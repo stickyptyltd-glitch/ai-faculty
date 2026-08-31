@@ -12,11 +12,33 @@ window.FACULTY = (function () {
   const norm = s => (s || "").toLowerCase();
   const placeholderish = v => /^(n\/?a|none|-|\.|idk|nothing)$/i.test((v || "").trim()) || (v || "").trim().length < 3;
 
-  // ---- Teaching Faculty -------------------------------------------------
-  function teaching(capId) {
+  // ---- Teaching Faculty ---------------------------------------------
+  function lesson(capId) {
     const c = C.competency(capId);
     if (!c) return null;
-    return { heading: `${c.id} — ${c.name}`, canDo: c.canDo, why: c.why, points: c.teach, example: c.example };
+    return { id: c.id, name: c.name, canDo: c.canDo, ...c.lesson };
+  }
+
+  // Formative feedback on the guided (supported) attempt — encouraging, never blocking.
+  // Compares the learner's answer to the lesson's model answer, field by field.
+  function guidedFeedback(capId, submission) {
+    const l = C.competency(capId).lesson.guided;
+    const reports = l.fields.map(f => {
+      const val = submission[f.key] || "";
+      const b = fieldBand(f, val, false);
+      let note;
+      if (b === "Not yet") note = "Have a go at this one before you check the model answer.";
+      else if (b === "Developing") note = "Reasonable start — the model answer below is more specific; see what it pins down that yours doesn't.";
+      else note = "Good — compare with the model answer for any details you'd add.";
+      return { key: f.key, label: f.label, band: b, yours: val, model: l.model[f.key], note };
+    });
+    const attempted = reports.filter(r => r.band !== "Not yet").length;
+    return {
+      reports,
+      summary: attempted === reports.length
+        ? "Nice work — you've done a full first attempt. Now compare each field with the model answer, then move on to doing it on your own task."
+        : "Fill in what you can, then reveal the model answer to see the whole thing. This one's for practice — it isn't graded.",
+    };
   }
 
   // ---- helpers -------------------------------------------------------
@@ -184,5 +206,5 @@ window.FACULTY = (function () {
     };
   }
 
-  return { teaching, assessChallenge, assessCheckpoint };
+  return { lesson, guidedFeedback, assessChallenge, assessCheckpoint };
 })();

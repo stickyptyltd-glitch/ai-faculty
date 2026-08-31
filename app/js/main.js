@@ -9,7 +9,7 @@
   // ---- routing --------------------------------------------------------
   function parseHash() {
     const h = (location.hash || "#/").replace(/^#/, "");
-    const parts = h.split("/").filter(Boolean);
+    const parts = h.split("/").filter(s => s !== "");   // keep "0"
     return { path: "/" + parts.join("/"), parts };
   }
 
@@ -71,10 +71,10 @@
 
   function handleAction(e) {
     const el = e.currentTarget;
-    if (el.dataset.action === "teach-done") {
+    if (el.dataset.action === "lesson-done") {
       const capId = el.dataset.cap;
       window.STORE.update(l => M.markTaught(l, capId));
-      window.STORE.log("taught", capId);
+      window.STORE.log("lesson-done", capId);
       const ch = M.nextChallenge(window.STORE.get(), capId);
       location.hash = ch ? `#/challenge/${capId}/${ch.id}` : `#/competency/${capId}`;
     }
@@ -100,6 +100,27 @@
       window.STORE.update(l => M.addProject(l, data.name, data.context, data.goal));
       window.STORE.log("project", data.name);
       location.hash = "#/projects";
+      return;
+    }
+
+    if (kind === "guided") {
+      const capId = form.dataset.cap;
+      const fb = F.guidedFeedback(capId, data);
+      const box = document.getElementById("guidedResult");
+      box.innerHTML = `
+        <div class="feedback">
+          <p style="margin-bottom:10px">${esc(fb.summary)}</p>
+          ${fb.reports.map(r => `
+            <div style="padding:8px 0;border-bottom:1px dashed var(--border)">
+              <div class="row"><span>${esc(r.label)}</span>
+                <span>${r.band === "Not yet" ? "" : bandTag(r.band)}</span></div>
+              <p class="hint" style="margin:4px 0">${esc(r.note)}</p>
+              ${r.yours ? `<p style="margin:4px 0;font-size:13px"><strong>You:</strong> ${esc(r.yours)}</p>` : ""}
+              <p style="margin:4px 0;font-size:13px;color:var(--good)"><strong>Model answer:</strong> ${esc(r.model)}</p>
+            </div>`).join("")}
+        </div>
+        <div class="notice">This is practice. When you're ready, do it on your own task using the button below.</div>`;
+      box.scrollIntoView({ block: "start" });
       return;
     }
 
@@ -242,25 +263,102 @@
       <form data-form="diagnostic">${q}<button class="btn" type="submit">Save &amp; see my pathway</button></form>`;
   }
 
+  function lessonProgress(stepIdx) {
+    return `<div class="stepline">` + C.LESSON_STEPS.map((s, i) =>
+      `<span class="${i < stepIdx ? "done" : i === stepIdx ? "now" : ""}">${esc(C.LESSON_STEP_LABELS[s])}</span>`
+    ).join("") + `</div>`;
+  }
+
   function viewLearn(learner, parts) {
     const capId = parts[1];
-    const t = F.teaching(capId);
-    if (!t) return `<div class="notice">Unknown competency.</div>`;
-    const points = t.points.map(p => `<li>${esc(p)}</li>`).join("");
-    return `
-      <div class="stepline"><span class="now">Learn</span><span>Challenges</span><span>Evidence</span><span>Mastery</span></div>
-      <h1>${esc(t.heading)}</h1>
-      <p class="lead">You'll be able to: <strong>${esc(t.canDo)}</strong></p>
-      <div class="card"><div class="card__label">Why this matters</div><p style="margin:0">${esc(t.why)}</p></div>
-      <h3>Teaching Faculty</h3><ul>${points}</ul>
-      <div class="card">
-        <div class="card__label">Example — ${esc(t.example.context)}</div>
-        <p style="margin:6px 0"><strong>Weak:</strong> ${esc(t.example.weak)}</p>
-        <p style="margin:0"><strong>Strong:</strong> ${esc(t.example.strong)}</p>
-      </div>
-      <button class="btn" data-action="teach-done" data-cap="${capId}">Got the idea — start the challenges</button>
-    `;
+    const stepIdx = Math.max(0, Math.min(C.LESSON_STEPS.length - 1, parseInt(parts[2] || "0", 10) || 0));
+    const L = F.lesson(capId);
+    if (!L) return `<div class="notice">Unknown competency.</div>`;
+    const stepKey = C.LESSON_STEPS[stepIdx];
+    const nextHref = stepIdx < C.LESSON_STEPS.length - 1 ? `#/learn/${capId}/${stepIdx + 1}` : null;
+    const prevHref = stepIdx > 0 ? `#/learn/${capId}/${stepIdx - 1}` : null;
+
+    const header = `
+      ${lessonProgress(stepIdx)}
+      <p class="hint" style="margin-bottom:2px">${esc(L.id)} — ${esc(L.name)} · lesson ${stepIdx + 1} of ${C.LESSON_STEPS.length}</p>`;
+
+    const nav = (extra = "") => `
+      <div style="display:flex;gap:10px;margin-top:18px">
+        ${prevHref ? `<a class="btn btn--ghost btn--sm" data-nav href="${prevHref}">← Back</a>` : ""}
+        ${extra}
+        ${nextHref ? `<a class="btn" data-nav href="${nextHref}">Next →</a>` : ""}
+      </div>`;
+
+    if (stepKey === "activate") {
+      const a = L.activate;
+      return `${header}
+        <h1>${esc(a.heading)}</h1>
+        <p class="lead">This lesson teaches you to: <strong>${esc(L.canDo)}</strong></p>
+        <div class="card"><p style="margin:0 0 10px">${esc(a.story)}</p>
+          <p style="margin:0;color:var(--accent)"><strong>${esc(a.point)}</strong></p></div>
+        ${nav()}`;
+    }
+
+    if (stepKey === "explain") {
+      const e = L.explain;
+      return `${header}
+        <h1>The idea</h1>
+        ${e.paras.map(p => `<p>${mdBold(esc(p))}</p>`).join("")}
+        <div class="card next"><div class="card__label">Key idea — remember this one</div>
+          <p style="margin:0;font-size:15px">${esc(e.keyIdea)}</p></div>
+        ${nav()}`;
+    }
+
+    if (stepKey === "demonstrate") {
+      const d = L.demonstrate;
+      const steps = d.steps.map(s => `
+        <div class="card card--tight">
+          <div class="card__label">${esc(s.move)}</div>
+          <p style="margin:6px 0"><em>Thinking:</em> ${esc(s.think)}</p>
+          <p style="margin:0"><strong>→ ${esc(s.result)}</strong></p>
+        </div>`).join("");
+      return `${header}
+        <h1>Watch it done</h1>
+        <p class="lead">${esc(d.task)}</p>
+        ${steps}
+        <div class="card next"><div class="card__label">The finished result</div>
+          <p style="margin:0">${esc(d.full)}</p></div>
+        ${nav()}`;
+    }
+
+    if (stepKey === "deconstruct") {
+      return `${header}
+        <h1>The moves</h1>
+        <p class="lead">What just happened, so you can do it yourself:</p>
+        <ul>${L.deconstruct.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+        ${nav()}`;
+    }
+
+    // guided
+    const g = L.guided;
+    const fields = g.fields.map(f => `
+      <div class="field"><label>${esc(f.label)}</label>
+        <div class="hint">${esc(f.hint || "")}</div>
+        <textarea name="${f.key}"></textarea></div>`).join("");
+    return `${header}
+      <h1>Your turn — with support</h1>
+      <p class="lead">${esc(g.intro)}</p>
+      <div class="card"><div class="card__label">Practice task (not graded)</div>
+        <p style="margin:0">${esc(g.task)}</p></div>
+      <form data-form="guided" data-cap="${capId}">
+        ${fields}
+        <button class="btn" type="submit">Check against the model answer</button>
+      </form>
+      <div id="guidedResult"></div>
+      <div style="margin-top:18px">
+        ${prevHref ? `<a class="btn btn--ghost btn--sm" data-nav href="${prevHref}">← Back</a>` : ""}
+        <button class="btn" data-action="lesson-done" data-cap="${capId}" style="margin-top:10px">
+          I'm ready — do it on my own task
+        </button>
+      </div>`;
   }
+
+  function mdBold(s) { return s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"); }
 
   function viewCompetency(learner, parts) {
     const capId = parts[1];
@@ -281,13 +379,17 @@
         : `<div class="caprow" style="opacity:.55">${inner}</div>`;
     }).join("");
 
+    const taught = !!cap.taughtAt;
     return `
-      <div class="stepline"><span class="done">Learn</span><span class="now">Challenges</span><span>Evidence</span><span>Mastery</span></div>
+      <div class="stepline"><span class="${taught ? "done" : "now"}">Lesson</span><span class="${taught ? "now" : ""}">Challenges</span><span>Evidence</span><span>Mastery</span></div>
       <h1>${esc(c.id)} — ${esc(c.name)}</h1>
-      <p class="lead">${esc(c.canDo)} · current state:
+      <p class="lead">${esc(c.canDo)}<br>Current state:
         <span class="pill pill--${cap.state}">${esc(M.levelLabel(cap.state))}</span></p>
-      <a class="btn btn--ghost btn--sm" data-nav href="#/learn/${capId}" style="margin-bottom:14px">Re-read the teaching</a>
+      <a class="btn ${taught ? "btn--ghost btn--sm" : ""}" data-nav href="#/learn/${capId}/0" style="margin-bottom:16px">
+        ${taught ? "Revisit the lesson" : "Start the lesson"}
+      </a>
       <h3>Practical challenges</h3>
+      <p class="hint" style="margin-top:-4px">Do these on your own real task. Each is checked against a rubric and adds to your evidence.</p>
       <div class="caplist">${rows}</div>
     `;
   }
@@ -297,6 +399,13 @@
     const c = C.competency(capId);
     const ch = C.challenge(capId, chId);
     if (!ch) return `<div class="notice">Unknown challenge.</div>`;
+    const idx = c.challenges.findIndex(x => x.id === chId);
+
+    const workedExample = c.lesson && c.lesson.demonstrate
+      ? `<details class="card card--tight" style="margin-bottom:14px">
+           <summary style="cursor:pointer;font-weight:600">Show the worked example from the lesson</summary>
+           <p style="margin:8px 0 0">${esc(c.lesson.demonstrate.full)}</p>
+         </details>` : "";
 
     let body = "";
     if (ch.type === "fields") {
@@ -316,8 +425,8 @@
         <label><input type="radio" name="choice" value="${o.id}" required>
           <span>${esc(o.label)}</span></label>`).join("");
       body = `
-        <div class="card"><div class="card__label">Scenario</div>
-          <p style="margin:0 0 6px">${esc(ch.brief)}</p>
+        <div class="card"><div class="card__label">The situation</div>
+          <p style="margin:0 0 8px">${esc(ch.scenario)}</p>
           <p style="margin:0"><strong>${esc(ch.question)}</strong></p></div>
         <div class="field checks">${opts}</div>
         <div class="field"><label>${esc(ch.ask.label)}</label>
@@ -326,11 +435,18 @@
     }
 
     return `
-      <div class="stepline"><span class="done">Learn</span><span class="now">Challenge</span><span>Evidence</span><span>Mastery</span></div>
+      <div class="stepline"><span class="done">Lesson</span><span class="now">Challenge ${idx + 1} of ${c.challenges.length}</span><span>Evidence</span><span>Mastery</span></div>
       <p class="hint" style="margin-bottom:2px"><a data-nav href="#/competency/${capId}">← ${esc(c.id)} ${esc(c.name)}</a>
-        · ${esc(ch.ladder)} · challenge</p>
+        · ${esc(ch.ladder)} level</p>
       <h1>${esc(ch.title)}</h1>
       <p class="lead">${esc(ch.brief)}</p>
+
+      <div class="card next">
+        <div class="card__label">What a strong answer looks like</div>
+        <p style="margin:0">${esc(ch.whatGood || "")}</p>
+      </div>
+      ${workedExample}
+
       <form data-form="challenge" data-cap="${capId}" data-ch="${chId}">
         ${body}
         ${projectSelect(learner)}
@@ -361,6 +477,8 @@
         <span class="now">Practical assessment</span><span>Mastery</span></div>
       <h1>${esc(cp.title)}</h1>
       <p class="lead">${esc(cp.brief)}</p>
+      <div class="card next"><div class="card__label">What a strong submission looks like</div>
+        <p style="margin:0">${esc(cp.whatGood || "")}</p></div>
       <div class="card"><div class="card__label">Assessed against the mastery rubric</div>
         <ul style="margin:0">${dims}</ul></div>
       ${done ? `<div class="notice" style="margin-bottom:12px">You've already passed this. Resubmitting will record a new evidence version.</div>` : ""}
