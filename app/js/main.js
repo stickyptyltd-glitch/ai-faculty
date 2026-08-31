@@ -3,23 +3,26 @@
   const app = document.getElementById("app");
   const C = window.CONTENT;
   const M = window.MODEL;
+  const F = window.FACULTY;
   const esc = window.PROGRESS.esc;
 
-  // ---- routing -----------------------------------------------------------
+  // ---- routing --------------------------------------------------------
   function parseHash() {
     const h = (location.hash || "#/").replace(/^#/, "");
-    const parts = h.split("/").filter(Boolean); // ["learn","C1"]
+    const parts = h.split("/").filter(Boolean);
     return { path: "/" + parts.join("/"), parts };
   }
 
   const routes = [
-    { test: p => p === "/" , view: viewProgress },
+    { test: p => p === "/", view: viewProgress },
     { test: p => p === "/diagnostic", view: viewDiagnostic },
     { test: p => p === "/pathway", view: viewPathway },
     { test: p => p === "/evidence", view: viewEvidence },
     { test: p => p === "/about", view: viewAbout },
     { test: p => p.startsWith("/learn/"), view: viewLearn },
-    { test: p => p.startsWith("/practise/"), view: viewPractise },
+    { test: p => p.startsWith("/competency/"), view: viewCompetency },
+    { test: p => p.startsWith("/challenge/"), view: viewChallenge },
+    { test: p => p.startsWith("/checkpoint/"), view: viewCheckpoint },
   ];
 
   function router() {
@@ -35,27 +38,24 @@
   function syncNav(path) {
     document.querySelectorAll(".topbar__nav a").forEach(a => {
       const target = a.getAttribute("href").replace(/^#/, "");
-      a.classList.toggle("is-active", target === path || (target === "/" && path === "/"));
+      a.classList.toggle("is-active", target === path);
     });
   }
 
-  // ---- delegated events -------------------------------------------------
+  // ---- events --------------------------------------------------------
   function wire() {
-    app.querySelectorAll("[data-action]").forEach(el => {
-      el.addEventListener("click", handleAction);
-    });
-    const form = app.querySelector("form[data-form]");
-    if (form) form.addEventListener("submit", handleForm);
+    app.querySelectorAll("[data-action]").forEach(el => el.addEventListener("click", handleAction));
+    app.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
   }
 
   function handleAction(e) {
     const el = e.currentTarget;
-    const action = el.dataset.action;
-    if (action === "teach-done") {
+    if (el.dataset.action === "teach-done") {
       const capId = el.dataset.cap;
       window.STORE.update(l => M.markTaught(l, capId));
       window.STORE.log("taught", capId);
-      location.hash = `#/practise/${capId}`;
+      const ch = M.nextChallenge(window.STORE.get(), capId);
+      location.hash = ch ? `#/challenge/${capId}/${ch.id}` : `#/competency/${capId}`;
     }
   }
 
@@ -75,149 +75,72 @@
       return;
     }
 
-    if (kind === "practise") {
-      const capId = form.dataset.cap;
-      const c = C.competency(capId);
-      const fields = {};
-      c.practice.fields.forEach(f => { fields[f.key] = data[f.key] || ""; });
-      const result = window.FACULTY.assess(capId, fields);
-      // stash for the render pass
-      sessionStorage.setItem("aifaculty.lastAssess." + capId, JSON.stringify({ fields, result }));
-      renderAssessResult(capId, fields, result, form);
+    if (kind === "challenge") {
+      const { cap, ch } = form.dataset;
+      const result = F.assessChallenge(cap, ch, data);
+      sessionStorage.setItem("aifaculty.assess", JSON.stringify({ scope: "challenge", cap, ch, data, result }));
+      renderResult(result, { scope: "challenge", cap, ch });
       return;
     }
 
-    if (kind === "confirm-evidence") {
-      const capId = form.dataset.cap;
-      const payload = JSON.parse(sessionStorage.getItem("aifaculty.lastAssess." + capId) || "null");
-      if (!payload) { location.hash = "#/"; return; }
-      window.STORE.update(l => {
-        M.addEvidence(l, {
-          capId,
-          kind: "practice",
-          title: `${capId} — ${C.competency(capId).name}: practice on a real task`,
-          fields: payload.fields,
-          feedback: payload.result.summary,
-          confidence: payload.result.confidence,
+    if (kind === "checkpoint") {
+      const { cp } = form.dataset;
+      const result = F.assessCheckpoint(cp, data);
+      sessionStorage.setItem("aifaculty.assess", JSON.stringify({ scope: "checkpoint", cp, data, result }));
+      renderResult(result, { scope: "checkpoint", cp });
+      return;
+    }
+
+    if (kind === "confirm") {
+      const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
+      if (!payload || payload.result.verdict !== "ready") { location.hash = "#/"; return; }
+
+      if (payload.scope === "challenge") {
+        const chDef = C.challenge(payload.cap, payload.ch);
+        window.STORE.update(l => {
+          const ev = M.addEvidence(l, {
+            capId: payload.cap, kind: "challenge", challengeId: payload.ch,
+            title: `${payload.ch} · ${C.competency(payload.cap).name}: ${chDef.title}`,
+            fields: payload.data, feedback: payload.result.summary, confidence: payload.result.confidence,
+          });
+          M.markChallengeDone(l, payload.ch, ev.id);
+          M.raise(l, payload.cap, payload.result.stateTarget, payload.result.confidence);
         });
-        M.raise(l, capId, payload.result.stateTarget, payload.result.confidence);
-      });
-      window.STORE.log("evidence", capId);
-      sessionStorage.removeItem("aifaculty.lastAssess." + capId);
+        window.STORE.log("challenge-evidence", payload.ch);
+      } else {
+        const cpDef = C.checkpoint(payload.cp);
+        window.STORE.update(l => {
+          const ev = M.addEvidence(l, {
+            capId: cpDef.after[0], kind: "checkpoint", checkpointId: payload.cp,
+            title: `${payload.cp} · ${cpDef.title}`,
+            fields: payload.data, feedback: payload.result.summary, confidence: payload.result.confidence,
+          });
+          M.markCheckpointDone(l, payload.cp, ev.id);
+          cpDef.after.forEach(capId => M.raise(l, capId, payload.result.stateTarget, "medium"));
+        });
+        window.STORE.log("checkpoint-evidence", payload.cp);
+      }
+      sessionStorage.removeItem("aifaculty.assess");
       location.hash = "#/evidence";
       return;
     }
   }
 
-  // ---- views -----------------------------------------------------------
-  function viewProgress(learner) {
-    return window.PROGRESS.render(learner);
-  }
+  // ---- shared result renderer --------------------------------------
+  function renderResult(result, ctx) {
+    const box = document.getElementById("assessResult");
+    if (!result) { box.innerHTML = `<div class="notice">Could not assess — try again.</div>`; return; }
 
-  function viewDiagnostic(learner) {
-    const q = C.DIAGNOSTIC.questions.map(item => {
-      if (item.type === "select") {
-        const opts = item.options.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join("");
-        return `<div class="field">
-          <label>${esc(item.label)}</label>
-          <select name="${item.key}" required>${opts}</select>
-        </div>`;
-      }
-      return `<div class="field">
-        <label>${esc(item.label)}</label>
-        ${item.hint ? `<div class="hint">${esc(item.hint)}</div>` : ""}
-        <textarea name="${item.key}" ${item.key === "c" || item.key === "e" ? "required" : ""}></textarea>
-      </div>`;
-    }).join("");
-
-    return `
-      <h1>Diagnostic</h1>
-      <p class="lead">${esc(C.DIAGNOSTIC.intro)}</p>
-      <form data-form="diagnostic">
-        ${q}
-        <button class="btn" type="submit">Save & see my pathway</button>
-      </form>
-    `;
-  }
-
-  function viewLearn(learner, parts) {
-    const capId = parts[1];
-    const t = window.FACULTY.teaching(capId);
-    if (!t) return `<div class="notice">Unknown competency.</div>`;
-    const cap = learner.capabilities[capId];
-    const points = t.points.map(p => `<li>${esc(p)}</li>`).join("");
-
-    return `
-      <div class="stepline">
-        <span class="now">Learn</span><span>Practise</span><span>Evidence</span><span>Mastery</span>
-      </div>
-      <h1>${esc(t.heading)}</h1>
-      <p class="lead">You'll be able to: <strong>${esc(t.canDo)}</strong></p>
-
-      <div class="card">
-        <div class="card__label">Why this matters</div>
-        <p style="margin:0">${esc(t.why)}</p>
-      </div>
-
-      <h3>Teaching Faculty</h3>
-      <ul>${points}</ul>
-
-      <div class="card">
-        <div class="card__label">Example — ${esc(t.example.context)}</div>
-        <p style="margin:6px 0"><strong>Weak:</strong> ${esc(t.example.weak)}</p>
-        <p style="margin:0"><strong>Strong:</strong> ${esc(t.example.strong)}</p>
-      </div>
-
-      <button class="btn" data-action="teach-done" data-cap="${capId}">
-        I've got the idea — practise it
-      </button>
-      ${M.levelIndex(cap.state) >= 2
-        ? `<a class="btn btn--ghost" data-nav href="#/practise/${capId}" style="margin-top:10px">Skip to practice</a>`
-        : ""}
-    `;
-  }
-
-  function viewPractise(learner, parts) {
-    const capId = parts[1];
-    const c = C.competency(capId);
-    if (!c) return `<div class="notice">Unknown competency.</div>`;
-
-    const fields = c.practice.fields.map(f => `
-      <div class="field">
-        <label>${esc(f.label)}</label>
-        <div class="hint">${esc(f.hint)}</div>
-        <textarea name="${f.key}" required></textarea>
-      </div>`).join("");
-
-    return `
-      <div class="stepline">
-        <span class="done">Learn</span><span class="now">Practise</span><span>Evidence</span><span>Mastery</span>
-      </div>
-      <h1>Practise — ${esc(c.name)}</h1>
-      <p class="lead">${esc(c.practice.brief)}</p>
-      <form data-form="practise" data-cap="${capId}">
-        ${fields}
-        <button class="btn" type="submit">Submit to Assessment Faculty</button>
-      </form>
-      <div id="assessResult"></div>
-    `;
-  }
-
-  function renderAssessResult(capId, fields, result, form) {
-    const c = C.competency(capId);
     const rows = result.fieldReports.map(r => `
-      <div class="row">
-        <span>${esc(r.label)}</span>
-        <span class="${r.ok ? "ok" : "miss"}">${r.ok ? "ok" : "needs work"}</span>
-      </div>
+      <div class="row"><span>${esc(r.label)}</span>
+        <span class="${r.ok ? "ok" : "miss"}">${r.ok ? "ok" : "needs work"}</span></div>
       <div class="hint" style="padding-bottom:8px">${esc(r.note)}</div>`).join("");
 
+    const rubricTitle = ctx.scope === "checkpoint" ? "Mastery rubric" : "Rubric";
     const rubric = result.rubric.map(r =>
       `<li class="${r.ok ? "ok" : "miss"}">${r.ok ? "✓" : "•"} ${esc(r.label)}</li>`).join("");
 
-    const box = document.getElementById("assessResult");
     const canConfirm = result.verdict === "ready";
-
     box.innerHTML = `
       <h2>Assessment Faculty — formative feedback</h2>
       <div class="feedback">
@@ -225,37 +148,182 @@
         ${rows}
       </div>
       <div class="card">
-        <div class="card__label">Rubric — ${esc(c.name)}</div>
+        <div class="card__label">${rubricTitle}</div>
         <ul style="margin:0">${rubric}</ul>
       </div>
       ${canConfirm
-        ? `<form data-form="confirm-evidence" data-cap="${capId}">
-             <p class="notice" style="margin-bottom:10px">Confirming saves this as an evidence record and
-             moves <strong>${esc(c.name)}</strong> to <strong>independent</strong>.</p>
+        ? `<form data-form="confirm">
+             <p class="notice" style="margin-bottom:10px">Confirming saves this as an evidence record.</p>
              <button class="btn" type="submit">Confirm &amp; save evidence</button>
            </form>`
-        : `<button class="btn btn--ghost" data-action="noop" onclick="document.querySelector('form[data-form=practise]').scrollIntoView()">Revise your answers above and resubmit</button>`}
+        : `<div class="notice">Revise your answers above and resubmit. Nothing is saved until the rubric is met.</div>`}
     `;
-    // re-wire the newly injected confirm form
-    const cf = box.querySelector("form[data-form=confirm-evidence]");
-    if (cf) cf.addEventListener("submit", handleForm);
-    box.querySelector("h2").scrollIntoView({ block: "start" });
+    box.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
+    const h = box.querySelector("h2");
+    if (h) h.scrollIntoView({ block: "start" });
+  }
+
+  // ---- views -------------------------------------------------------
+  function viewProgress(learner) { return window.PROGRESS.render(learner); }
+
+  function viewDiagnostic() {
+    const q = C.DIAGNOSTIC.questions.map(item => {
+      if (item.type === "select") {
+        const opts = item.options.map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join("");
+        return `<div class="field"><label>${esc(item.label)}</label><select name="${item.key}" required>${opts}</select></div>`;
+      }
+      return `<div class="field"><label>${esc(item.label)}</label>
+        ${item.hint ? `<div class="hint">${esc(item.hint)}</div>` : ""}
+        <textarea name="${item.key}" ${(item.key === "c" || item.key === "e") ? "required" : ""}></textarea></div>`;
+    }).join("");
+    return `<h1>Diagnostic</h1><p class="lead">${esc(C.DIAGNOSTIC.intro)}</p>
+      <form data-form="diagnostic">${q}<button class="btn" type="submit">Save &amp; see my pathway</button></form>`;
+  }
+
+  function viewLearn(learner, parts) {
+    const capId = parts[1];
+    const t = F.teaching(capId);
+    if (!t) return `<div class="notice">Unknown competency.</div>`;
+    const points = t.points.map(p => `<li>${esc(p)}</li>`).join("");
+    return `
+      <div class="stepline"><span class="now">Learn</span><span>Challenges</span><span>Evidence</span><span>Mastery</span></div>
+      <h1>${esc(t.heading)}</h1>
+      <p class="lead">You'll be able to: <strong>${esc(t.canDo)}</strong></p>
+      <div class="card"><div class="card__label">Why this matters</div><p style="margin:0">${esc(t.why)}</p></div>
+      <h3>Teaching Faculty</h3><ul>${points}</ul>
+      <div class="card">
+        <div class="card__label">Example — ${esc(t.example.context)}</div>
+        <p style="margin:6px 0"><strong>Weak:</strong> ${esc(t.example.weak)}</p>
+        <p style="margin:0"><strong>Strong:</strong> ${esc(t.example.strong)}</p>
+      </div>
+      <button class="btn" data-action="teach-done" data-cap="${capId}">Got the idea — start the challenges</button>
+    `;
+  }
+
+  function viewCompetency(learner, parts) {
+    const capId = parts[1];
+    const c = C.competency(capId);
+    if (!c) return `<div class="notice">Unknown competency.</div>`;
+    const cap = learner.capabilities[capId];
+    const rows = c.challenges.map((ch, i) => {
+      const done = M.challengeDone(learner, ch.id);
+      const locked = i > 0 && !M.challengeDone(learner, c.challenges[i - 1].id);
+      const state = done ? "independent" : locked ? "unknown" : "guided";
+      const label = done ? "Done" : locked ? "Locked" : "Open";
+      const inner = `<span class="caprow__id">${i + 1}</span>
+        <span class="caprow__name">${esc(ch.title)}
+          <span style="color:var(--text-dim);font-size:12px">· ${esc(ch.ladder)} · ${esc(ch.type)}</span></span>
+        <span class="pill pill--${state}">${label}</span>`;
+      return (!locked)
+        ? `<a class="caprow" data-nav href="#/challenge/${capId}/${ch.id}">${inner}</a>`
+        : `<div class="caprow" style="opacity:.55">${inner}</div>`;
+    }).join("");
+
+    return `
+      <div class="stepline"><span class="done">Learn</span><span class="now">Challenges</span><span>Evidence</span><span>Mastery</span></div>
+      <h1>${esc(c.id)} — ${esc(c.name)}</h1>
+      <p class="lead">${esc(c.canDo)} · current state:
+        <span class="pill pill--${cap.state}">${esc(M.levelLabel(cap.state))}</span></p>
+      <a class="btn btn--ghost btn--sm" data-nav href="#/learn/${capId}" style="margin-bottom:14px">Re-read the teaching</a>
+      <h3>Practical challenges</h3>
+      <div class="caplist">${rows}</div>
+    `;
+  }
+
+  function viewChallenge(learner, parts) {
+    const capId = parts[1], chId = parts[2];
+    const c = C.competency(capId);
+    const ch = C.challenge(capId, chId);
+    if (!ch) return `<div class="notice">Unknown challenge.</div>`;
+
+    let body = "";
+    if (ch.type === "fields") {
+      body = ch.fields.map(f => `
+        <div class="field"><label>${esc(f.label)}</label>
+          <div class="hint">${esc(f.hint || "")}</div>
+          <textarea name="${f.key}" required></textarea></div>`).join("");
+    } else if (ch.type === "critique") {
+      body = `
+        <div class="card"><div class="card__label">Material to critique</div>
+          <p style="margin:0;font-style:italic">${esc(ch.material)}</p></div>
+        <div class="field"><label>${esc(ch.ask.label)}</label>
+          <div class="hint">${esc(ch.ask.hint || "")}</div>
+          <textarea name="critique" required></textarea></div>`;
+    } else if (ch.type === "scenario") {
+      const opts = ch.options.map(o => `
+        <label><input type="radio" name="choice" value="${o.id}" required>
+          <span>${esc(o.label)}</span></label>`).join("");
+      body = `
+        <div class="card"><div class="card__label">Scenario</div>
+          <p style="margin:0 0 6px">${esc(ch.brief)}</p>
+          <p style="margin:0"><strong>${esc(ch.question)}</strong></p></div>
+        <div class="field checks">${opts}</div>
+        <div class="field"><label>${esc(ch.ask.label)}</label>
+          <div class="hint">${esc(ch.ask.hint || "")}</div>
+          <textarea name="justify" required></textarea></div>`;
+    }
+
+    return `
+      <div class="stepline"><span class="done">Learn</span><span class="now">Challenge</span><span>Evidence</span><span>Mastery</span></div>
+      <p class="hint" style="margin-bottom:2px"><a data-nav href="#/competency/${capId}">← ${esc(c.id)} ${esc(c.name)}</a>
+        · ${esc(ch.ladder)} · challenge</p>
+      <h1>${esc(ch.title)}</h1>
+      <p class="lead">${esc(ch.brief)}</p>
+      <form data-form="challenge" data-cap="${capId}" data-ch="${chId}">
+        ${body}
+        <button class="btn" type="submit">Submit to Assessment Faculty</button>
+      </form>
+      <div id="assessResult"></div>
+    `;
+  }
+
+  function viewCheckpoint(learner, parts) {
+    const cpId = parts[1];
+    const cp = C.checkpoint(cpId);
+    if (!cp) return `<div class="notice">Unknown assessment.</div>`;
+    if (!M.checkpointReady(learner, cpId) && !M.checkpointDone(learner, cpId)) {
+      return `<h1>${esc(cp.title)}</h1>
+        <div class="notice">Locked. Complete every challenge in ${esc(cp.after.join(", "))} first.</div>
+        <a class="btn btn--ghost" data-nav href="#/" style="margin-top:12px">Back to progress</a>`;
+    }
+    const done = M.checkpointDone(learner, cpId);
+    const fields = cp.fields.map(f => `
+      <div class="field"><label>${esc(f.label)}</label>
+        <div class="hint">${esc(f.hint || "")}</div>
+        <textarea name="${f.key}" required></textarea></div>`).join("");
+    const dims = cp.rubricDims.map(d => `<li>${esc(d)}</li>`).join("");
+
+    return `
+      <div class="stepline"><span class="done">Learn</span><span class="done">Challenges</span>
+        <span class="now">Practical assessment</span><span>Mastery</span></div>
+      <h1>${esc(cp.title)}</h1>
+      <p class="lead">${esc(cp.brief)}</p>
+      <div class="card"><div class="card__label">Assessed against the mastery rubric</div>
+        <ul style="margin:0">${dims}</ul></div>
+      ${done ? `<div class="notice" style="margin-bottom:12px">You've already passed this. Resubmitting will record a new evidence version.</div>` : ""}
+      <form data-form="checkpoint" data-cp="${cpId}">
+        ${fields}
+        <button class="btn" type="submit">Submit to Assessment Faculty</button>
+      </form>
+      <div id="assessResult"></div>
+    `;
   }
 
   function viewPathway(learner) {
-    const stages = C.PATHWAY.map((s, i) => `<li>${i + 1}. ${esc(s)}</li>`).join("");
     const nba = window.PATHWAY.next(learner);
+    const stages = C.PATHWAY.map((s, i) => {
+      const cp = C.CHECKPOINTS.find(x => x.stage === s);
+      const tag = cp ? ` <span class="pill pill--${M.checkpointDone(learner, cp.id) ? "independent" : "unknown"}">${cp.id}</span>` : "";
+      return `<li>${i + 1}. ${esc(s)}${tag}</li>`;
+    }).join("");
     return `
       <h1>Pathway</h1>
-      <p class="lead">AI Fluency → Practical AI Capability. The pathway is allowed to change as your
-      evidence changes — it can accelerate, branch back, or raise the challenge.</p>
-      <div class="card next">
-        <div class="card__label">Right now</div>
+      <p class="lead">AI Fluency → Practical AI Capability. The pathway changes as your evidence changes —
+      it can accelerate, branch back, or raise the challenge.</p>
+      <div class="card next"><div class="card__label">Right now</div>
         <p style="margin-bottom:10px">${esc(nba.reason)}</p>
-        <a class="btn" data-nav href="${nba.href}">${esc(window.PATHWAY.actionVerb(nba.action))}</a>
-      </div>
-      <h2>The 10 stages</h2>
-      <ol style="margin-left:18px">${stages}</ol>
+        <a class="btn" data-nav href="${nba.href}">${esc(window.PATHWAY.actionVerb(nba.action))}</a></div>
+      <h2>The 10 stages</h2><ol style="margin-left:18px">${stages}</ol>
       <h2>Master capability</h2>
       <div class="card"><p style="margin:0">${esc(C.MASTER_CAPABILITY.statement)}</p></div>
     `;
@@ -264,58 +332,46 @@
   function viewEvidence(learner) {
     if (!learner.evidence.length) {
       return `<h1>Evidence</h1>
-        <p class="lead">Nothing recorded yet. Evidence is created when you complete a practice task on a
-        real task of your own and Assessment Faculty confirms it.</p>
+        <p class="lead">Nothing recorded yet. Evidence is created when you complete a challenge or a
+        practical assessment on a real task of your own and Assessment Faculty confirms it against the rubric.</p>
         <a class="btn" data-nav href="#/">Back to progress</a>`;
     }
     const items = learner.evidence.map(ev => {
-      const c = C.competency(ev.capId);
       const fieldList = Object.entries(ev.fields).map(([k, v]) =>
         `<p style="margin:4px 0"><strong>${esc(k)}:</strong> ${esc(v)}</p>`).join("");
       return `<div class="evidence-item">
         <time>${new Date(ev.createdAt).toLocaleString()}</time>
-        <h3 style="margin:4px 0;text-transform:none;letter-spacing:0;color:var(--text);font-size:15px">
-          ${esc(ev.title)}</h3>
-        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">confidence: ${esc(ev.confidence)}</p>
+        <h3 style="margin:4px 0;text-transform:none;letter-spacing:0;color:var(--text);font-size:15px">${esc(ev.title)}</h3>
+        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${esc(ev.kind)} · confidence: ${esc(ev.confidence)}</p>
         ${fieldList}
         <p style="margin:8px 0 0;font-size:14px"><strong>Faculty note:</strong> ${esc(ev.feedback)}</p>
       </div>`;
     }).join("");
-
     return `<h1>Evidence portfolio</h1>
       <p class="lead">${learner.evidence.length} record${learner.evidence.length === 1 ? "" : "s"}.
-      Every capability claim links to evidence (see docs/01-architecture.md).</p>
-      ${items}`;
+      Every capability claim links to evidence (see docs/01-architecture.md).</p>${items}`;
   }
 
   function viewAbout() {
     return `
       <h1>About this prototype</h1>
-      <p class="lead">AI Faculty v0.1 — the first working slice of the Learning Engine.</p>
-      <p>This implements one vertical path end to end:</p>
+      <p class="lead">AI Faculty v0.2 — the Learning Engine with practical challenges and assessments.</p>
       <ul>
         <li><strong>Diagnostic</strong> → Learner Intelligence Model (capability state for C1–C7)</li>
-        <li><strong>Pathway Engine</strong> → computes your next best action</li>
-        <li><strong>Teach → Practise → Evidence → Mastery</strong> loop for each competency</li>
-        <li><strong>Progress view</strong> → 8 panels, no fake "% complete"</li>
+        <li><strong>Pathway Engine</strong> → next best action, interleaving teaching, challenges and assessments</li>
+        <li><strong>Per competency:</strong> teach → 2–3 <strong>practical challenges</strong> up the difficulty ladder
+          (do-it / critique / scenario), each rubric-assessed and producing evidence</li>
+        <li><strong>Checkpoints:</strong> CP1 (combined workflow design) and CP2 (full build/test/improve capstone),
+          scored against the mastery rubric</li>
+        <li><strong>Evidence portfolio</strong> — every confirmed attempt</li>
       </ul>
-      <p>Teaching and assessment currently run on authored content and transparent rubric heuristics
-      (<code>js/faculty.js</code>). A model behind the Institutional AI Control Plane replaces that one
-      module later — nothing else changes.</p>
-      <p>Your data lives only in this browser (<code>localStorage</code>). Use “Reset learner” in the
-      footer to start over.</p>
-      <p>Design docs: <code>../docs/</code> in the repo.</p>
+      <p>Teaching and assessment run on authored content and transparent rubric heuristics
+      (<code>js/faculty.js</code>) — one swappable seam for a real model later.</p>
+      <p>Data lives only in this browser (<code>localStorage</code>). “Reset learner” in the footer clears it.</p>
     `;
   }
 
-  // ---- global nav + reset --------------------------------------------
-  document.addEventListener("click", e => {
-    const nav = e.target.closest("[data-nav]");
-    if (nav && nav.getAttribute("href")) {
-      // let normal hash navigation happen; nothing to do
-    }
-  });
-
+  // ---- reset -----------------------------------------------------
   document.getElementById("resetBtn").addEventListener("click", () => {
     if (confirm("Reset this learner? All progress and evidence on this device will be cleared.")) {
       window.STORE.reset();

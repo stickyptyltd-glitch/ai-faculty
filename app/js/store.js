@@ -17,6 +17,8 @@ window.STORE = (function () {
       intake: null,          // filled by the diagnostic
       track: null,           // personal | professional | mixed
       capabilities: caps,
+      challenges: {},        // { "C1.1": { completedAt, evidenceId } }
+      checkpoints: {},       // { "CP1": { completedAt, evidenceId } }
       evidence: [],          // { id, capId, kind, fields, feedback, confidence, createdAt }
       activity: [],          // { ts, kind, detail }
     };
@@ -45,7 +47,10 @@ window.STORE = (function () {
 
   function get() {
     let l = load();
-    if (!l) l = save(blankLearner());
+    if (!l) { l = save(blankLearner()); return l; }
+    // forward-compatible defaults for records saved by an earlier version
+    if (!l.challenges) l.challenges = {};
+    if (!l.checkpoints) l.checkpoints = {};
     return l;
   }
 

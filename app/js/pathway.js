@@ -1,13 +1,14 @@
 /* AI Faculty — Pathway Engine.
  * Output = the next best learning action, not necessarily "the next lesson".
+ * Walks: diagnostic → per competency (learn → each challenge) → checkpoints → advance.
  * See docs/04-learning-engine.md.
  */
 window.PATHWAY = (function () {
-  const { levelIndex, isDiagnosed, firstUnmastered, evidenceFor } = window.MODEL;
+  const C = window.CONTENT;
+  const M = window.MODEL;
 
-  // Returns { action, capId, capName, reason, href }
   function next(learner) {
-    if (!isDiagnosed(learner)) {
+    if (!M.isDiagnosed(learner)) {
       return {
         action: "diagnose",
         reason: "We don't yet have your starting point. The diagnostic takes a few minutes and isn't graded.",
@@ -15,60 +16,73 @@ window.PATHWAY = (function () {
       };
     }
 
-    const cap = firstUnmastered(learner);
-    if (!cap) {
+    for (const comp of C.COMPETENCIES) {
+      const cap = learner.capabilities[comp.id];
+
+      // interleave the checkpoint as soon as its prerequisites are complete
+      const cpDue = C.CHECKPOINTS.find(cp =>
+        cp.after[cp.after.length - 1] === comp.id &&
+        M.checkpointReady(learner, cp.id) &&
+        !M.checkpointDone(learner, cp.id));
+      // (handled after the competency loop below — see checkpoint pass)
+
+      if (!cap.taughtAt) {
+        return {
+          action: "learn", capId: comp.id, capName: comp.name,
+          reason: `${comp.id} (${comp.name}) is next and you haven't started it. Begin with the short teaching.`,
+          href: `#/learn/${comp.id}`,
+        };
+      }
+
+      const ch = M.nextChallenge(learner, comp.id);
+      if (ch) {
+        const p = M.challengeProgress(learner, comp.id);
+        const first = p.done === 0;
+        return {
+          action: "challenge",
+          capId: comp.id, capName: comp.name, challengeId: ch.id, challengeTitle: ch.title,
+          reason: first
+            ? `Practise ${comp.name} on a real task of your own — challenge 1 of ${p.total}: "${ch.title}".`
+            : `Keep building ${comp.name} — challenge ${p.done + 1} of ${p.total}: "${ch.title}" (${ch.ladder.toLowerCase()}).`,
+          href: `#/challenge/${comp.id}/${ch.id}`,
+        };
+      }
+
+      // competency's challenges are all done — is its checkpoint now due?
+      if (cpDue) {
+        return {
+          action: "checkpoint", cpId: cpDue.id, cpTitle: cpDue.title,
+          reason: `You've finished the competencies for "${cpDue.title}". Time for the combined practical assessment.`,
+          href: `#/checkpoint/${cpDue.id}`,
+        };
+      }
+    }
+
+    // any remaining ready-but-undone checkpoints
+    const cp = C.CHECKPOINTS.find(x => M.checkpointReady(learner, x.id) && !M.checkpointDone(learner, x.id));
+    if (cp) {
       return {
-        action: "advance",
-        reason: "You've reached at least 'independent' on all seven competencies of AI-Assisted Workflow Designer. Time to consolidate with a transfer challenge or move to the next capability.",
-        href: "#/evidence",
+        action: "checkpoint", cpId: cp.id, cpTitle: cp.title,
+        reason: `"${cp.title}" is unlocked — a combined practical assessment across ${cp.after.join(", ")}.`,
+        href: `#/checkpoint/${cp.id}`,
       };
     }
 
-    const c = learner.capabilities[cap.id];
-    const idx = levelIndex(c.state);
-    const hasEvidence = evidenceFor(learner, cap.id).length > 0;
-
-    if (idx <= 0) {
-      return {
-        action: "learn",
-        capId: cap.id, capName: cap.name,
-        reason: `${cap.id} (${cap.name}) is the next competency and you haven't started it. Begin with the short teaching.`,
-        href: `#/learn/${cap.id}`,
-      };
-    }
-    if (idx === 1) { // emerging -> needs practice
-      return {
-        action: "practise",
-        capId: cap.id, capName: cap.name,
-        reason: `You understand ${cap.name}. Now do it on a real task of your own so it produces evidence.`,
-        href: `#/practise/${cap.id}`,
-      };
-    }
-    if (idx === 2 && !hasEvidence) { // guided but no evidence recorded
-      return {
-        action: "demonstrate",
-        capId: cap.id, capName: cap.name,
-        reason: `You can do ${cap.name} with support. One clean independent attempt will record it as evidence.`,
-        href: `#/practise/${cap.id}`,
-      };
-    }
-    // guided with evidence, or anything below independent — push for the independent rep
     return {
-      action: "practise",
-      capId: cap.id, capName: cap.name,
-      reason: `Keep working ${cap.name} until you can do it independently and cleanly.`,
-      href: `#/practise/${cap.id}`,
+      action: "advance",
+      reason: "You've completed every competency, both practical checkpoints and the capstone. AI-Assisted Workflow Designer is demonstrated. Next: a transfer project or the next capability in the graph.",
+      href: "#/evidence",
     };
   }
 
-  function actionVerb(action) {
+  function actionVerb(a) {
     return {
       diagnose: "Start the diagnostic",
       learn: "Learn it",
-      practise: "Practise it",
-      demonstrate: "Demonstrate it",
+      challenge: "Start the challenge",
+      checkpoint: "Start the assessment",
       advance: "Review & advance",
-    }[action] || "Continue";
+    }[a] || "Continue";
   }
 
   return { next, actionVerb };
