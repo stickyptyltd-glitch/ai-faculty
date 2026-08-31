@@ -51,17 +51,30 @@ tasks, constraints, risks and examples of their profession — instead of stayin
 
 ## 4. Initial catalogue
 
-Each is an **academy** that starts small and grows (more capabilities, role-specific sub-tracks,
-industry variants).
+Two kinds of pathway: **using AI at work** in a specific job, and **building AI systems**
+(the technical track). Each is an **academy** that starts small and grows (more capabilities,
+role sub-tracks, industry variants).
+
+### Using AI at work
 
 | Pathway | For | Signature capabilities |
 |---|---|---|
 | **Software & Product Development** | engineers, PMs, technical founders, designers-who-build | vague ask → testable spec · driving AI to write code you can trust · reviewing AI-generated code · generating & trusting tests · shipping responsibly |
-| **Content, Marketing & Comms** | writers, marketers, founders doing their own marketing | brief → controlled draft · brand voice & consistency at scale · claim & fact checking · repurposing one asset into many · disclosure & compliance |
-| **Operations & Admin** | ops, EAs, office managers, small-business owners | mapping a process before automating it · document & data workflows · inbox / scheduling with guardrails · turning an SOP into a checked workflow · audit trails |
-| **Customer Support** | support agents, success, founders doing support | triage & routing · drafted replies with tone control · grounding answers in the knowledge base · escalation rules · handling angry and edge cases |
-| **Research & Analysis** | analysts, researchers, journalists, students | framing the question · multi-source synthesis · source verification (R0–R5) · faithful summarisation · never shipping a fabricated citation |
-| **Education & Training** | teachers, trainers, L&D, course creators | designing a learning outcome · material generation with accuracy checks · feedback & assessment support · adapting to the learner · academic-integrity boundaries |
+| **Content, Marketing & Comms** | writers, marketers, founders doing their own marketing | brief → controlled draft · brand voice at scale · claim & fact checking · repurposing responsibly · disclosure & compliance |
+| **Operations & Admin** | ops, EAs, office managers, small-business owners | map before you automate · document & data workflows · inbox / scheduling with guardrails · SOP → checked workflow · audit trails |
+| **Customer Support** | support agents, success, founders doing support | triage & routing · grounded replies · tone control · escalation rules · quality review |
+| **Research & Analysis** | analysts, researchers, journalists, students | frame the question · multi-source synthesis · source verification (R0–R5) · faithful summarisation · communicate honestly |
+| **Education & Training** | teachers, trainers, L&D, course creators | design a learning outcome · material generation with accuracy checks · feedback & assessment support · adapting to the learner · academic-integrity boundaries |
+
+### Building AI (technical track)
+
+| Pathway | For | Signature capabilities |
+|---|---|---|
+| **AI Engineering — Building with LLMs** | engineers & AI/ML engineers shipping AI features | prompting as engineering (output contracts) · retrieval / RAG · tools & function calling · evaluation · production concerns (cost, latency, injection, observability) |
+| **How AI Works — Technical Foundations** | anyone building with or deciding about AI | what a language model is (tokens, context) · embeddings · training / fine-tuning / inference · why models hallucinate · capabilities & limits |
+| **Machine Learning Practitioner** | data scientists, ML engineers, analysts moving into ML | frame the problem · data (leakage, splits) · training & model selection · evaluation & the overfitting trap · deployment & monitoring |
+| **Agentic Systems** | engineers building autonomous / multi-step AI | agent vs workflow · tools, planning & the control loop · memory & context · failure modes & recovery · human-in-the-loop & authority limits |
+| **AI Safety, Evals & Red-teaming** | safety engineers, eval authors, anyone shipping consequential AI | risk assessment · writing safety evals · red-teaming · guardrails & mitigations · governance & incident response |
 
 ## 5. How a pathway is built and approved
 
@@ -78,8 +91,7 @@ industry variants).
 | Now (app) | Next |
 |---|---|
 | Foundation module fully playable | — |
-| Pathway catalogue + selection | Recommendation from diagnostic answer B |
-| **Software & Product Development** built — S1 Ask→Spec, S2 driving trustworthy code, S3 reviewing AI code, S4 tests you can trust, S5 shipping responsibly, + capstone | — |
-| **Content, Marketing & Comms** built — M1 brief→draft, M2 brand voice at scale, M3 claim & fact checking, M4 one asset into many, + capstone | — |
-| Operations, Support, Research, Education listed as "planned" | Author them; add role sub-tracks |
+| Catalogue grouped **Using AI at work** / **Building AI**; planned pathways show their curriculum outline | Recommendation from diagnostic answer B |
+| **Built & available:** Software (S1–S5), Content (M1–M4), **AI Engineering (E1–E5)** — each with a work capstone | — |
+| **Planned (curriculum outlined):** Operations, Support, Research, Education, Technical Foundations, ML Practitioner, Agentic Systems, AI Safety | Author the lessons + challenges |
 | Founder can skip the foundation to work on pathways | Test-out-by-capstone for real learners |

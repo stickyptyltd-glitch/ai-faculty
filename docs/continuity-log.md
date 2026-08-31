@@ -79,9 +79,22 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
   full 6-step lesson + 2 challenges + quick-check, plus the CONTCAP capstone.
 - 4 pathways still "planned": Operations, Support, Research, Education.
 
+## v0.7 — 2026-09-01 — Technical track: more pathways + AI Engineering built
+
+- Founder wants more technical AI knowledge in the programs, and more pathways.
+- Catalogue is now grouped: **Using AI at work** and **Building AI** (technical track).
+  Planned pathways display their **curriculum outline** so the depth is visible before authoring.
+- **AI Engineering — Building with LLMs** built (available): E1 prompting as engineering
+  (output contracts), E2 retrieval/RAG, E3 tools & function calling, E4 evaluation,
+  E5 production concerns (cost, latency, prompt injection, observability) — full 6-step lessons
+  + challenges + quick-checks, plus the ENGCAP capstone.
+- Four new technical pathways outlined: How AI Works (Technical Foundations), Machine Learning
+  Practitioner, Agentic Systems, AI Safety/Evals/Red-teaming.
+- Total catalogue: 11 pathways — 3 built (Software, Content, AI Engineering), 8 outlined.
+
 ## Open threads
+- **Author the outlined pathways** — 8 remaining, curriculum defined.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
-- **Fill the remaining pathways** — Operations, Support, Research, Education (structure ready).
 - **Diagnostic → pathway recommendation** from answer B.
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.

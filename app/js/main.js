@@ -636,9 +636,10 @@
 
   function viewPathwayCatalogue(learner) {
     const fDone = M.foundationDone(learner);
-    const cards = C.PATHWAYS.map(p => {
+    const card = p => {
       const chosen = learner.pathway === p.id;
       const avail = p.status === "available";
+      const nComp = p.competencies.length || (p.outline ? p.outline.length : 0);
       const badge = chosen ? `<span class="pill pill--independent">Your pathway</span>`
         : avail ? `<span class="pill pill--guided">Available</span>`
         : `<span class="pill pill--unknown">Planned</span>`;
@@ -646,29 +647,33 @@
         ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Open</a>`
         : (avail && fDone)
           ? `<a class="btn btn--sm" data-nav href="#/pathway/${p.id}">View &amp; choose</a>`
-          : avail
-            ? `<span class="hint">Finish the foundation first</span>`
-            : `<span class="hint">Coming soon</span>`;
+          : `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">See the curriculum</a>`;
       return `<div class="card">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:6px">
           <strong style="font-size:15px">${esc(p.title)}</strong>${badge}
         </div>
         <p style="margin:0 0 6px">${esc(p.tagline)}</p>
-        <p class="hint" style="margin:0 0 10px">For: ${esc(p.forRoles)}</p>
+        <p class="hint" style="margin:0 0 10px">For: ${esc(p.forRoles)}${nComp ? ` · ${nComp} capabilities` : ""}</p>
         ${action}
       </div>`;
-    }).join("");
+    };
+    const group = (g, title, blurb) => `
+      <h2>${esc(title)}</h2>
+      <p class="hint" style="margin-top:-4px">${esc(blurb)}</p>
+      ${C.PATHWAYS.filter(p => p.group === g).map(card).join("")}`;
 
     return `
-      <h1>Work pathways</h1>
-      <p class="lead">After the foundation, a pathway takes the same skills into the real tasks,
-      constraints and risks of your job. You can take more than one. (See docs/09-work-pathways.md.)</p>
+      <h1>Pathways</h1>
+      <p class="lead">After the foundation, a pathway goes deep in one direction. Two kinds:
+      using AI well in a specific job, and building AI systems. You can take more than one.
+      (See docs/09-work-pathways.md.)</p>
       ${!fDone ? `<div class="card next" style="margin-bottom:14px">
-        <p style="margin:0 0 10px">You're still in the foundation module. You can finish it, or —
-        as the founder building this — skip ahead to work on pathways now.</p>
+        <p style="margin:0 0 10px">You're still in the foundation module. Finish it, or —
+        as the founder building this — skip ahead now.</p>
         <button class="btn btn--ghost btn--sm" data-action="skip-foundation">Skip foundation (founder)</button>
       </div>` : ""}
-      ${cards}`;
+      ${group("work", "Using AI at work", "Take the foundation skills into the real tasks of your role.")}
+      ${group("build", "Building AI", "The technical track — how models work, and how to build systems on them.")}`;
   }
 
   function viewPathwayOverview(learner, parts) {
@@ -702,7 +707,17 @@
                  <button class="btn" type="submit">Choose ${esc(p.title)}</button></form>`
             : `<div class="notice" style="margin-top:16px">Finish the foundation module to start a pathway
                  (or use the founder skip on the <a data-nav href="#/pathways">pathways page</a>).</div>`}
-      ` : `<div class="notice">This pathway is planned — the capabilities and content are being authored.
+      ` : p.outline ? `
+        <div class="notice" style="margin-bottom:14px">Planned pathway — this is the curriculum;
+        the lessons and challenges are being authored.</div>
+        <h2>Planned capabilities</h2>
+        <div class="caplist">${p.outline.map(c => `
+          <div class="caprow" style="opacity:.85">
+            <span class="caprow__id">${esc(c.id)}</span>
+            <span class="caprow__name">${esc(c.name)}
+              <span style="color:var(--text-dim);font-size:12px">— ${esc(c.canDo)}</span></span>
+          </div>`).join("")}</div>
+      ` : `<div class="notice">This pathway is planned — content being authored.
         <a data-nav href="#/pathways">Back to pathways</a>.</div>`}
     `;
   }
@@ -753,9 +768,9 @@
           6-step lesson — story → idea → played worked example → the moves → quick-check MCQs → guided
           attempt — then 2–3 rubric-assessed challenges on your own task</li>
         <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
-        <li><strong>Work pathways</strong> — after the foundation, pick a profession-specific track.
-          <strong>Software &amp; Product Development</strong> (S1–S5) and <strong>Content, Marketing &amp; Comms</strong>
-          (M1–M4) are built, each with a work capstone; four more are planned</li>
+        <li><strong>Pathways</strong> — after the foundation, go deep. Two kinds: <em>using AI at work</em>
+          (Software S1–S5, Content M1–M4) and <em>building AI</em> (AI Engineering E1–E5). Each built
+          pathway has a work capstone; 8 more pathways are outlined with their curriculum visible</li>
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
