@@ -44,8 +44,13 @@ body {
 .topbar__brand {
   background: none; border: 0; color: var(--text);
   font-size: 17px; font-weight: 700; letter-spacing: 0.2px;
+  flex: 0 0 auto;
 }
-.topbar__nav { display: flex; gap: 14px; flex: 1; flex-wrap: wrap; }
+.topbar__nav { display: flex; gap: 16px; flex-wrap: wrap; }
+@media (max-width: 460px) {
+  .topbar { gap: 8px 14px; }
+  .topbar__brand { flex-basis: 100%; }
+}
 .topbar__nav a {
   color: var(--text-dim); text-decoration: none; font-size: 14px; font-weight: 600;
   padding: 4px 0;
