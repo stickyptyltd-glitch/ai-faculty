@@ -92,8 +92,17 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
   Practitioner, Agentic Systems, AI Safety/Evals/Red-teaming.
 - Total catalogue: 11 pathways — 3 built (Software, Content, AI Engineering), 8 outlined.
 
+## v0.8 — 2026-09-01 — Technical Foundations pathway built
+
+- **How AI Works — Technical Foundations** built (available): F1 what a language model is
+  (tokens, next-token prediction, context window, no memory), F2 embeddings & vectors,
+  F3 training vs fine-tuning vs inference (and when NOT to fine-tune), F4 why models hallucinate,
+  F5 capabilities & limits (maths/recency/recall/lost-in-the-middle → tools & structure) —
+  full 6-step lessons + challenges + quick-checks, plus the FNDCAP capstone.
+- 4 pathways now built (Software, Content, AI Engineering, Technical Foundations); 7 outlined.
+
 ## Open threads
-- **Author the outlined pathways** — 8 remaining, curriculum defined.
+- **Author the 7 outlined pathways** — curriculum defined for each.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
 
