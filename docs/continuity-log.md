@@ -39,7 +39,25 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
   to them, and a project becomes "Demonstrated" once evidence spans all seven competencies. New
   Projects view; evidence portfolio grouped by project; Applications panel on the progress view.
 
+## v0.4 — 2026-09-01 — Real lessons, clearer tasks, visual play-through
+
+- Founder feedback: "be clearer about what to do; it must actually teach, not just set
+  unclear tasks; the point is rapid learning via a great curriculum and real-world examples;
+  short visual clips would help."
+- Every competency (C1–C7) rebuilt as a **5-step lesson**: Why it matters (a real story of the
+  skill failing) → The idea (model + boxed key idea) → **Watch it done** (a worked real-world
+  example with the thinking shown) → The moves → **Your turn, guided** (supported attempt on a
+  provided task, model answer shown next to the learner's, field by field). Challenges only open
+  after the lesson.
+- Every challenge/checkpoint now leads with a **"what a strong answer looks like"** panel and the
+  worked example one click away. Field hints rewritten with concrete "e.g." examples.
+- **Visual learning aid:** "Watch it done" has a ▶ play-through that reveals the worked example
+  step by step on a timer with a progress bar (a lightweight stand-in for real short video clips,
+  which are a later production asset).
+
 ## Open threads
+- **Short video clips** — real filmed/animated clips per lesson are a future production asset;
+  the SVG/CSS play-through is the interim.
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.
 - Faculty role full specs (mission/scope/boundaries/…) still to be written.

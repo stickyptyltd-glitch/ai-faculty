@@ -178,3 +178,16 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
 .stepline span.now { background: var(--accent); color: #fff; }
 
 .notice { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text-dim); font-size: 14px; }
+
+/* "watch it done" play-through — a lightweight visual clip */
+.demo__bar { height: 4px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
+.demo__bar > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s ease; }
+.demo-step { transition: opacity .45s ease, transform .45s ease; }
+.demo.playing .demo-step { opacity: 0; transform: translateY(10px); }
+.demo.playing .demo-step.reveal { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .demo-step { transition: none; }
+  .demo.playing .demo-step { opacity: 1; transform: none; }
+}
+details.card summary { list-style: revert; }
+details.card summary::-webkit-details-marker { display: revert; }

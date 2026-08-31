@@ -71,6 +71,30 @@
 
   function handleAction(e) {
     const el = e.currentTarget;
+
+    if (el.dataset.action === "demo-all") {
+      const demo = el.closest(".demo");
+      demo.classList.remove("playing");
+      demo.querySelectorAll(".demo-step").forEach(s => s.classList.add("reveal"));
+      setDemoBar(demo, 1);
+      return;
+    }
+    if (el.dataset.action === "demo-play") {
+      const demo = el.closest(".demo");
+      const steps = [...demo.querySelectorAll(".demo-step")];
+      el.disabled = true;
+      demo.classList.add("playing");
+      steps.forEach(s => s.classList.remove("reveal"));
+      setDemoBar(demo, 0);
+      steps.forEach((s, i) => setTimeout(() => {
+        s.classList.add("reveal");
+        s.scrollIntoView({ block: "center", behavior: "smooth" });
+        setDemoBar(demo, (i + 1) / steps.length);
+        if (i === steps.length - 1) el.disabled = false;
+      }, i * 2200));
+      return;
+    }
+
     if (el.dataset.action === "lesson-done") {
       const capId = el.dataset.cap;
       window.STORE.update(l => M.markTaught(l, capId));
@@ -311,18 +335,27 @@
 
     if (stepKey === "demonstrate") {
       const d = L.demonstrate;
-      const steps = d.steps.map(s => `
-        <div class="card card--tight">
-          <div class="card__label">${esc(s.move)}</div>
+      const steps = d.steps.map((s, i) => `
+        <div class="card card--tight demo-step" data-i="${i}">
+          <div class="card__label">Step ${i + 1} · ${esc(s.move)}</div>
           <p style="margin:6px 0"><em>Thinking:</em> ${esc(s.think)}</p>
           <p style="margin:0"><strong>→ ${esc(s.result)}</strong></p>
         </div>`).join("");
       return `${header}
         <h1>Watch it done</h1>
         <p class="lead">${esc(d.task)}</p>
-        ${steps}
-        <div class="card next"><div class="card__label">The finished result</div>
-          <p style="margin:0">${esc(d.full)}</p></div>
+        <div class="demo" data-count="${d.steps.length}">
+          <div class="demo__bar"><span></span></div>
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <button class="btn btn--sm" data-action="demo-play">▶ Play the example</button>
+            <button class="btn btn--ghost btn--sm" data-action="demo-all">Show all steps</button>
+          </div>
+          ${steps}
+          <div class="card next demo-step" data-i="${d.steps.length}">
+            <div class="card__label">The finished result</div>
+            <p style="margin:0">${esc(d.full)}</p>
+          </div>
+        </div>
         ${nav()}`;
     }
 
@@ -359,6 +392,10 @@
   }
 
   function mdBold(s) { return s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>"); }
+  function setDemoBar(demo, frac) {
+    const bar = demo.querySelector(".demo__bar > span");
+    if (bar) bar.style.width = Math.round(frac * 100) + "%";
+  }
 
   function viewCompetency(learner, parts) {
     const capId = parts[1];
