@@ -29,6 +29,16 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
 - Faculty responses are authored content for now, behind a `faculty.js` seam that a model/Control
   Plane can replace later.
 
+## v0.3 — 2026-09-01 — Practical assessment model + Applied Projects
+
+- `docs/08-assessment-model.md` — practical assessment & applications model.
+- App: **banded rubric scoring** (Not yet / Developing / Meets / Exceeds) replacing binary pass/fail.
+- App: **Assessment Resolution Protocol** surfaced — checkpoints offer an independent second
+  assessment at a stricter bar; evidence records whether assessors 1 + 2 agreed.
+- App: **Applied Projects** — learners register real projects, attach challenge/checkpoint evidence
+  to them, and a project becomes "Demonstrated" once evidence spans all seven competencies. New
+  Projects view; evidence portfolio grouped by project; Applications panel on the progress view.
+
 ## Open threads
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.

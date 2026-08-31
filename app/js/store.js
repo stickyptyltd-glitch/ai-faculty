@@ -17,6 +17,7 @@ window.STORE = (function () {
       intake: null,          // filled by the diagnostic
       track: null,           // personal | professional | mixed
       capabilities: caps,
+      projects: [],          // { id, name, context, goal, createdAt } — Applied Projects
       challenges: {},        // { "C1.1": { completedAt, evidenceId } }
       checkpoints: {},       // { "CP1": { completedAt, evidenceId } }
       evidence: [],          // { id, capId, kind, fields, feedback, confidence, createdAt }
@@ -51,6 +52,7 @@ window.STORE = (function () {
     // forward-compatible defaults for records saved by an earlier version
     if (!l.challenges) l.challenges = {};
     if (!l.checkpoints) l.checkpoints = {};
+    if (!l.projects) l.projects = [];
     return l;
   }
 

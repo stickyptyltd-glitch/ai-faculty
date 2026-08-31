@@ -20,11 +20,17 @@ for `localStorage`.)
 
 - **Diagnostic** intake → sets your track (Personal / Professional / Mixed) and seeds the Learner
   Intelligence Model.
-- **Pathway Engine** computes your next best action on every screen.
-- **Teach → Practise → Evidence → Mastery** loop for all seven competencies (C1 has full authored
-  teaching; C2–C7 have condensed teaching + a real practice task).
-- **Assessment Faculty** gives transparent, rubric-based formative feedback — no hidden score.
-- **Evidence portfolio** records every confirmed practice attempt.
+- **Pathway Engine** computes your next best action, interleaving teaching, challenges and assessments.
+- **Practical challenges throughout** — each competency has 2–3 gated challenges up the difficulty
+  ladder, in three types: structured task, critique (find the flaws), scenario + justify.
+- **Checkpoints** — CP1 (combined workflow design, C1–C3) and CP2 (full build/test/improve capstone),
+  scored against the mastery rubric.
+- **Banded rubric** — Not yet / Developing / Meets / Exceeds, with transparent per-dimension feedback.
+- **Assessment Resolution Protocol** — checkpoints offer an independent second assessment at a
+  stricter bar before you confirm.
+- **Applied Projects** — register a real project, attach your challenge/checkpoint work to it, and it
+  becomes "Demonstrated" once your evidence covers all seven competencies.
+- **Evidence portfolio** — grouped by project.
 - **Progress view** — 8 panels, capability states, no fake "% complete".
 - **Reset learner** (footer) clears everything on this device.
 

@@ -20,30 +20,60 @@ window.FACULTY = (function () {
   }
 
   // ---- helpers -------------------------------------------------------
-  function fieldReport(f, val) {
+  const BANDS = ["Not yet", "Developing", "Meets", "Exceeds"];
+  const bandIndex = b => BANDS.indexOf(b);
+
+  // Band one field's answer. `strict` = the second, independent assessment (higher bar).
+  function fieldBand(f, val, strict) {
+    if (!val || !val.trim() || placeholderish(val)) return "Not yet";
     const n = wc(val);
-    const ok = n >= f.minWords && !placeholderish(val);
-    let note;
-    if (!val || !val.trim()) note = "Not answered yet.";
-    else if (placeholderish(val)) note = "This reads as a placeholder — this field matters, give it a real answer.";
-    else if (n < f.minWords) note = `Only ${n} word${n === 1 ? "" : "s"}. Say more — aim for at least ${f.minWords}. ${f.hint || ""}`.trim();
-    else note = "Clear enough to work with.";
-    return { key: f.key, label: f.label, ok, note };
+    const min = strict ? Math.ceil(f.minWords * 1.4) : f.minWords;
+    if (n < min) return "Developing";
+    const specific =
+      /\d/.test(val) ||
+      /\b(because|so that|trade-?off|instead of|whereas|rather than|in order to)\b/i.test(val) ||
+      /\b(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b/.test(val) ||
+      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(val);
+    if (n >= min * 2 && specific) return "Exceeds";
+    if (strict && !specific) return "Developing";
+    return "Meets";
   }
 
-  function verdictFrom(okCount, total, kind) {
-    if (okCount === total) {
-      return { verdict: "ready", confidence: "medium",
+  function fieldReport(f, val, strict) {
+    const b = fieldBand(f, val, strict);
+    const n = wc(val);
+    let note;
+    if (b === "Not yet") note = !val || !val.trim() ? "Not answered yet." : "Reads as a placeholder — give this a real answer.";
+    else if (b === "Developing") note = `Too thin${strict ? " for an independent pass" : ""}. ${f.hint || ""}`.trim() + (n ? ` (${n} words)` : "");
+    else if (b === "Meets") note = "Concrete and usable.";
+    else note = "Specific and well-reasoned — names, numbers or trade-offs are explicit.";
+    return { key: f.key, label: f.label, band: b, ok: bandIndex(b) >= 2, note };
+  }
+
+  // Derive a verdict from a set of banded reports.
+  function verdictFromBands(reports, kind, strict) {
+    const idx = reports.map(r => bandIndex(r.band));
+    const allMeet = idx.every(i => i >= 2);
+    const noDeveloping = idx.every(i => i >= 2);
+    const majorityPresent = idx.filter(i => i >= 1).length >= Math.ceil(reports.length * 0.6);
+    const ready = strict ? (allMeet && noDeveloping && idx.some(i => i >= 3)) : allMeet;
+
+    if (ready) {
+      return { verdict: "ready", confidence: strict ? "high" : "medium",
         summary: kind === "checkpoint"
-          ? "This holds together as a whole workflow. It records as evidence against the mastery rubric. Read the rubric check, then confirm to save it."
-          : "Complete and concrete. It records as evidence for this challenge. Read the rubric check below, then confirm to save it." };
+          ? (strict
+              ? "Second assessment agrees: this meets the mastery rubric on every dimension, specifically. Confirm to record it."
+              : "This holds together as a whole workflow and meets the rubric. You can confirm now, or request an independent second assessment.")
+          : "Every rubric dimension is met. Records as evidence for this challenge — confirm below." };
     }
-    if (okCount >= Math.ceil(total * 0.6)) {
+    if (majorityPresent) {
       return { verdict: "revise", confidence: "low",
-        summary: "You're close. The pieces are here but some are too thin to verify or build on later. Fill the gaps flagged below and resubmit." };
+        summary: strict
+          ? "The second assessor wants more here — the dimensions marked below are present but not specific enough for a mastery pass. Add detail and resubmit."
+          : "You're close. The dimensions marked below are too thin to verify or build on. Fill them in and resubmit." };
     }
     return { verdict: "more", confidence: "low",
-      summary: "Not enough here yet. Go back to the teaching, then try again on a real task — vague answers here always cost you later in testing and improvement." };
+      summary: "Not enough here yet. Go back to the teaching, then try again on a real task." };
   }
 
   // ---- Assessment Faculty (formative) -------------------------------
@@ -53,10 +83,13 @@ window.FACULTY = (function () {
     if (!ch) return null;
 
     if (ch.type === "fields") {
-      const reports = ch.fields.map(f => fieldReport(f, submission[f.key]));
-      const okCount = reports.filter(r => r.ok).length;
-      const v = verdictFrom(okCount, reports.length, "challenge");
-      const rubric = ch.rubric.map((item, i) => ({ label: item.label, ok: reports[i] ? reports[i].ok : okCount === reports.length }));
+      const reports = ch.fields.map(f => fieldReport(f, submission[f.key], false));
+      const v = verdictFromBands(reports, "challenge", false);
+      const rubric = ch.rubric.map((item, i) => ({
+        label: item.label,
+        band: reports[i] ? reports[i].band : "Meets",
+        ok: reports[i] ? reports[i].ok : true,
+      }));
       return { ...v, kind: "fields", stateTarget: v.verdict === "ready" ? ch.raises : (v.verdict === "revise" ? "guided" : "emerging"),
                fieldReports: reports, rubric };
     }
@@ -76,12 +109,10 @@ window.FACULTY = (function () {
           ? `Say more — at least ${ch.ask.minWords} words, working through each problem.`
           : `You identified ${caught} of ${ch.expected.length} problems. ${caught < ch.expected.length ? "Look again at the unticked items below." : "All of them — good."}`,
       }];
-      const okAll = reports[0].ok;
-      const v = verdictFrom(caught, ch.expected.length, "challenge");
-      // enough words but few catches => "more"; good catches => ready
-      const verdict = !enough ? "more" : (caught >= ch.expected.length - 0 ? "ready"
-                        : caught >= Math.ceil(ch.expected.length * 0.75) ? "ready"
-                        : caught >= Math.ceil(ch.expected.length * 0.5) ? "revise" : "more");
+      // enough words but few catches => "more"; most catches => ready
+      const verdict = !enough ? "more"
+        : caught >= Math.ceil(ch.expected.length * 0.75) ? "ready"
+        : caught >= Math.ceil(ch.expected.length * 0.5) ? "revise" : "more";
       return {
         verdict,
         confidence: verdict === "ready" ? "medium" : "low",
@@ -130,20 +161,23 @@ window.FACULTY = (function () {
   }
 
   // ---- Assessment Faculty — checkpoint (mastery-rubric) -------------
-  function assessCheckpoint(cpId, submission) {
+  // pass strict:true for the independent second assessment (Assessment Resolution Protocol).
+  function assessCheckpoint(cpId, submission, strict) {
     const cp = C.checkpoint(cpId);
     if (!cp) return null;
-    const reports = cp.fields.map(f => fieldReport(f, submission[f.key]));
-    const okCount = reports.filter(r => r.ok).length;
-    const v = verdictFrom(okCount, reports.length, "checkpoint");
-    // map rubric dimensions onto field adequacy (best-effort, transparent)
-    const rubric = cp.rubricDims.map((dim, i) => ({
-      label: dim,
-      ok: reports[i] ? reports[i].ok : okCount === reports.length,
-    }));
+    const reports = cp.fields.map(f => fieldReport(f, submission[f.key], !!strict));
+    const v = verdictFromBands(reports, "checkpoint", !!strict);
+    // map rubric dimensions onto field bands; dimensions beyond the field count
+    // inherit the weakest band observed (transparent, conservative).
+    const minBand = BANDS[Math.min(...reports.map(r => bandIndex(r.band)))];
+    const rubric = cp.rubricDims.map((dim, i) => {
+      const b = reports[i] ? reports[i].band : minBand;
+      return { label: dim, band: b, ok: bandIndex(b) >= 2 };
+    });
     return {
       ...v,
       kind: "checkpoint",
+      assessor: strict ? 2 : 1,
       stateTarget: v.verdict === "ready" ? cp.raisesTo : (v.verdict === "revise" ? "independent" : "guided"),
       fieldReports: reports,
       rubric,

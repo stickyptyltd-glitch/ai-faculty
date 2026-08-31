@@ -81,6 +81,20 @@ window.PROGRESS = (function () {
       <h2>Practical assessments</h2>
       <div class="caplist">${cpRows}</div>
 
+      <h2>Applied Projects</h2>
+      ${(learner.projects && learner.projects.length)
+        ? `<div class="caplist">` + learner.projects.map(p => {
+            const cov = M.projectCoverage(learner, p.id).length;
+            const done = M.projectDemonstrated(learner, p.id);
+            return `<a class="caprow" data-nav href="#/projects">
+              <span class="caprow__id">▷</span>
+              <span class="caprow__name">${esc(p.name)}
+                <span style="color:var(--text-dim);font-size:12px">· ${cov}/7 covered</span></span>
+              ${pill(done ? "independent" : "guided", done ? "Demonstrated" : "In progress")}
+            </a>`;
+          }).join("") + `</div>`
+        : `<div class="notice">Register a real task to apply the course to — <a data-nav href="#/projects">add a project</a>.</div>`}
+
       <h2>Pathway</h2>
       <a class="btn btn--ghost" data-nav href="#/pathway">See the 10-stage pathway</a>
     `;

@@ -76,6 +76,32 @@ window.MODEL = (function () {
     learner.checkpoints[cpId] = { completedAt: new Date().toISOString(), evidenceId };
   }
 
+  // ---- applied projects -----------------------------------------
+  function addProject(learner, name, context, goal) {
+    const p = { id: "pr_" + Date.now().toString(36), name, context, goal, createdAt: new Date().toISOString() };
+    if (!learner.projects) learner.projects = [];
+    learner.projects.push(p);
+    return p;
+  }
+  function project(learner, id) {
+    return (learner.projects || []).find(p => p.id === id) || null;
+  }
+  function evidenceForProject(learner, projectId) {
+    return learner.evidence.filter(e => e.projectId === projectId);
+  }
+  // which competencies have at least one confirmed evidence record against this project
+  function projectCoverage(learner, projectId) {
+    const caps = new Set();
+    evidenceForProject(learner, projectId).forEach(e => {
+      if (e.kind === "checkpoint" && e.checkpointId === "CP2") COMPETENCIES.forEach(c => caps.add(c.id));
+      else if (e.capId) caps.add(e.capId);
+    });
+    return COMPETENCIES.map(c => c.id).filter(id => caps.has(id));
+  }
+  function projectDemonstrated(learner, projectId) {
+    return projectCoverage(learner, projectId).length === COMPETENCIES.length;
+  }
+
   // ---- rollups --------------------------------------------------
   function overallPct(learner) {
     const vals = COMPETENCIES.map(c => levelIndex(learner.capabilities[c.id].state));
@@ -111,6 +137,7 @@ window.MODEL = (function () {
     levelIndex, levelLabel, raise, markTaught, addEvidence, evidenceFor,
     challengeDone, nextChallenge, challengeProgress, competencyComplete, markChallengeDone,
     checkpointDone, checkpointReady, markCheckpointDone,
+    addProject, project, evidenceForProject, projectCoverage, projectDemonstrated,
     overallPct, isDiagnosed, allComplete, summary,
   };
 })();
