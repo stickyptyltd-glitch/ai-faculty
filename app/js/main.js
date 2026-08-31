@@ -754,7 +754,8 @@
           attempt — then 2–3 rubric-assessed challenges on your own task</li>
         <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
         <li><strong>Work pathways</strong> — after the foundation, pick a profession-specific track.
-          <strong>Software &amp; Product Development</strong> is built (S1–S4 + work capstone); five more are planned</li>
+          <strong>Software &amp; Product Development</strong> (S1–S5) and <strong>Content, Marketing &amp; Comms</strong>
+          (M1–M4) are built, each with a work capstone; four more are planned</li>
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics

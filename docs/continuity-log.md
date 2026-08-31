@@ -70,10 +70,19 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
 - App: **Quick-check** lesson step — 2 MCQs per competency, instant why-feedback, not gated.
   Lesson step chips now have icons. Play-through visual retained.
 
+## v0.6 — 2026-09-01 — Software S5 + Content pathway built
+
+- **Software** pathway completed: added **S5 — Shipping responsibly** (human gates, flags,
+  tested rollback, what AI must not decide). SWCAP capstone now spans S1–S5.
+- **Content, Marketing & Comms** pathway built and marked available: M1 brief→controlled draft,
+  M2 brand voice at scale, M3 claim & fact checking, M4 one asset into many responsibly — each a
+  full 6-step lesson + 2 challenges + quick-check, plus the CONTCAP capstone.
+- 4 pathways still "planned": Operations, Support, Research, Education.
+
 ## Open threads
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
-- **Fill the other pathways** — Content, Operations, Support, Research, Education (structure ready).
-- **Finish Software S5** ("shipping responsibly") — currently folded into the capstone.
+- **Fill the remaining pathways** — Operations, Support, Research, Education (structure ready).
+- **Diagnostic → pathway recommendation** from answer B.
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.
 - Faculty role full specs (mission/scope/boundaries/…) still to be written.

@@ -79,6 +79,7 @@ industry variants).
 |---|---|
 | Foundation module fully playable | — |
 | Pathway catalogue + selection | Recommendation from diagnostic answer B |
-| **Software & Product Development** built (S1–S4 + capstone) | Fill S5; build Content and Operations |
-| Other 5 pathways listed as "planned" | Author them; add role sub-tracks |
+| **Software & Product Development** built — S1 Ask→Spec, S2 driving trustworthy code, S3 reviewing AI code, S4 tests you can trust, S5 shipping responsibly, + capstone | — |
+| **Content, Marketing & Comms** built — M1 brief→draft, M2 brand voice at scale, M3 claim & fact checking, M4 one asset into many, + capstone | — |
+| Operations, Support, Research, Education listed as "planned" | Author them; add role sub-tracks |
 | Founder can skip the foundation to work on pathways | Test-out-by-capstone for real learners |
