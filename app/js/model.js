@@ -2,7 +2,9 @@
  * A living capability model, not a static profile. See docs/04-learning-engine.md.
  */
 window.MODEL = (function () {
-  const { LEVEL_ORDER, LEVELS, COMPETENCIES, CHECKPOINTS } = window.CONTENT;
+  const C = window.CONTENT;
+  const { LEVEL_ORDER, LEVELS } = C;
+  const comp = id => C.competency(id);
 
   function levelIndex(state) {
     const i = LEVEL_ORDER.indexOf(state);
@@ -43,12 +45,12 @@ window.MODEL = (function () {
     return !!(learner.challenges && learner.challenges[chId]);
   }
   function nextChallenge(learner, capId) {
-    const c = COMPETENCIES.find(x => x.id === capId);
+    const c = comp(capId);
     if (!c) return null;
     return c.challenges.find(ch => !challengeDone(learner, ch.id)) || null;
   }
   function challengeProgress(learner, capId) {
-    const c = COMPETENCIES.find(x => x.id === capId);
+    const c = comp(capId);
     if (!c) return { done: 0, total: 0 };
     const done = c.challenges.filter(ch => challengeDone(learner, ch.id)).length;
     return { done, total: c.challenges.length };
@@ -67,7 +69,7 @@ window.MODEL = (function () {
     return !!(learner.checkpoints && learner.checkpoints[cpId]);
   }
   function checkpointReady(learner, cpId) {
-    const cp = CHECKPOINTS.find(x => x.id === cpId);
+    const cp = C.checkpoint(cpId);
     if (!cp) return false;
     return cp.after.every(capId => competencyComplete(learner, capId));
   }
@@ -89,35 +91,47 @@ window.MODEL = (function () {
   function evidenceForProject(learner, projectId) {
     return learner.evidence.filter(e => e.projectId === projectId);
   }
-  // which competencies have at least one confirmed evidence record against this project
-  function projectCoverage(learner, projectId) {
-    const caps = new Set();
+  // which of a module's competencies have a confirmed evidence record against this project
+  function projectCoverage(learner, projectId, moduleId) {
+    const caps = C.competenciesFor(moduleId || "foundation");
+    const seen = new Set();
     evidenceForProject(learner, projectId).forEach(e => {
-      if (e.kind === "checkpoint" && e.checkpointId === "CP2") COMPETENCIES.forEach(c => caps.add(c.id));
-      else if (e.capId) caps.add(e.capId);
+      if (e.kind === "checkpoint") {
+        const cp = C.checkpoint(e.checkpointId);
+        if (cp) cp.after.forEach(id => seen.add(id));
+      } else if (e.capId) seen.add(e.capId);
     });
-    return COMPETENCIES.map(c => c.id).filter(id => caps.has(id));
+    return caps.map(c => c.id).filter(id => seen.has(id));
   }
-  function projectDemonstrated(learner, projectId) {
-    return projectCoverage(learner, projectId).length === COMPETENCIES.length;
+  function projectDemonstrated(learner, projectId, moduleId) {
+    const total = C.competenciesFor(moduleId || "foundation").length;
+    return total > 0 && projectCoverage(learner, projectId, moduleId).length === total;
   }
 
-  // ---- rollups --------------------------------------------------
-  function overallPct(learner) {
-    const vals = COMPETENCIES.map(c => levelIndex(learner.capabilities[c.id].state));
+  // ---- module rollups -----------------------------------------
+  function moduleComplete(learner, moduleId) {
+    const caps = C.competenciesFor(moduleId);
+    const cps = C.checkpointsFor(moduleId);
+    return caps.length > 0 &&
+      caps.every(c => competencyComplete(learner, c.id)) &&
+      cps.every(cp => checkpointDone(learner, cp.id));
+  }
+  function overallPct(learner, moduleId) {
+    const caps = C.competenciesFor(moduleId || "foundation");
+    if (!caps.length) return 0;
+    const vals = caps.map(c => levelIndex(learner.capabilities[c.id].state));
     const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
     return Math.round((mean / (LEVELS.length - 1)) * 100);
   }
   function isDiagnosed(learner) {
     return !!learner.intake && !!learner.track;
   }
-  function allComplete(learner) {
-    return COMPETENCIES.every(c => competencyComplete(learner, c.id)) &&
-           CHECKPOINTS.every(cp => checkpointDone(learner, cp.id));
+  function foundationDone(learner) {
+    return learner.foundationSkipped || moduleComplete(learner, "foundation");
   }
 
-  function summary(learner) {
-    return COMPETENCIES.map(c => {
+  function summary(learner, moduleId) {
+    return C.competenciesFor(moduleId || "foundation").map(c => {
       const p = challengeProgress(learner, c.id);
       return {
         id: c.id,
@@ -138,6 +152,6 @@ window.MODEL = (function () {
     challengeDone, nextChallenge, challengeProgress, competencyComplete, markChallengeDone,
     checkpointDone, checkpointReady, markCheckpointDone,
     addProject, project, evidenceForProject, projectCoverage, projectDemonstrated,
-    overallPct, isDiagnosed, allComplete, summary,
+    moduleComplete, overallPct, isDiagnosed, foundationDone, summary,
   };
 })();

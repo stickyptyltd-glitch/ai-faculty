@@ -21,6 +21,7 @@ full absorbed architecture, and [app/](app/) for the working prototype.
 | [06-faculty-growth-and-compensation.md](docs/06-faculty-growth-and-compensation.md) | Growth ladder + pay firewall |
 | [07-research-protocol.md](docs/07-research-protocol.md) | Multi-source research, R0–R5 |
 | [08-assessment-model.md](docs/08-assessment-model.md) | Practical challenges, checkpoints, Applied Projects |
+| [09-work-pathways.md](docs/09-work-pathways.md) | Profession-specific tracks after the foundation |
 | [roadmap.md](docs/roadmap.md) · [continuity-log.md](docs/continuity-log.md) | Plan + change history |
 
 ## Run the app

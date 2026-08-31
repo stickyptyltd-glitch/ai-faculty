@@ -6,7 +6,7 @@ window.STORE = (function () {
 
   function blankLearner() {
     const caps = {};
-    window.CONTENT.COMPETENCIES.forEach(c => {
+    window.CONTENT.allCompetencies().forEach(c => {
       caps[c.id] = { state: "unknown", confidence: "low", taughtAt: null };
     });
     const now = new Date().toISOString();
@@ -16,6 +16,9 @@ window.STORE = (function () {
       updatedAt: now,
       intake: null,          // filled by the diagnostic
       track: null,           // personal | professional | mixed
+      module: "foundation",  // "foundation" | <pathwayId> — what the learner is working now
+      pathway: null,         // chosen work pathway id (once foundation is done)
+      foundationSkipped: false,
       capabilities: caps,
       projects: [],          // { id, name, context, goal, createdAt } — Applied Projects
       challenges: {},        // { "C1.1": { completedAt, evidenceId } }
@@ -53,6 +56,13 @@ window.STORE = (function () {
     if (!l.challenges) l.challenges = {};
     if (!l.checkpoints) l.checkpoints = {};
     if (!l.projects) l.projects = [];
+    if (!l.module) l.module = "foundation";
+    if (l.pathway === undefined) l.pathway = null;
+    if (l.foundationSkipped === undefined) l.foundationSkipped = false;
+    // add capability slots for any competency not seen before (e.g. new pathway)
+    window.CONTENT.allCompetencies().forEach(c => {
+      if (!l.capabilities[c.id]) l.capabilities[c.id] = { state: "unknown", confidence: "low", taughtAt: null };
+    });
     return l;
   }
 

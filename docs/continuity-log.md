@@ -55,9 +55,25 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
   step by step on a timer with a progress bar (a lightweight stand-in for real short video clips,
   which are a later production asset).
 
+## v0.5 — 2026-09-01 — Work Pathways + quick-check MCQs + jazz
+
+- Founder feedback: "jazz it up, more visual aids, more multiple-choice questions — and I want to
+  skip to the end of the foundation and start on specific work pathways."
+- `docs/09-work-pathways.md` — the Work Pathways model: foundation → profession-specific tracks,
+  catalogue of 6, how they're built and approved.
+- App: **Work Pathways** — catalogue at `#/pathways`, per-pathway overview, "choose", and a
+  **founder skip** for the foundation module. Progress view now shows Foundation module + Work
+  Pathway sections. Model + Pathway Engine are module-aware.
+- App: **Software & Product Development** pathway built — S1 Ask→Spec, S2 driving trustworthy code,
+  S3 reviewing AI code, S4 tests you can trust — each a full lesson + 2 challenges + quick-check,
+  plus the SWCAP work capstone. The other 5 pathways are listed as "planned".
+- App: **Quick-check** lesson step — 2 MCQs per competency, instant why-feedback, not gated.
+  Lesson step chips now have icons. Play-through visual retained.
+
 ## Open threads
-- **Short video clips** — real filmed/animated clips per lesson are a future production asset;
-  the SVG/CSS play-through is the interim.
+- **Short video clips** — real filmed/animated clips per lesson are a future production asset.
+- **Fill the other pathways** — Content, Operations, Support, Research, Education (structure ready).
+- **Finish Software S5** ("shipping responsibly") — currently folded into the capstone.
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.
 - Faculty role full specs (mission/scope/boundaries/…) still to be written.

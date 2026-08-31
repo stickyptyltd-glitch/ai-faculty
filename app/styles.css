@@ -191,3 +191,18 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
 }
 details.card summary { list-style: revert; }
 details.card summary::-webkit-details-marker { display: revert; }
+
+/* quick-check MCQs */
+.qcheck__opts { display: flex; flex-direction: column; gap: 8px; }
+.qopt {
+  text-align: left; background: var(--surface-2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 9px; padding: 10px 12px; font: inherit; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.qopt:hover:not(:disabled) { border-color: var(--accent); }
+.qopt:disabled { cursor: default; }
+.qopt--right { border-color: var(--good); background: #12351d; color: #b8f0c4; }
+.qopt--wrong { border-color: var(--bad); background: #3a1a1a; color: #f6c6c2; }
+
+/* stepline chips wrap nicely with icons */
+.stepline span { display: inline-flex; align-items: center; gap: 4px; }

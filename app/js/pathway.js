@@ -1,89 +1,91 @@
 /* AI Faculty — Pathway Engine.
  * Output = the next best learning action, not necessarily "the next lesson".
- * Walks: diagnostic → per competency (learn → each challenge) → checkpoints → advance.
- * See docs/04-learning-engine.md.
+ * Walks: diagnostic → foundation module → choose a work pathway → pathway → capstone.
+ * See docs/04-learning-engine.md and docs/09-work-pathways.md.
  */
 window.PATHWAY = (function () {
   const C = window.CONTENT;
   const M = window.MODEL;
 
-  function next(learner) {
-    if (!M.isDiagnosed(learner)) {
-      return {
-        action: "diagnose",
-        reason: "We don't yet have your starting point. The diagnostic takes a few minutes and isn't graded.",
-        href: "#/diagnostic",
-      };
-    }
+  function walkModule(learner, moduleId) {
+    const caps = C.competenciesFor(moduleId);
+    const cps = C.checkpointsFor(moduleId);
 
-    for (const comp of C.COMPETENCIES) {
+    for (const comp of caps) {
       const cap = learner.capabilities[comp.id];
-
-      // interleave the checkpoint as soon as its prerequisites are complete
-      const cpDue = C.CHECKPOINTS.find(cp =>
-        cp.after[cp.after.length - 1] === comp.id &&
-        M.checkpointReady(learner, cp.id) &&
-        !M.checkpointDone(learner, cp.id));
-      // (handled after the competency loop below — see checkpoint pass)
-
       if (!cap.taughtAt) {
         return {
           action: "learn", capId: comp.id, capName: comp.name,
-          reason: `${comp.id} (${comp.name}) is next and you haven't started it. Begin with the short teaching.`,
-          href: `#/learn/${comp.id}`,
+          reason: `${comp.id} (${comp.name}) is next. Start with the lesson — it teaches the idea before you apply it.`,
+          href: `#/learn/${comp.id}/0`,
         };
       }
-
       const ch = M.nextChallenge(learner, comp.id);
       if (ch) {
         const p = M.challengeProgress(learner, comp.id);
-        const first = p.done === 0;
         return {
           action: "challenge",
-          capId: comp.id, capName: comp.name, challengeId: ch.id, challengeTitle: ch.title,
-          reason: first
-            ? `Practise ${comp.name} on a real task of your own — challenge 1 of ${p.total}: "${ch.title}".`
-            : `Keep building ${comp.name} — challenge ${p.done + 1} of ${p.total}: "${ch.title}" (${ch.ladder.toLowerCase()}).`,
+          capId: comp.id, capName: comp.name, challengeId: ch.id,
+          reason: p.done === 0
+            ? `You've done the ${comp.name} lesson. Now challenge 1 of ${p.total} — "${ch.title}" — on your own real task.`
+            : `Keep going on ${comp.name}: challenge ${p.done + 1} of ${p.total} — "${ch.title}" (${ch.ladder.toLowerCase()}).`,
           href: `#/challenge/${comp.id}/${ch.id}`,
         };
       }
-
-      // competency's challenges are all done — is its checkpoint now due?
-      if (cpDue) {
-        return {
-          action: "checkpoint", cpId: cpDue.id, cpTitle: cpDue.title,
-          reason: `You've finished the competencies for "${cpDue.title}". Time for the combined practical assessment.`,
-          href: `#/checkpoint/${cpDue.id}`,
-        };
-      }
     }
 
-    // any remaining ready-but-undone checkpoints
-    const cp = C.CHECKPOINTS.find(x => M.checkpointReady(learner, x.id) && !M.checkpointDone(learner, x.id));
+    const cp = cps.find(x => M.checkpointReady(learner, x.id) && !M.checkpointDone(learner, x.id));
     if (cp) {
       return {
         action: "checkpoint", cpId: cp.id, cpTitle: cp.title,
-        reason: `"${cp.title}" is unlocked — a combined practical assessment across ${cp.after.join(", ")}.`,
+        reason: `${cp.title} — a combined practical assessment across ${cp.after.join(", ")}.`,
         href: `#/checkpoint/${cp.id}`,
       };
     }
+    return null;
+  }
 
-    return {
-      action: "advance",
-      reason: "You've completed every competency, both practical checkpoints and the capstone. AI-Assisted Workflow Designer is demonstrated. Next: a transfer project or the next capability in the graph.",
-      href: "#/evidence",
-    };
+  function next(learner) {
+    if (!M.isDiagnosed(learner)) {
+      return { action: "diagnose",
+        reason: "We don't have your starting point yet. The diagnostic takes a few minutes and isn't graded.",
+        href: "#/diagnostic" };
+    }
+
+    // 1) Foundation module
+    if (!M.foundationDone(learner)) {
+      const step = walkModule(learner, "foundation");
+      if (step) return step;
+    }
+
+    // 2) Choose a work pathway
+    if (!learner.pathway) {
+      return { action: "choose-pathway",
+        reason: "Foundation done. Now pick a work pathway — it takes these skills into the real tasks of your job.",
+        href: "#/pathways" };
+    }
+
+    // 3) The chosen pathway
+    const step = walkModule(learner, learner.pathway);
+    if (step) return step;
+
+    // 4) Everything in the current pathway is done
+    const p = C.pathway(learner.pathway);
+    return { action: "advance",
+      reason: `You've completed the ${p ? p.title : "current"} pathway, capstone included. Pick another work pathway, or deepen this one as new capabilities are added.`,
+      href: "#/pathways" };
   }
 
   function actionVerb(a) {
     return {
       diagnose: "Start the diagnostic",
-      learn: "Learn it",
+      learn: "Start the lesson",
       challenge: "Start the challenge",
       checkpoint: "Start the assessment",
-      advance: "Review & advance",
+      "choose-pathway": "Choose a work pathway",
+      advance: "See work pathways",
     }[a] || "Continue";
   }
 
-  return { next, actionVerb };
+  return { next, actionVerb, walkModule };
 })();

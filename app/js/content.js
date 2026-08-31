@@ -33,10 +33,13 @@ window.CONTENT = (function () {
   ];
   const LEVEL_ORDER = LEVELS.map(l => l.key);
 
-  const LESSON_STEPS = ["activate", "explain", "demonstrate", "deconstruct", "guided"];
+  const LESSON_STEPS = ["activate", "explain", "demonstrate", "deconstruct", "quickcheck", "guided"];
   const LESSON_STEP_LABELS = {
     activate: "Why it matters", explain: "The idea", demonstrate: "Watch it done",
-    deconstruct: "The moves", guided: "Your turn (guided)",
+    deconstruct: "The moves", quickcheck: "Quick check", guided: "Your turn (guided)",
+  };
+  const LESSON_STEP_ICONS = {
+    activate: "⚠️", explain: "💡", demonstrate: "▶️", deconstruct: "🧩", quickcheck: "✅", guided: "✍️",
   };
 
   const PATHWAY = [
@@ -702,16 +705,529 @@ window.CONTENT = (function () {
     ],
   };
 
-  function competency(id) { return COMPETENCIES.find(c => c.id === id); }
+  // =================================================================
+  //  QUICK CHECKS  — 2 multiple-choice questions per competency,
+  //  shown as the "Quick check" lesson step. Instant feedback, not gated.
+  // =================================================================
+  const QUICK_CHECKS = {
+    C1: [
+      { q: "Which of these is a goal, not a task?", options: [
+        { label: "\"Write a follow-up email to the client.\"", ok: false, why: "That's a task — a thing to produce. It doesn't say what result you need." },
+        { label: "\"Get the client to confirm the delivery date in writing by Friday.\"", ok: true, why: "It names the result, a deadline, and how you'd know it happened." },
+        { label: "\"Use AI to help with client comms.\"", ok: false, why: "Far too broad — no outcome, no test, no constraints." },
+      ]},
+      { q: "You can't state how you'd know a workflow succeeded. What's the real cost later?", options: [
+        { label: "The AI will refuse to run it", ok: false, why: "It'll run fine — that's the problem." },
+        { label: "You can't verify the output or improve the workflow", ok: true, why: "With no success test there's nothing to check against and nothing to measure an improvement." },
+        { label: "It just takes a bit longer", ok: false, why: "It's not a speed issue — it's that you can't tell whether it worked." },
+      ]},
+    ],
+    C2: [
+      { q: "Why write the workflow as visible, ordered steps?", options: [
+        { label: "It looks more professional", ok: false, why: "Not the point." },
+        { label: "So there's somewhere to put checks and somewhere to see what went wrong", ok: true, why: "A one-shot 'do it all' has no place to insert verification or diagnose a failure." },
+        { label: "The AI needs numbered lists", ok: false, why: "It's for you, not the model." },
+      ]},
+      { q: "Which step deserves the most care?", options: [
+        { label: "The first step", ok: false, why: "Not inherently — depends what it does." },
+        { label: "The irreversible one (e.g. 'send to client')", ok: true, why: "You can't undo it, so it gets the most checking and comes last." },
+        { label: "The longest step", ok: false, why: "Length isn't risk." },
+      ]},
+    ],
+    C3: [
+      { q: "Where is AI most of a liability?", options: [
+        { label: "Drafting a first version of some text", ok: false, why: "Low stakes, easy to fix — a good AI step." },
+        { label: "A consequential judgement where a confident wrong answer is costly and hard to catch", ok: true, why: "That's exactly the danger zone — decisions about money, people, safety, facts with consequences." },
+        { label: "Summarising a long document", ok: false, why: "Usually fine, and easy to spot-check." },
+      ]},
+      { q: "You've given a step the role 'do-it' but can't say why. What does that tell you?", options: [
+        { label: "It's fine — do-it is the default", ok: false, why: "There is no safe default; every step needs a reason." },
+        { label: "You haven't decided — you've defaulted", ok: true, why: "If you can't give the one-sentence reason, the role wasn't a decision." },
+        { label: "The step should be removed", ok: false, why: "Not necessarily — it just needs a considered role." },
+      ]},
+    ],
+    C4: [
+      { q: "Why doesn't 'I asked the model if it was correct and it said yes' count as verification?", options: [
+        { label: "The model is too slow to check properly", ok: false, why: "Speed isn't the issue." },
+        { label: "It's checking its own work — not independent of what's being checked", ok: true, why: "A real check is independent: a source of truth, a test, or a human." },
+        { label: "Models aren't allowed to self-assess", ok: false, why: "They can respond — it just isn't meaningful verification." },
+      ]},
+      { q: "When should you decide what would make you reject the output?", options: [
+        { label: "After you see the output", ok: false, why: "Then you'll rationalise accepting whatever came back." },
+        { label: "Before you run the workflow", ok: true, why: "Pre-committing to a reject condition keeps the bar honest." },
+        { label: "Only if it looks wrong", ok: false, why: "The dangerous errors are the ones that look right." },
+      ]},
+    ],
+    C5: [
+      { q: "You have time for one test. Which case teaches you the most?", options: [
+        { label: "The most common, straightforward case", ok: false, why: "Least likely to expose a problem — you mostly know it works." },
+        { label: "A realistic awkward case near the edge of what it should handle", ok: true, why: "That's where hidden assumptions break, and you still need to handle it." },
+        { label: "An absurd case it was never built for", ok: false, why: "A failure there tells you little." },
+      ]},
+      { q: "A test fails. What is that?", options: [
+        { label: "A setback — the workflow is broken", ok: false, why: "It's not a setback." },
+        { label: "A finding — exactly what testing is for", ok: true, why: "You now have a specific problem you can fix in C6." },
+        { label: "A sign to stop testing", ok: false, why: "The opposite." },
+      ]},
+    ],
+    C6: [
+      { q: "What makes a change an 'improvement' rather than tinkering?", options: [
+        { label: "It makes the prompt longer and more forceful", ok: false, why: "That's tinkering with wording." },
+        { label: "It targets a specific finding, and you re-test the same case to compare", ok: true, why: "Specific cause, specific change, measured effect." },
+        { label: "It feels better when you read it", ok: false, why: "Not measurable." },
+      ]},
+      { q: "Your fix removes the original problem but introduces a smaller new one. Best move?", options: [
+        { label: "Revert — any new problem means it failed", ok: false, why: "Too rigid; you'd lose a real fix." },
+        { label: "Keep it silently — the original was worse", ok: false, why: "You've hidden a trade-off." },
+        { label: "Keep it, and log the new problem as its own finding to fix next", ok: true, why: "Take the net gain, make the trade-off explicit, feed it back into the loop." },
+      ]},
+    ],
+    C7: [
+      { q: "What belongs in a responsible-use note?", options: [
+        { label: "A disclaimer that says 'use sensibly'", ok: false, why: "Too vague to act on." },
+        { label: "What it's NOT for, the human oversight point, and the wider-use risk", ok: true, why: "Specific boundary, named check, realistic failure in other hands." },
+        { label: "The prompt you used", ok: false, why: "Useful, but not the responsible-use note." },
+      ]},
+      { q: "A colleague wants your workflow for their similar task. Best response?", options: [
+        { label: "Send it over — it works for you", ok: false, why: "Their context differs and they won't know your assumptions." },
+        { label: "Refuse — workflows shouldn't be shared", ok: false, why: "Sharing capability is a goal; it just needs its guardrails." },
+        { label: "Share it with its goal, constraints, verification steps and note — and check it fits their case", ok: true, why: "Transfer the whole thing, guardrails included." },
+      ]},
+    ],
+
+    // ---- Software pathway ----
+    S1: [
+      { q: "Which is a buildable spec?", options: [
+        { label: "\"Make the login better.\"", ok: false, why: "No problem stated, nothing testable, no boundary." },
+        { label: "\"Cut password-reset support tickets: reset rate down over 2 weeks, existing login still works, no SSO/2FA changes, ship behind a flag.\"", ok: true, why: "User problem, measurable acceptance, out-of-scope, constraints." },
+        { label: "\"Add a magic-link login flow.\"", ok: false, why: "That's a solution, not the problem — maybe not even the right one." },
+      ]},
+      { q: "What does 'out of scope' do in a spec?", options: [
+        { label: "Nothing much — it's optional", ok: false, why: "It's one of the four load-bearing parts." },
+        { label: "Stops scope creep and sets a shared boundary before work starts", ok: true, why: "It's the cheapest disagreement to have early." },
+        { label: "Tells the AI what to build", ok: false, why: "It tells everyone what NOT to build." },
+      ]},
+    ],
+    S2: [
+      { q: "You want AI to add rate limiting. What gives you code you can trust?", options: [
+        { label: "\"Add rate limiting to my API.\"", ok: false, why: "No context — you'll get generic code against assumptions." },
+        { label: "The router file + \"we use Redis, no new deps\" + the acceptance criteria + \"give me a diff and a test\"", ok: true, why: "Real code, constraints, target, reviewable output." },
+        { label: "\"Add rate limiting. Make it production-ready and secure.\"", ok: false, why: "Adjectives aren't context." },
+      ]},
+      { q: "Why ask for a diff and small steps instead of a full rewrite?", options: [
+        { label: "It's faster to generate", ok: false, why: "Not the reason." },
+        { label: "So you can actually review it", ok: true, why: "A wall of new code is unreviewable; small diffs you can check." },
+        { label: "The model prefers it", ok: false, why: "It's for your review, not the model." },
+      ]},
+    ],
+    S3: [
+      { q: "AI code 'looks idiomatic and passes review'. Why is that a trap?", options: [
+        { label: "It never is idiomatic", ok: false, why: "It often is — fluently so." },
+        { label: "It's confident and fluent, so 'looks right' hides invented APIs, swallowed errors and missed edges", ok: true, why: "Its failure modes are different from a human's; you have to check them on purpose." },
+        { label: "Reviewers are lazy", ok: false, why: "Not the point being made." },
+      ]},
+      { q: "Which is a distinctively AI-code failure to check for?", options: [
+        { label: "Inconsistent indentation", ok: false, why: "A formatter catches that; not the risk." },
+        { label: "A call to a method or parameter that doesn't exist in your version of the library", ok: true, why: "Hallucinated APIs are classic — plausible name, not real." },
+        { label: "Slightly verbose variable names", ok: false, why: "Cosmetic." },
+      ]},
+    ],
+    S4: [
+      { q: "AI wrote 12 tests, all green, 90% coverage. What's missing?", options: [
+        { label: "Nothing — that's a good result", ok: false, why: "Coverage and green say nothing about whether the right behaviour is proven." },
+        { label: "A test that would have failed on the old, broken code", ok: true, why: "If no test fails against the bug you fixed, the tests don't prove the fix." },
+        { label: "More tests", ok: false, why: "Quantity isn't the gap." },
+      ]},
+      { q: "A test asserts on internal implementation details rather than behaviour. Problem?", options: [
+        { label: "No — more assertions is better", ok: false, why: "It'll break on safe refactors and still miss behaviour regressions." },
+        { label: "Yes — it's brittle and doesn't protect the behaviour from the spec", ok: true, why: "Tests should pin the behaviour the acceptance criteria describe." },
+        { label: "Only if it's slow", ok: false, why: "Speed isn't the issue." },
+      ]},
+    ],
+  };
+
+  // =================================================================
+  //  WORK PATHWAYS  — profession-specific tracks after the foundation.
+  //  See docs/09-work-pathways.md.
+  // =================================================================
+  const SOFTWARE_COMPETENCIES = [
+    {
+      id: "S1", name: "Ask → Spec",
+      canDo: "Turn \"can you just add X\" into a spec you could build and verify against.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The PM said \"make the login better\". You built a slick magic-link flow. Turns out they meant \"stop the flood of password-reset tickets\" — and magic links didn't touch that. Two days of rework.",
+          point: "You built the right solution to the wrong problem, because the ask was never turned into a spec.",
+        },
+        explain: {
+          paras: [
+            "This is C1 (Goal Definition) aimed at a build. A vague ask isn't a spec — it's the start of a conversation.",
+            "A buildable spec names four things: the **user problem** (why does this matter, to whom), the **acceptance criteria** (what must be true and how you'd test it), what's **out of scope**, and the **constraints** (tech, patterns, time).",
+            "The solution isn't in the spec. \"Add a magic link\" is a solution — and maybe the wrong one. The spec describes the problem and the finish line.",
+          ],
+          keyIdea: "Buildable spec = user problem + testable acceptance criteria + out-of-scope + constraints. The solution comes after.",
+        },
+        demonstrate: {
+          task: "The ask: \"make the login better.\"",
+          steps: [
+            { move: "Get the real problem", think: "\"Better\" how? I ask.", result: "Problem: too many password-reset support tickets; users locked out and churning." },
+            { move: "Write testable acceptance", think: "What must be true, measurably?", result: "Acceptance: password-reset rate drops over 2 weeks; existing email+password login still works for all current users." },
+            { move: "Bound the scope", think: "What am I not doing?", result: "Out of scope: SSO, 2FA changes, UI redesign." },
+            { move: "Name the constraints", think: "What must it fit?", result: "Constraints: use the existing email provider; ship behind a feature flag; no new auth library." },
+          ],
+          full: "Problem: password-reset tickets are high and users churn when locked out. Acceptance: reset rate down over 2 weeks; current login unaffected. Out of scope: SSO, 2FA, UI redesign. Constraints: existing email provider, feature flag, no new auth lib.",
+        },
+        deconstruct: [
+          "The acceptance criteria are measurable (\"reset rate down over 2 weeks\") — you can tell if it worked.",
+          "\"Existing login still works\" is an acceptance criterion too — the thing you must not break.",
+          "Constraints (\"no new auth lib\", \"behind a flag\") are what make it shippable, not just buildable.",
+        ],
+        guided: {
+          intro: "Your turn, on this provided ask. Then reveal the model answer.",
+          task: "An internal user says: \"the dashboard is slow, can AI fix it?\"",
+          fields: [
+            { key: "problem", label: "The user problem", hint: "Who's affected, and what's the actual pain? e.g. \"analysts wait 8s per filter, so they batch work and miss deadlines\".", minWords: 8 },
+            { key: "acceptance", label: "Testable acceptance criteria", hint: "e.g. \"filter response under 1s at p95 on the standard dataset; existing exports unchanged\".", minWords: 8 },
+            { key: "scope", label: "Out of scope", hint: "e.g. \"redesigning the dashboard; adding new charts\".", minWords: 4 },
+            { key: "constraints", label: "Constraints", hint: "e.g. \"no schema changes this sprint; must work on the current DB\".", minWords: 5 },
+          ],
+          model: {
+            problem: "Analysts wait ~8s every time they change a filter, so they avoid exploring the data and lean on stale saved views — decisions get made on old numbers.",
+            acceptance: "Filter-to-render under 1s at p95 on the standard 90-day dataset; all existing saved views and exports return identical results.",
+            scope: "Not redesigning the dashboard, not adding new metrics, not touching mobile.",
+            constraints: "No schema migrations this sprint; must run on the current Postgres instance; changes behind a flag with a fast rollback.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("S1.1", "Reproduce", "Spec a real ask from your work",
+          "Take a real, vague request you've been given (or would plausibly get) and turn it into a spec with the four parts.",
+          "Strong answer: a real user problem (not a restated solution); acceptance criteria you could actually test; a scope boundary; and constraints that make it shippable.",
+          [
+            { key: "problem", label: "The user problem", hint: "Who, and what pain — not the feature.", minWords: 8 },
+            { key: "acceptance", label: "Testable acceptance criteria", hint: "How you'd prove it's done. Include what must not break.", minWords: 8 },
+            { key: "scope", label: "Out of scope", hint: "At least two things.", minWords: 4 },
+            { key: "constraints", label: "Constraints", hint: "Tech, patterns, time, rollout.", minWords: 5 },
+          ],
+          [
+            { label: "Problem is a real user problem, not a solution" },
+            { label: "Acceptance criteria are testable" },
+            { label: "Scope boundary is set" },
+            { label: "Constraints make it shippable" },
+          ],
+          "independent"),
+        critiqueChallenge("S1.2", "Adapt", "Fix a bad ticket",
+          "Here's a ticket as written. Using the four-part spec, find what's missing and rewrite it so a developer (or an AI) could build and verify against it.",
+          "Title: \"Improve search.\"  Body: \"Search is bad, users complain. Make it use AI. Should be fast and accurate.\"",
+          [
+            { label: "No stated user problem — 'bad' and 'complain' aren't specific", signals: ["what problem", "user problem", "what's actually", "which users", "what do they", "specific", "vague problem", "no problem"] },
+            { label: "No testable acceptance criteria", signals: ["acceptance", "how to test", "measurable", "how would you know", "criteria", "testable", "define fast", "define accurate", "what does fast"] },
+            { label: "'Make it use AI' is a solution, not a requirement", signals: ["solution not", "prescribes a solution", "not a requirement", "jumps to", "premature solution", "why ai", "solution rather"] },
+            { label: "No scope boundary or constraints", signals: ["scope", "out of scope", "constraint", "boundary", "what's not", "no constraints"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "S2", name: "Driving AI to write trustworthy code",
+      canDo: "Give AI the context and constraints to return small, reviewable changes — not a wall of code.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "You typed \"add caching\" into the chat. It gave you 200 lines using a library you don't have, referencing a `config/cache.yml` that doesn't exist in your repo. Twenty minutes gone untangling it.",
+          point: "Garbage context in, plausible garbage out. The model filled the gaps with assumptions.",
+        },
+        explain: {
+          paras: [
+            "Give the model what a competent contractor would need: the **spec / acceptance criteria**, the **actual code** it will touch plus your conventions, and the **constraints** (which libraries, which patterns, no new deps).",
+            "Ask for the change as a **diff or small steps**, not a rewrite — so you can review it.",
+            "Ask it to **explain the risky parts** (\"walk me through the window-reset logic\"). That surfaces bugs before they land.",
+            "Work in small loops: one change, review, next.",
+          ],
+          keyIdea: "Real code + constraints + acceptance criteria in → small reviewable diff out → make it explain the risky bit.",
+        },
+        demonstrate: {
+          task: "Add rate limiting to the API.",
+          steps: [
+            { move: "Give real context", think: "Paste the actual router file, not a description.", result: "router.js + \"we use Redis (ioredis), no new deps\" + acceptance: 100 req/min/IP, 429 over limit" },
+            { move: "Ask for a reviewable change", think: "Diff, plus a test.", result: "\"Give me this as a diff against router.js and a test file.\"" },
+            { move: "Review the diff", think: "Read it like a PR.", result: "spotted: window never resets on the happy path" },
+            { move: "Make it explain the risk", think: "The bit I'm unsure about.", result: "\"Walk me through the window reset\" → confirms the bug → asks for the fix" },
+          ],
+          full: "Context: real router.js + \"Redis via ioredis, no new deps\" + acceptance (100/min/IP → 429). Asked for a diff + test. Reviewed it, found the window-reset bug, had it explain and fix that part, then accepted.",
+        },
+        deconstruct: [
+          "Pasting the real file beats describing it — the model stops guessing your structure.",
+          "\"Give me a diff\" keeps the change small enough to actually review.",
+          "\"Explain the risky part\" is where the reset bug surfaced — it wouldn't have from just reading fluent code.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You need to add input validation to a signup form. Your codebase already uses zod for schemas.",
+          fields: [
+            { key: "context", label: "What context would you give the model?", hint: "Files, conventions, constraints.", minWords: 8 },
+            { key: "ask", label: "What would you ask it to produce?", hint: "Format and scope of the output.", minWords: 6 },
+            { key: "check", label: "What would you review first?", hint: "The most likely place it goes wrong.", minWords: 6 },
+          ],
+          model: {
+            context: "The signup handler file, an existing zod schema from a nearby form as the pattern to follow, and: \"use zod, match this style, no new deps, return field-level errors like the existing one\".",
+            ask: "\"Give me the zod schema and the changed handler as a diff, plus the error-shape it returns. Keep it to this one form.\"",
+            check: "Whether the error shape actually matches the existing form's (so the frontend doesn't break), and whether it handles the empty-submission and extra-unknown-fields cases.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("S2.1", "Reproduce", "Drive a real change",
+          "Pick a small real change in your own codebase (or a project you know). Write the context, the constraints, and what you'd ask for — as if briefing the model now.",
+          "Strong answer: names the real files/conventions; constraints are concrete (libraries, patterns, no new deps); asks for a reviewable output; and identifies what you'd check first.",
+          [
+            { key: "change", label: "The change, and the real files/conventions involved", hint: "Be specific about the code it touches.", minWords: 10 },
+            { key: "constraints", label: "Constraints you'd give the model", hint: "Libraries, patterns, scope limits.", minWords: 6 },
+            { key: "review", label: "What you'd review first and why", hint: "Where it's most likely to be wrong.", minWords: 8 },
+          ],
+          [
+            { label: "Real context (files, conventions) is provided" },
+            { label: "Constraints are concrete" },
+            { label: "Asks for a reviewable change, not a rewrite" },
+            { label: "Names the first thing to check" },
+          ],
+          "independent"),
+        scenarioChallenge("S2.2", "Create", "It used a package you don't have",
+          "You asked AI for a change. The code it returned imports `date-fns`, which isn't in your project — you use the native `Intl` API and a small helper.",
+          "What's the right move?",
+          [
+            { id: "a", label: "Add date-fns — it's a popular, well-tested library", ok: false, why: "You just took on a dependency to satisfy generated code. That's the tail wagging the dog." },
+            { id: "b", label: "Tell it your constraint (\"no new deps, we use Intl + this helper\") and ask it to redo the change", ok: true, why: "Fix the brief, not the codebase. The constraint was missing from your context." },
+            { id: "c", label: "Rewrite it yourself to use Intl", ok: false, why: "You can — but the faster, repeatable fix is to give the model the constraint so it gets it right now and next time." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "S3", name: "Reviewing AI-generated code",
+      canDo: "Review AI code for the things it gets wrong that humans usually don't.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI code looked idiomatic and passed review in five minutes. In production it called `.flatMap()` on an object (not an array), swallowed the error in a bare `catch {}`, and users saw a blank screen with no log line.",
+          point: "It reads as fluent and confident. \"Looks right\" is exactly the trap.",
+        },
+        explain: {
+          paras: [
+            "AI code fails **differently** from human code. Review for these on purpose:",
+            "**Hallucinated APIs** — a method, parameter or import that's plausible but not real in your version. **Swallowed errors** — empty catches, ignored return values. **Missing edges** — empty, null, very large, concurrent, unicode. **Security** — injection, secrets in code, missing authorization checks. **Spec drift** — does it actually do what the ticket said?",
+            "Fluency is not correctness. Read it like you're suspicious.",
+          ],
+          keyIdea: "Check the AI-specific failure modes: invented APIs, swallowed errors, unhandled edges, security, and does it match the spec.",
+        },
+        demonstrate: {
+          task: "Review a short function the AI wrote to \"return the average order value for a customer\".",
+          steps: [
+            { move: "Invented API?", think: "Scan every call.", result: "`orders.sumBy('total')` — no such method on our array; hallucinated" },
+            { move: "Swallowed errors?", think: "Look at catches and unchecked returns.", result: "wraps the DB call in `try { } catch { return 0 }` — a DB error silently looks like a £0 average" },
+            { move: "Edge cases?", think: "Empty, null, one item.", result: "customer with zero orders → divides by zero → NaN" },
+            { move: "Matches the spec?", think: "Re-read the ticket.", result: "spec said 'last 12 months'; the code averages all time" },
+          ],
+          full: "Found: a hallucinated `sumBy`; a catch that turns DB errors into a silent £0; a divide-by-zero for customers with no orders; and it ignores the '12 months' from the spec. None of these are visible from 'it looks clean'.",
+        },
+        deconstruct: [
+          "Every issue came from a specific check, not a general read-through.",
+          "The swallowed error is the scariest — it fails silently and looks like real data.",
+          "Re-reading the spec caught a bug that was 'correct code' for the wrong requirement.",
+        ],
+        guided: {
+          intro: "Your turn. Here's an AI-written snippet — list what you'd check and what you suspect. Then reveal the model answer.",
+          task: "AI wrote this to \"send a welcome email when a user signs up\":\n\n  async function onSignup(user) {\n    try {\n      await mailer.send({ to: user.email, template: 'welcome', vars: { name: user.name } });\n    } catch (e) {}\n    await db.users.update(user.id, { welcomed: true });\n  }",
+          fields: [
+            { key: "checks", label: "What would you check?", hint: "Go through the failure modes from the lesson.", minWords: 10 },
+            { key: "suspect", label: "What do you already suspect is wrong?", hint: "Name at least two concrete issues.", minWords: 8 },
+          ],
+          model: {
+            checks: "Does `mailer.send` take that shape in our client? Is `user.name` always present (nullable?)? What happens when the email fails? Is `welcomed: true` set even if the email never went? Any rate/retry concern on signup spikes?",
+            suspect: "The bare `catch {}` swallows every send failure with no log — and then it marks the user `welcomed: true` regardless, so a failed welcome email is invisible and will never be retried. Also `user.name` could be null and render 'Hi ,'.",
+          },
+        },
+      },
+      challenges: [
+        critiqueChallenge("S3.1", "Adapt", "Review this AI change",
+          "Here's an AI-written function to \"parse a CSV of contacts and return valid email addresses\". Review it against the failure modes from the lesson.",
+          "  function validEmails(csv) {\n    return csv.split('\\n').map(line => line.split(',')[2]).filter(e => e.includes('@'));\n  }",
+          [
+            { label: "No handling of the header row — it'll try to validate the column title", signals: ["header", "first row", "title row", "skip the header", "column name"] },
+            { label: "Fragile CSV parsing — commas inside quoted fields break split(',')", signals: ["comma", "quoted", "quotes", "csv parsing", "split(',')", "embedded comma", "proper csv", "escaped"] },
+            { label: "`e.includes('@')` is a near-useless email check", signals: ["includes('@')", "weak check", "not a real", "\"@\" is not", "barely validates", "poor validation", "just checks for @"] },
+            { label: "Crashes on a short/blank line — split(',')[2] is undefined, then .includes throws", signals: ["undefined", "blank line", "empty line", "short line", "throws", "crash", "missing column", "[2]"] },
+          ],
+          "transferable"),
+        fieldsChallenge("S3.2", "Transfer", "Review a real AI change from your work",
+          "Take a real change AI has written for you (or a snippet from a project). Run the failure-mode checklist and write up what you found.",
+          "Strong answer: you actually went through the specific checks (invented APIs, swallowed errors, edges, security, spec match) and reported concrete findings — or a reasoned 'clean, and here's what I verified'.",
+          [
+            { key: "snippet", label: "What the change does (and paste/describe it)", hint: "Enough for the finding to make sense.", minWords: 8 },
+            { key: "findings", label: "What you found, check by check", hint: "Go through the five failure modes.", minWords: 15 },
+          ],
+          [
+            { label: "Went through the specific AI failure modes" },
+            { label: "Findings are concrete (or the 'clean' verdict is justified)" },
+            { label: "Checked it against the actual spec/intent" },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "S4", name: "Generating tests you can trust",
+      canDo: "Get AI to write tests that catch real regressions — and know when green means nothing.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "You asked AI to add tests for the bug you just fixed. It produced 12 tests, all green, coverage up to 90%. A week later the same bug came back — none of the 12 actually exercised it.",
+          point: "Green and high coverage tell you the tests ran, not that they'd catch the thing you care about.",
+        },
+        explain: {
+          paras: [
+            "Tell it the **behaviour to prove**, straight from the acceptance criteria — not \"write tests for this file\".",
+            "Ask for the **failure cases first**: what inputs *should* be rejected or handled specially.",
+            "**Run the new tests against the old, broken code.** If none fail, they don't protect the fix.",
+            "Watch for tests that assert on **implementation** (internal calls, private state) instead of **behaviour** — they break on safe refactors and miss real regressions.",
+          ],
+          keyIdea: "Tests prove behaviour from the spec. Write the failing case first; run it against the bug; a test that never fails proves nothing.",
+        },
+        demonstrate: {
+          task: "You fixed a bug: the cart accepted negative quantities. Now get tests.",
+          steps: [
+            { move: "State the behaviour", think: "From the fix.", result: "\"Quantity must be an integer ≥ 1; anything else is rejected with a clear error.\"" },
+            { move: "Ask for failure cases first", think: "The rejections matter most.", result: "tests for: -1, 0, 1.5, \"2\", null, missing" },
+            { move: "Run against the pre-fix code", think: "Would they have caught it?", result: "the -1 and 0 tests fail on old code ✓; the 1.5 test passes on old code — old code coerced it, so that's a real gap the fix also closed" },
+            { move: "Check the assertions", think: "Behaviour, not internals.", result: "assert the API returns 400 + error message, not that a private `validateQty()` was called" },
+          ],
+          full: "Behaviour: qty is integer ≥ 1 or rejected. Asked for the rejection cases first (-1, 0, 1.5, \"2\", null). Ran them against the old code — the key ones failed, confirming they catch the bug. Assertions check the response, not internal calls.",
+        },
+        deconstruct: [
+          "Running the tests against the broken code is the step that proves they're worth anything.",
+          "Asking for failure cases first stops you with a suite of only happy-path tests.",
+          "Behaviour assertions survive refactors; implementation assertions give false confidence.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You fixed a bug where a discount code could be applied twice, stacking the discount. Now you want tests.",
+          fields: [
+            { key: "behaviour", label: "The behaviour to prove", hint: "State it precisely, from the fix.", minWords: 6 },
+            { key: "cases", label: "The cases you'd ask AI to write", hint: "Failure cases first.", minWords: 8 },
+            { key: "trust", label: "How you'd know the tests are actually good", hint: "The step that proves it.", minWords: 6 },
+          ],
+          model: {
+            behaviour: "A given discount code can be applied at most once per cart; a second attempt is rejected and the total is unchanged.",
+            cases: "Apply code once → total drops correctly. Apply the same code again → rejected, total unchanged. Apply a different valid code after → allowed. Remove and re-apply → allowed once. Concurrent double-apply (two requests) → only one takes effect.",
+            trust: "Run the 'apply twice' and 'concurrent' tests against the pre-fix code — they should fail there. If they pass on the broken code, they aren't testing the bug.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("S4.1", "Reproduce", "Test a real fix or feature",
+          "Take a real bug you've fixed or feature you've built. Write the behaviour, the cases you'd ask AI for, and how you'd verify the tests are good.",
+          "Strong answer: behaviour stated from the spec; failure cases included; and a concrete plan to confirm the tests would have caught the problem (e.g. run against the old code).",
+          [
+            { key: "behaviour", label: "The behaviour to prove", hint: "Precise, testable.", minWords: 6 },
+            { key: "cases", label: "Cases to ask AI for", hint: "Failure cases first, then happy path.", minWords: 10 },
+            { key: "verify", label: "How you'd confirm the tests are meaningful", hint: "The step that proves it.", minWords: 6 },
+          ],
+          [
+            { label: "Behaviour stated from the spec, not the code" },
+            { label: "Failure cases included, not just happy path" },
+            { label: "A concrete way to confirm the tests catch the issue" },
+          ],
+          "independent"),
+        scenarioChallenge("S4.2", "Create", "All the tests passed first try",
+          "You asked AI for tests on a tricky bit of logic. It generated them and they all pass on the first run, no edits.",
+          "What should you do before trusting them?",
+          [
+            { id: "a", label: "Nothing — passing tests on a correct implementation is the expected result", ok: false, why: "You don't yet know the tests would fail on a wrong implementation — which is the whole point of a test." },
+            { id: "b", label: "Break the code deliberately (or run against a known-bad version) and check the tests fail", ok: true, why: "A test that can't fail proves nothing. Mutating the code or running against the pre-fix version confirms they bite." },
+            { id: "c", label: "Delete half of them — if they all pass they're redundant", ok: false, why: "Passing doesn't mean redundant; they may cover different cases. The issue is whether any of them can fail." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  const PATHWAYS = [
+    {
+      id: "software",
+      title: "Software & Product Development",
+      tagline: "Ship real features and fixes with AI as a fast pair — and catch it when it's wrong.",
+      forRoles: "engineers · PMs · technical founders · designers who build",
+      status: "available",
+      prereq: "foundation",
+      competencies: SOFTWARE_COMPETENCIES,
+      capstoneId: "SWCAP",
+      rubricEmphasis: ["Verification", "Safety"],
+    },
+    { id: "content", title: "Content, Marketing & Comms", tagline: "Draft at scale with brand voice, checked claims, and disclosure done right.", forRoles: "writers · marketers · founders doing their own marketing", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Reasoning", "Safety"] },
+    { id: "ops", title: "Operations & Admin", tagline: "Map a process, then automate it with human checkpoints and an audit trail.", forRoles: "ops · EAs · office managers · small-business owners", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Structure", "Safety"] },
+    { id: "support", title: "Customer Support", tagline: "Triage, draft, ground answers in the knowledge base, and handle the hard cases.", forRoles: "support · customer success", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Reasoning", "Safety"] },
+    { id: "research", title: "Research & Analysis", tagline: "Frame the question, synthesise many sources, verify every claim, never ship a fake citation.", forRoles: "analysts · researchers · journalists · students", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Verification", "Reasoning"] },
+    { id: "education", title: "Education & Training", tagline: "Design outcomes, generate checked materials, support feedback and assessment.", forRoles: "teachers · trainers · L&D · course creators", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Clarity", "Safety"] },
+  ];
+
+  const PATHWAY_CHECKPOINTS = [
+    {
+      id: "SWCAP",
+      pathway: "software",
+      title: "Work Capstone — ship a real change with AI, responsibly",
+      after: ["S1", "S2", "S3", "S4"],
+      stage: "Demonstration",
+      brief:
+        "Take a real feature or bug in your work. Run the whole loop with AI and show it: the spec, how you drove the AI, what your review caught, the tests, and the ship checklist.",
+      whatGood:
+        "The spec is testable; the AI-collaboration approach gives reviewable changes; the review caught something real; the tests would fail on the bug; and the ship checklist covers flag, rollback, human review and data/secrets.",
+      fields: [
+        { key: "spec", label: "The spec", hint: "User problem, acceptance criteria, out-of-scope, constraints.", minWords: 15 },
+        { key: "drive", label: "How you drove the AI", hint: "Context given, what you asked for, how you iterated.", minWords: 12 },
+        { key: "review", label: "What your review caught", hint: "Concrete issues in the AI's code (or a justified 'clean').", minWords: 10 },
+        { key: "tests", label: "The tests, and why you trust them", hint: "Behaviour proven + how you confirmed they bite.", minWords: 10 },
+        { key: "ship", label: "Ship checklist", hint: "Flag, rollback, human review gate, secrets/data, what AI must NOT decide.", minWords: 10 },
+      ],
+      rubricDims: ["Clarity", "Structure", "Verification", "Reasoning", "Evidence", "Safety"],
+      raisesTo: "advanced",
+    },
+  ];
+
+  const ALL_CHECKPOINTS = CHECKPOINTS.concat(PATHWAY_CHECKPOINTS);
+
+  // ---- lookups (search foundation + every pathway) ------------------
+  function allCompetencies() {
+    return COMPETENCIES.concat(...PATHWAYS.map(p => p.competencies));
+  }
+  function competency(id) { return allCompetencies().find(c => c.id === id); }
   function challenge(capId, chId) {
     const c = competency(capId);
     return c ? c.challenges.find(ch => ch.id === chId) : null;
   }
-  function checkpoint(id) { return CHECKPOINTS.find(cp => cp.id === id); }
+  function checkpoint(id) { return ALL_CHECKPOINTS.find(cp => cp.id === id); }
+  function pathway(id) { return PATHWAYS.find(p => p.id === id); }
+  function competenciesFor(moduleId) {
+    if (!moduleId || moduleId === "foundation") return COMPETENCIES;
+    const p = pathway(moduleId);
+    return p ? p.competencies : [];
+  }
+  function checkpointsFor(moduleId) {
+    if (!moduleId || moduleId === "foundation") return CHECKPOINTS;
+    return PATHWAY_CHECKPOINTS.filter(cp => cp.pathway === moduleId);
+  }
+  function quickCheck(capId) { return QUICK_CHECKS[capId] || []; }
+  function lessonSteps(capId) {
+    return LESSON_STEPS.filter(s => s !== "quickcheck" || quickCheck(capId).length);
+  }
 
   return {
-    MASTER_CAPABILITY, LEVELS, LEVEL_ORDER, LESSON_STEPS, LESSON_STEP_LABELS,
+    MASTER_CAPABILITY, LEVELS, LEVEL_ORDER, LESSON_STEPS, LESSON_STEP_LABELS, LESSON_STEP_ICONS,
     PATHWAY, COMPETENCIES, CHECKPOINTS, DIAGNOSTIC,
-    competency, challenge, checkpoint,
+    PATHWAYS, PATHWAY_CHECKPOINTS, QUICK_CHECKS,
+    competency, challenge, checkpoint, pathway,
+    allCompetencies, competenciesFor, checkpointsFor, quickCheck, lessonSteps,
   };
 })();

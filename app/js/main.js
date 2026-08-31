@@ -16,7 +16,6 @@
   const routes = [
     { test: p => p === "/", view: viewProgress },
     { test: p => p === "/diagnostic", view: viewDiagnostic },
-    { test: p => p === "/pathway", view: viewPathway },
     { test: p => p === "/evidence", view: viewEvidence },
     { test: p => p === "/about", view: viewAbout },
     { test: p => p.startsWith("/learn/"), view: viewLearn },
@@ -24,6 +23,8 @@
     { test: p => p.startsWith("/challenge/"), view: viewChallenge },
     { test: p => p.startsWith("/checkpoint/"), view: viewCheckpoint },
     { test: p => p === "/projects", view: viewProjects },
+    { test: p => p === "/pathways", view: viewPathwayCatalogue },
+    { test: p => p.startsWith("/pathway/"), view: viewPathwayOverview },
   ];
 
   function stripMeta(data) {
@@ -67,6 +68,26 @@
   function wire() {
     app.querySelectorAll("[data-action]").forEach(el => el.addEventListener("click", handleAction));
     app.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
+    app.querySelectorAll(".qopt").forEach(el => el.addEventListener("click", handleQopt));
+  }
+
+  function handleQopt(e) {
+    const btn = e.currentTarget;
+    const block = btn.closest(".qcheck");
+    if (block.classList.contains("answered")) return;
+    block.classList.add("answered");
+    const correct = btn.dataset.ok === "true";
+    block.querySelectorAll(".qopt").forEach(o => {
+      if (o.dataset.ok === "true") o.classList.add("qopt--right");
+      else if (o === btn) o.classList.add("qopt--wrong");
+      o.disabled = true;
+    });
+    const qi = +btn.dataset.qi, oi = +btn.dataset.oi;
+    const capId = parseHash().parts[1];
+    const opt = C.quickCheck(capId)[qi].options[oi];
+    const fb = block.querySelector(".qcheck__fb");
+    fb.textContent = (correct ? "Correct. " : "Not quite. ") + opt.why;
+    fb.style.color = correct ? "var(--good)" : "var(--warn)";
   }
 
   function handleAction(e) {
@@ -101,6 +122,16 @@
       window.STORE.log("lesson-done", capId);
       const ch = M.nextChallenge(window.STORE.get(), capId);
       location.hash = ch ? `#/challenge/${capId}/${ch.id}` : `#/competency/${capId}`;
+      return;
+    }
+
+    if (el.dataset.action === "skip-foundation") {
+      if (confirm("Skip the foundation module and go straight to work pathways? (Founder option — foundation stays available.)")) {
+        window.STORE.update(l => { l.foundationSkipped = true; });
+        window.STORE.log("skip", "foundation");
+        location.hash = "#/pathways";
+      }
+      return;
     }
   }
 
@@ -124,6 +155,14 @@
       window.STORE.update(l => M.addProject(l, data.name, data.context, data.goal));
       window.STORE.log("project", data.name);
       location.hash = "#/projects";
+      return;
+    }
+
+    if (kind === "choose-pathway") {
+      const pid = form.dataset.pathway;
+      window.STORE.update(l => { l.pathway = pid; l.module = pid; });
+      window.STORE.log("pathway", pid);
+      location.hash = "#/";
       return;
     }
 
@@ -287,24 +326,25 @@
       <form data-form="diagnostic">${q}<button class="btn" type="submit">Save &amp; see my pathway</button></form>`;
   }
 
-  function lessonProgress(stepIdx) {
-    return `<div class="stepline">` + C.LESSON_STEPS.map((s, i) =>
-      `<span class="${i < stepIdx ? "done" : i === stepIdx ? "now" : ""}">${esc(C.LESSON_STEP_LABELS[s])}</span>`
+  function lessonProgress(steps, stepIdx) {
+    return `<div class="stepline">` + steps.map((s, i) =>
+      `<span class="${i < stepIdx ? "done" : i === stepIdx ? "now" : ""}">${C.LESSON_STEP_ICONS[s] || ""} ${esc(C.LESSON_STEP_LABELS[s])}</span>`
     ).join("") + `</div>`;
   }
 
   function viewLearn(learner, parts) {
     const capId = parts[1];
-    const stepIdx = Math.max(0, Math.min(C.LESSON_STEPS.length - 1, parseInt(parts[2] || "0", 10) || 0));
+    const steps = C.lessonSteps(capId);
+    const stepIdx = Math.max(0, Math.min(steps.length - 1, parseInt(parts[2] || "0", 10) || 0));
     const L = F.lesson(capId);
     if (!L) return `<div class="notice">Unknown competency.</div>`;
-    const stepKey = C.LESSON_STEPS[stepIdx];
-    const nextHref = stepIdx < C.LESSON_STEPS.length - 1 ? `#/learn/${capId}/${stepIdx + 1}` : null;
+    const stepKey = steps[stepIdx];
+    const nextHref = stepIdx < steps.length - 1 ? `#/learn/${capId}/${stepIdx + 1}` : null;
     const prevHref = stepIdx > 0 ? `#/learn/${capId}/${stepIdx - 1}` : null;
 
     const header = `
-      ${lessonProgress(stepIdx)}
-      <p class="hint" style="margin-bottom:2px">${esc(L.id)} — ${esc(L.name)} · lesson ${stepIdx + 1} of ${C.LESSON_STEPS.length}</p>`;
+      ${lessonProgress(steps, stepIdx)}
+      <p class="hint" style="margin-bottom:2px">${esc(L.id)} — ${esc(L.name)} · lesson ${stepIdx + 1} of ${steps.length}</p>`;
 
     const nav = (extra = "") => `
       <div style="display:flex;gap:10px;margin-top:18px">
@@ -365,6 +405,27 @@
         <p class="lead">What just happened, so you can do it yourself:</p>
         <ul>${L.deconstruct.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
         ${nav()}`;
+    }
+
+    if (stepKey === "quickcheck") {
+      const qs = C.quickCheck(capId);
+      const blocks = qs.map((qc, qi) => `
+        <div class="card qcheck" data-qi="${qi}">
+          <div class="card__label">Question ${qi + 1} of ${qs.length}</div>
+          <p style="margin:6px 0 10px"><strong>${esc(qc.q)}</strong></p>
+          <div class="qcheck__opts">
+            ${qc.options.map((o, oi) => `
+              <button class="qopt" data-qi="${qi}" data-oi="${oi}" data-ok="${!!o.ok}">
+                ${esc(o.label)}
+              </button>`).join("")}
+          </div>
+          <p class="qcheck__fb hint" style="margin:10px 0 0"></p>
+        </div>`).join("");
+      return `${header}
+        <h1>Quick check</h1>
+        <p class="lead">Two questions on the idea. Pick an answer to see why — this isn't graded.</p>
+        <div class="qcheck-set" data-total="${qs.length}">${blocks}</div>
+        <div id="qcheckNav">${nav()}</div>`;
     }
 
     // guided
@@ -528,15 +589,21 @@
     `;
   }
 
+  function activeModule(learner) {
+    return (M.foundationDone(learner) && learner.pathway) ? learner.pathway : "foundation";
+  }
+
   function viewProjects(learner) {
+    const mod = activeModule(learner);
+    const total = C.competenciesFor(mod).length;
     const list = (learner.projects || []).map(p => {
-      const cov = M.projectCoverage(learner, p.id);
-      const done = M.projectDemonstrated(learner, p.id);
+      const cov = M.projectCoverage(learner, p.id, mod);
+      const done = M.projectDemonstrated(learner, p.id, mod);
       const evc = M.evidenceForProject(learner, p.id).length;
       return `<div class="card">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:start">
           <strong style="font-size:15px">${esc(p.name)}</strong>
-          <span class="pill pill--${done ? "independent" : "guided"}">${done ? "Demonstrated" : `${cov.length}/7 covered`}</span>
+          <span class="pill pill--${done ? "independent" : "guided"}">${done ? "Demonstrated" : `${cov.length}/${total} covered`}</span>
         </div>
         <p style="margin:6px 0 4px;color:var(--text-dim);font-size:13px">${esc(p.context)} · ${evc} evidence record${evc === 1 ? "" : "s"}</p>
         <p style="margin:0;font-size:14px">${esc(p.goal)}</p>
@@ -548,7 +615,7 @@
       <h1>Applied Projects</h1>
       <p class="lead">Register a real task from your life or work. Do the course's challenges against it,
       and your evidence builds into a portfolio. A project is <strong>Demonstrated</strong> once it has
-      confirmed evidence across all seven competencies (or a passed capstone).</p>
+      confirmed evidence across the current module's competencies (or a passed capstone).</p>
       ${list || `<div class="notice" style="margin-bottom:16px">No projects yet. Add your first below.</div>`}
       <h2>Add a project</h2>
       <form data-form="project">
@@ -567,23 +634,76 @@
     `;
   }
 
-  function viewPathway(learner) {
-    const nba = window.PATHWAY.next(learner);
-    const stages = C.PATHWAY.map((s, i) => {
-      const cp = C.CHECKPOINTS.find(x => x.stage === s);
-      const tag = cp ? ` <span class="pill pill--${M.checkpointDone(learner, cp.id) ? "independent" : "unknown"}">${cp.id}</span>` : "";
-      return `<li>${i + 1}. ${esc(s)}${tag}</li>`;
+  function viewPathwayCatalogue(learner) {
+    const fDone = M.foundationDone(learner);
+    const cards = C.PATHWAYS.map(p => {
+      const chosen = learner.pathway === p.id;
+      const avail = p.status === "available";
+      const badge = chosen ? `<span class="pill pill--independent">Your pathway</span>`
+        : avail ? `<span class="pill pill--guided">Available</span>`
+        : `<span class="pill pill--unknown">Planned</span>`;
+      const action = chosen
+        ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Open</a>`
+        : (avail && fDone)
+          ? `<a class="btn btn--sm" data-nav href="#/pathway/${p.id}">View &amp; choose</a>`
+          : avail
+            ? `<span class="hint">Finish the foundation first</span>`
+            : `<span class="hint">Coming soon</span>`;
+      return `<div class="card">
+        <div style="display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:6px">
+          <strong style="font-size:15px">${esc(p.title)}</strong>${badge}
+        </div>
+        <p style="margin:0 0 6px">${esc(p.tagline)}</p>
+        <p class="hint" style="margin:0 0 10px">For: ${esc(p.forRoles)}</p>
+        ${action}
+      </div>`;
     }).join("");
+
     return `
-      <h1>Pathway</h1>
-      <p class="lead">AI Fluency → Practical AI Capability. The pathway changes as your evidence changes —
-      it can accelerate, branch back, or raise the challenge.</p>
-      <div class="card next"><div class="card__label">Right now</div>
-        <p style="margin-bottom:10px">${esc(nba.reason)}</p>
-        <a class="btn" data-nav href="${nba.href}">${esc(window.PATHWAY.actionVerb(nba.action))}</a></div>
-      <h2>The 10 stages</h2><ol style="margin-left:18px">${stages}</ol>
-      <h2>Master capability</h2>
-      <div class="card"><p style="margin:0">${esc(C.MASTER_CAPABILITY.statement)}</p></div>
+      <h1>Work pathways</h1>
+      <p class="lead">After the foundation, a pathway takes the same skills into the real tasks,
+      constraints and risks of your job. You can take more than one. (See docs/09-work-pathways.md.)</p>
+      ${!fDone ? `<div class="card next" style="margin-bottom:14px">
+        <p style="margin:0 0 10px">You're still in the foundation module. You can finish it, or —
+        as the founder building this — skip ahead to work on pathways now.</p>
+        <button class="btn btn--ghost btn--sm" data-action="skip-foundation">Skip foundation (founder)</button>
+      </div>` : ""}
+      ${cards}`;
+  }
+
+  function viewPathwayOverview(learner, parts) {
+    const p = C.pathway(parts[1]);
+    if (!p) return `<div class="notice">Unknown pathway.</div>`;
+    const fDone = M.foundationDone(learner);
+    const chosen = learner.pathway === p.id;
+    const comps = p.competencies.map((c, i) => `
+      <div class="caprow">
+        <span class="caprow__id">${c.id}</span>
+        <span class="caprow__name">${esc(c.name)}
+          <span style="color:var(--text-dim);font-size:12px">— ${esc(c.canDo)}</span></span>
+      </div>`).join("");
+    const cap = C.checkpointsFor(p.id)[0];
+
+    return `
+      <p class="hint" style="margin-bottom:2px"><a data-nav href="#/pathways">← All pathways</a></p>
+      <h1>${esc(p.title)}</h1>
+      <p class="lead">${esc(p.tagline)}</p>
+      <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
+
+      ${p.competencies.length ? `
+        <h2>Capabilities</h2>
+        <div class="caplist">${comps}</div>
+        ${cap ? `<h2>Work capstone</h2><div class="card"><strong>${esc(cap.title)}</strong>
+          <p style="margin:6px 0 0">${esc(cap.brief)}</p></div>` : ""}
+        ${chosen
+          ? `<a class="btn" data-nav href="#/" style="margin-top:16px">Continue this pathway</a>`
+          : fDone
+            ? `<form data-form="choose-pathway" data-pathway="${p.id}" style="margin-top:16px">
+                 <button class="btn" type="submit">Choose ${esc(p.title)}</button></form>`
+            : `<div class="notice" style="margin-top:16px">Finish the foundation module to start a pathway
+                 (or use the founder skip on the <a data-nav href="#/pathways">pathways page</a>).</div>`}
+      ` : `<div class="notice">This pathway is planned — the capabilities and content are being authored.
+        <a data-nav href="#/pathways">Back to pathways</a>.</div>`}
     `;
   }
 
@@ -609,7 +729,7 @@
     const groups = [];
     (learner.projects || []).forEach(p => {
       const evs = learner.evidence.filter(e => e.projectId === p.id);
-      if (evs.length) groups.push({ name: p.name, demonstrated: M.projectDemonstrated(learner, p.id), evs });
+      if (evs.length) groups.push({ name: p.name, demonstrated: M.projectDemonstrated(learner, p.id, activeModule(learner)), evs });
     });
     const loose = learner.evidence.filter(e => !e.projectId || !M.project(learner, e.projectId));
     if (loose.length) groups.push({ name: "Not attached to a project", evs: loose });
@@ -626,15 +746,16 @@
   function viewAbout() {
     return `
       <h1>About this prototype</h1>
-      <p class="lead">AI Faculty v0.2 — the Learning Engine with practical challenges and assessments.</p>
+      <p class="lead">AI Faculty v0.5 — foundation module + first work pathway.</p>
       <ul>
-        <li><strong>Diagnostic</strong> → Learner Intelligence Model (capability state for C1–C7)</li>
-        <li><strong>Pathway Engine</strong> → next best action, interleaving teaching, challenges and assessments</li>
-        <li><strong>Per competency:</strong> teach → 2–3 <strong>practical challenges</strong> up the difficulty ladder
-          (do-it / critique / scenario), each rubric-assessed and producing evidence</li>
-        <li><strong>Checkpoints:</strong> CP1 (combined workflow design) and CP2 (full build/test/improve capstone),
-          scored against the mastery rubric</li>
-        <li><strong>Evidence portfolio</strong> — every confirmed attempt</li>
+        <li><strong>Diagnostic</strong> → Learner Intelligence Model</li>
+        <li><strong>Foundation module</strong> (AI-Assisted Workflow Designer, C1–C7): each competency is a
+          6-step lesson — story → idea → played worked example → the moves → quick-check MCQs → guided
+          attempt — then 2–3 rubric-assessed challenges on your own task</li>
+        <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
+        <li><strong>Work pathways</strong> — after the foundation, pick a profession-specific track.
+          <strong>Software &amp; Product Development</strong> is built (S1–S4 + work capstone); five more are planned</li>
+        <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
       (<code>js/faculty.js</code>) — one swappable seam for a real model later.</p>
