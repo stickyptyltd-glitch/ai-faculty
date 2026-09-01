@@ -101,8 +101,21 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
   full 6-step lessons + challenges + quick-checks, plus the FNDCAP capstone.
 - 4 pathways now built (Software, Content, AI Engineering, Technical Foundations); 7 outlined.
 
+## v0.9 — 2026-09-01 — Agentic Systems pathway built
+
+- **Agentic Systems** built (available, best after AI Engineering): AG1 agent vs workflow
+  (default to a workflow), AG2 the plan→act→observe control loop + hard stopping conditions,
+  AG3 context management (pinned goal + scratchpad, extract-then-drop), AG4 failure modes &
+  recovery (loops, drift, compounding, hallucinated tool results → stop and escalate), AG5
+  human-in-the-loop & authority limits (enforce in code, not the prompt) — full 6-step lessons +
+  challenges + quick-checks, plus the AGCAP capstone.
+- Pathway overview now shows a "best taken after X" note when a pathway's prereq is another pathway.
+- 5 pathways built (Software, Content, AI Engineering, Technical Foundations, Agentic Systems);
+  6 outlined.
+
 ## Open threads
-- **Author the 7 outlined pathways** — curriculum defined for each.
+- **Author the 6 outlined pathways** — Operations, Support, Research, Education, ML Practitioner,
+  AI Safety/Evals/Red-teaming.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
 

@@ -694,6 +694,10 @@
       <h1>${esc(p.title)}</h1>
       <p class="lead">${esc(p.tagline)}</p>
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
+      ${p.prereq && p.prereq !== "foundation" && C.pathway(p.prereq)
+        ? `<div class="notice" style="margin-bottom:14px">Best taken after the
+           <a data-nav href="#/pathway/${p.prereq}">${esc(C.pathway(p.prereq).title)}</a> pathway —
+           it assumes that background.</div>` : ""}
 
       ${p.competencies.length ? `
         <h2>Capabilities</h2>
@@ -768,9 +772,9 @@
           6-step lesson — story → idea → played worked example → the moves → quick-check MCQs → guided
           attempt — then 2–3 rubric-assessed challenges on your own task</li>
         <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
-        <li><strong>Pathways</strong> — after the foundation, go deep. Two kinds: <em>using AI at work</em>
-          (Software S1–S5, Content M1–M4) and <em>building AI</em> (AI Engineering E1–E5). Each built
-          pathway has a work capstone; 8 more pathways are outlined with their curriculum visible</li>
+        <li><strong>Pathways</strong> — after the foundation, go deep. <em>Using AI at work</em>
+          (Software, Content) and <em>building AI</em> (AI Engineering, Technical Foundations,
+          Agentic Systems). Each built pathway has a capstone; 6 more are outlined with their curriculum visible</li>
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
