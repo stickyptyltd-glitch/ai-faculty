@@ -113,11 +113,24 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
 - 5 pathways built (Software, Content, AI Engineering, Technical Foundations, Agentic Systems);
   6 outlined.
 
+## v0.10 — 2026-09-01 — AI Safety pathway built; technical track ~complete
+
+- **AI Safety, Evals & Red-teaming** built (available, best after AI Engineering): SF1 risk
+  assessment (incl. non-users, residual risk), SF2 writing safety evals (risk → test, blocks
+  the release), SF3 red-teaming (multi-turn, injection, reframing; repro + severity×ease → into
+  evals), SF4 guardrails & mitigations (layered; strongest are structural), SF5 governance &
+  incident response (owner, disclosure, reconstructable logging, kill switch / human fallback) —
+  full 6-step lessons + challenges + quick-checks, plus the SAFECAP capstone. Ties into
+  docs/05 (governance) and docs/07 (research protocol / R0–R5).
+- 6 pathways built; the Building-AI track is complete except ML Practitioner.
+- 5 outlined: Operations, Support, Research, Education, ML Practitioner.
+
 ## Open threads
-- **Author the 6 outlined pathways** — Operations, Support, Research, Education, ML Practitioner,
-  AI Safety/Evals/Red-teaming.
+- **Author the 5 outlined pathways** — the "Using AI at work" set (Ops, Support, Research,
+  Education) + ML Practitioner.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
+- **Enforce pathway prerequisites** for real (non-founder) learners — currently advisory only.
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.
 - Faculty role full specs (mission/scope/boundaries/…) still to be written.

@@ -92,6 +92,6 @@ role sub-tracks, industry variants).
 |---|---|
 | Foundation module fully playable | — |
 | Catalogue grouped **Using AI at work** / **Building AI**; planned pathways show their curriculum outline | Recommendation from diagnostic answer B |
-| **Built & available:** Software (S1–S5), Content (M1–M4), **AI Engineering (E1–E5)**, **Technical Foundations (F1–F5)**, **Agentic Systems (AG1–AG5)** — each with a capstone | — |
-| **Planned (curriculum outlined):** Operations, Support, Research, Education, ML Practitioner, AI Safety | Author the lessons + challenges |
+| **Built & available (6):** Software (S1–S5), Content (M1–M4), **AI Engineering (E1–E5)**, **Technical Foundations (F1–F5)**, **Agentic Systems (AG1–AG5)**, **AI Safety / Evals / Red-teaming (SF1–SF5)** — each with a capstone. The entire Building-AI technical track is built except ML Practitioner. | — |
+| **Planned (curriculum outlined, 5):** Operations, Support, Research, Education, ML Practitioner | Author the lessons + challenges |
 | Founder can skip the foundation to work on pathways | Test-out-by-capstone for real learners |
