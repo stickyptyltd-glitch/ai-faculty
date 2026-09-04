@@ -1,5 +1,4 @@
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const KV = SIGNUPS;
 
 const EMAIL_TO_JSON = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +29,7 @@ function readRate(vars) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const KV = env.SIGNUPS || { get: async () => null, put: async () => {} };
 
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: EMAIL_TO_JSON });

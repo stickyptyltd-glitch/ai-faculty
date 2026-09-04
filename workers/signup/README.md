@@ -76,6 +76,12 @@ per connecting IP via Cloudflare's `CF-Connecting-IP` header.
 npx wrangler dev
 ```
 
+Run the self-contained unit tests (no Node v22 / wrangler needed — just Node 18+):
+
+```bash
+node test.mjs
+```
+
 It serves on `http://localhost:8787`. To test the full page → worker flow, point the landing
 page at it (set the form action or run `wrangler dev` behind the static server). For the
 simplest local test, temporarily POST directly to the dev worker:
