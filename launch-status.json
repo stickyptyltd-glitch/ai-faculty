@@ -1,0 +1,58 @@
+{
+  "countdown_target": "2026-12-01T00:00:00Z",
+  "offer": "Early subscribers get free access",
+  "domain": "aifaculty.org",
+  "domain_cost_per_year_usd": 12,
+  "registrar": "Cloudflare Registrar",
+  "steps": [
+    {
+      "id": "code",
+      "label": "Landing page + signup Worker + tests",
+      "status": "done",
+      "cost": 0,
+      "notes": "landing/ + workers/signup/, 7/7 tests passing, committed & pushed"
+    },
+    {
+      "id": "pages_free",
+      "label": "Cloudflare Pages (free, *.pages.dev URL)",
+      "status": "todo",
+      "cost": 0,
+      "notes": "Needs your ONE browser login. Serves only landing/, keeps prototype private."
+    },
+    {
+      "id": "worker_free",
+      "label": "Deploy signup Worker to KV (free tier)",
+      "status": "todo",
+      "cost": 0,
+      "notes": "npx wrangler kv:namespace create SIGNUPS; deploy; route /signup"
+    },
+    {
+      "id": "verify_free",
+      "label": "Verify free URL end-to-end",
+      "status": "todo",
+      "cost": 0,
+      "notes": "Submit a test signup; check KV list"
+    },
+    {
+      "id": "domain",
+      "label": "Register aifaculty.org ($12/yr)",
+      "status": "todo",
+      "cost": 12,
+      "notes": "The ONLY required cost. Register at dash.cloudflare.com"
+    },
+    {
+      "id": "attach_domain",
+      "label": "Attach domain to Pages + route Worker",
+      "status": "todo",
+      "cost": 0,
+      "notes": "Custom domain on Pages; wrangler routes add aifaculty.org/signup"
+    },
+    {
+      "id": "go_live",
+      "label": "Point / Update countdown + announce",
+      "status": "todo",
+      "cost": 0,
+      "notes": "HTTPS via Cloudflare; update copy if desired"
+    }
+  ]
+}
