@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e1116" />
+  <meta name="description" content="AI Faculty — an ever-expanding, industry-specific AI education institution built like a university faculty. Early subscribers get free access. Launching Dec 1, 2026." />
+  <title>AI Faculty — Early Access</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="landing">
+  <header class="topbar">
+    <button class="topbar__brand" type="button">AI&nbsp;Faculty</button>
+    <nav class="topbar__nav">
+      <a href="#signup">Early access</a>
+      <a href="#how">What it is</a>
+      <a href="#faculty">The Faculty</a>
+    </nav>
+  </header>
+
+  <main class="hero">
+    <section class="hero__inner">
+      <p class="eyebrow">Early access is free</p>
+      <h1>
+        An AI institution that
+        <span class="grad">teaches you how to work with AI</span> —
+        built like a university faculty.
+      </h1>
+      <p class="lead">
+        AI Faculty is a structured, evidence-based education system that scales from one learner to a
+        hundred thousand — without diluting quality. Industry-specific, mobile-first, and under human
+        oversight.
+      </p>
+
+      <div class="countdown" aria-label="Countdown to launch">
+        <div class="countdown__unit">
+          <span class="countdown__num" id="cdD">00</span>
+          <span class="countdown__label">days</span>
+        </div>
+        <div class="countdown__unit">
+          <span class="countdown__num" id="cdH">00</span>
+          <span class="countdown__label">hours</span>
+        </div>
+        <div class="countdown__unit">
+          <span class="countdown__num" id="cdM">00</span>
+          <span class="countdown__label">min</span>
+        </div>
+        <div class="countdown__unit">
+          <span class="countdown__num" id="cdS">00</span>
+          <span class="countdown__label">sec</span>
+        </div>
+      </div>
+      <p class="countdown__note">Public launch — <strong>Dec 1, 2026</strong></p>
+
+      <div class="card signup" id="signup">
+        <p class="card__label">Join the early cohort</p>
+        <p class="signup__intro">
+          First subscribers get <strong>free access</strong> when AI Faculty goes live. No spam — one
+          email when we open the doors.
+        </p>
+        <form id="signupForm" class="signup__form" novalidate>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            class="signup__input"
+            placeholder="you@example.com"
+            autocomplete="email"
+            required
+          />
+          <button class="btn" type="submit">Reserve my spot</button>
+        </form>
+        <p class="signup__status" id="status" role="status"></p>
+      </div>
+    </section>
+
+    <section class="how" id="how">
+      <h2>How it works</h2>
+      <div class="grid grid--2">
+        <div class="card">
+          <p class="card__label">Diagnose</p>
+          <p>Every learner is routed to Personal, Professional, or Mixed based on where they actually are.</p>
+        </div>
+        <div class="card">
+          <p class="card__label">Learn &amp; practise</p>
+          <p>Teach → practise → evidence → mastery. The Faculty computes the next best action for you.</p>
+        </div>
+        <div class="card">
+          <p class="card__label">Evidence</p>
+          <p>Real proof of capability, not certificates. Mastery is confirmed against a clear rubric.</p>
+        </div>
+        <div class="card">
+          <p class="card__label">Scale with quality</p>
+          <p>A university-faculty structure — specialised AI roles under human oversight that never dilute quality.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="faculty" id="faculty">
+      <h2>The Faculty</h2>
+      <p class="lead">
+        Ten specialised roles run the institution — each with a clear job, decision rights, and quality gates.
+      </p>
+      <div class="faculty__list">
+        <div class="faculty__item"><span>01</span> Dean / Founder</div>
+        <div class="faculty__item"><span>02</span> Curricular Design</div>
+        <div class="faculty__item"><span>03</span> Diagnostic</div>
+        <div class="faculty__item"><span>04</span> Teaching</div>
+        <div class="faculty__item"><span>05</span> Assessment</div>
+        <div class="faculty__item"><span>06</span> Research</div>
+        <div class="faculty__item"><span>07</span> Student Success</div>
+        <div class="faculty__item"><span>08</span> Quality &amp; Safety</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>AI Faculty — launching Dec 1, 2026</span>
+    <span>Early access free</span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
