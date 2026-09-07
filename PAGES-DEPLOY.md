@@ -29,20 +29,30 @@ The public site is just the `landing/` folder — the prototype (`app/`) stays p
 In the Pages project → **Custom domains** → add `aifaculty.org`. Cloudflare sets up the route
 automatically.
 
-## 4. Deploy the signup Worker
+## 4. Deploy the signup Worker  ·  ✅ done (2026-09-07)
 
-See [`workers/signup/README.md`](workers/signup/README.md) for the full steps. TL;DR:
+Deployed on `lecheyne24@gmail.com`:
+
+- Worker: **`aifaculty-signup`** → `https://aifaculty-signup.lecheyne24.workers.dev/signup`
+- KV namespace: **`SIGNUPS`** = `1764d7ac08d14438aa1179e4a748cbce` (id is in `workers/signup/wrangler.toml`)
+- Verified: valid signup → `201`, duplicate → `200 {already:true}`, bad email → `400`, other routes → `404`.
+
+Until `aifaculty.org` exists, `landing/app.js` posts **cross-origin** to the `workers.dev` URL
+(the Worker sends `Access-Control-Allow-Origin: *` and the landing `_headers` CSP allows that
+origin in `connect-src`). Once the domain is attached, add the same-origin route so the form
+posts to `/signup`:
 
 ```bash
 cd workers/signup
-npm install
-npx wrangler kv:namespace create SIGNUPS   # paste id into wrangler.toml
-npx wrangler secret put RESEND_API_KEY      # optional, free Resend account
-npx wrangler deploy
-npx wrangler routes add aifaculty.org/signup --worker aifaculty-signup
+npx wrangler deploy            # re-deploy if index.js changes
+npx wrangler triggers deploy   # or add a route: aifaculty.org/signup -> aifaculty-signup
 ```
 
-After step 4, the landing form's `POST /signup` hits the Worker and stores emails in KV.
+`app.js` already switches to the relative `/signup` path automatically when the host is
+`aifaculty.org`.
+
+Optional: `npx wrangler secret put RESEND_API_KEY` (free Resend account) to email a
+confirmation on signup — leave unset and signups are just stored in KV.
 
 ## 5. Verify
 

@@ -4,7 +4,7 @@ compatibility_date = "2024-11-01"
 
 [[kv_namespaces]]
 binding = "SIGNUPS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "1764d7ac08d14438aa1179e4a748cbce"
 
 [vars]
 RESEND_FROM = "AI Faculty <earlyaccess@aifaculty.org>"

@@ -138,6 +138,21 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
 - 7 pathways built (Software, Content, AI Engineering, Technical Foundations, Agentic Systems,
   AI Safety, Research & Analysis); 4 outlined (Operations, Support, Education, ML Practitioner).
 
+## v0.12 — 2026-09-07 — Signup Worker deployed (launch infra)
+
+- **`aifaculty-signup` Worker deployed** on Cloudflare (`lecheyne24@gmail.com`, account
+  `b0bcef4fb406db6e7be003337571b42a`). KV namespace `SIGNUPS` =
+  `1764d7ac08d14438aa1179e4a748cbce` (written into `workers/signup/wrangler.toml`).
+  Live: `https://aifaculty-signup.lecheyne24.workers.dev/signup`.
+- Verified end-to-end: valid → 201, duplicate → 200 `{already:true}`, invalid email → 400,
+  other routes → 404; KV write confirmed then test key removed.
+- `landing/app.js` now targets the `workers.dev` URL cross-origin everywhere except
+  `*.aifaculty.org`, where it uses the same-origin `/signup`. `landing/_headers` CSP
+  `connect-src` updated to allow the Worker origin.
+- **Still on the founder:** register `aifaculty.org` (~$12/yr), create the Cloudflare Pages
+  project (repo `ai-faculty`, output dir `landing`), then attach the custom domain and route
+  the Worker at `aifaculty.org/signup`.
+
 ## Open threads
 - **Author the 4 outlined pathways** — the "Using AI at work" set (Ops, Support, Education) +
   ML Practitioner.

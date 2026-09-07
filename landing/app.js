@@ -1,5 +1,12 @@
 const TARGET = new Date("2026-12-01T00:00:00Z").getTime();
 
+// On aifaculty.org the signup Worker is routed at /signup (same origin).
+// Anywhere else (e.g. the *.pages.dev preview) hit the Worker directly — it
+// sends permissive CORS headers so a cross-origin POST is fine.
+const SIGNUP_ENDPOINT = /(^|\.)aifaculty\.org$/.test(location.hostname)
+  ? "/signup"
+  : "https://aifaculty-signup.lecheyne24.workers.dev/signup";
+
 const cdD = document.getElementById("cdD");
 const cdH = document.getElementById("cdH");
 const cdM = document.getElementById("cdM");
@@ -39,7 +46,7 @@ form.addEventListener("submit", async (e) => {
   }
 
   try {
-    const res = await fetch("/signup", {
+    const res = await fetch(SIGNUP_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: value }),

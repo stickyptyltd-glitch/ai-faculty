@@ -22,16 +22,16 @@
     {
       "id": "worker_free",
       "label": "Deploy signup Worker to KV (free tier)",
-      "status": "todo",
+      "status": "done",
       "cost": 0,
-      "notes": "npx wrangler kv:namespace create SIGNUPS; deploy; route /signup"
+      "notes": "Deployed as aifaculty-signup on lecheyne24@gmail.com (account b0bcef4fb406db6e7be003337571b42a). KV namespace SIGNUPS = 1764d7ac08d14438aa1179e4a748cbce. Live at https://aifaculty-signup.lecheyne24.workers.dev/signup"
     },
     {
       "id": "verify_free",
-      "label": "Verify free URL end-to-end",
-      "status": "todo",
+      "label": "Verify Worker end-to-end",
+      "status": "done",
       "cost": 0,
-      "notes": "Submit a test signup; check KV list"
+      "notes": "Tested: valid signup -> 201, dupe -> 200 already, bad email -> 400, non-route -> 404. Key confirmed in KV then test key removed."
     },
     {
       "id": "domain",
@@ -45,7 +45,7 @@
       "label": "Attach domain to Pages + route Worker",
       "status": "todo",
       "cost": 0,
-      "notes": "Custom domain on Pages; wrangler routes add aifaculty.org/signup"
+      "notes": "Custom domain on Pages; then `npx wrangler routes` for aifaculty.org/signup -> aifaculty-signup. Until the domain exists the landing form posts cross-origin to the workers.dev URL (CSP + CORS already allow it)."
     },
     {
       "id": "go_live",
