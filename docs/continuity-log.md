@@ -125,9 +125,22 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
 - 6 pathways built; the Building-AI track is complete except ML Practitioner.
 - 5 outlined: Operations, Support, Research, Education, ML Practitioner.
 
+## v0.11 — 2026-09-07 — Research & Analysis pathway built
+
+- **Research & Analysis** built (available, prereq foundation): R1 frame the question (decision +
+  scope + answer type + what would change it), R2 multi-source synthesis (R0–R5 confidence per
+  claim, collapse echoes, explain disagreement by cause, name gaps), R3 source verification
+  (exists / says it / credible — catch AI-fabricated citations, format is not evidence), R4
+  faithful summarisation (keep hedges, scope, uncertainty, direction/magnitude; AI rounds up),
+  R5 communicate honestly (headline + calibrated confidence + gaps + what would change it;
+  findings separate from recommendation) — full 6-step lessons + challenges + quick-checks, plus
+  the RESCAP capstone. Ties into docs/07 (research protocol / R0–R5) and C1 (Goal Definition).
+- 7 pathways built (Software, Content, AI Engineering, Technical Foundations, Agentic Systems,
+  AI Safety, Research & Analysis); 4 outlined (Operations, Support, Education, ML Practitioner).
+
 ## Open threads
-- **Author the 5 outlined pathways** — the "Using AI at work" set (Ops, Support, Research,
-  Education) + ML Practitioner.
+- **Author the 4 outlined pathways** — the "Using AI at work" set (Ops, Support, Education) +
+  ML Practitioner.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
 - **Enforce pathway prerequisites** for real (non-founder) learners — currently advisory only.

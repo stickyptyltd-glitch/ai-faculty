@@ -773,8 +773,9 @@
           attempt — then 2–3 rubric-assessed challenges on your own task</li>
         <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
         <li><strong>Pathways</strong> — after the foundation, go deep. <em>Using AI at work</em>
-          (Software, Content) and <em>building AI</em> (AI Engineering, Technical Foundations,
-          Agentic Systems, AI Safety). Each built pathway has a capstone; 5 more are outlined with their curriculum visible</li>
+          (Software, Content, Research &amp; Analysis) and <em>building AI</em> (AI Engineering,
+          Technical Foundations, Agentic Systems, AI Safety). Each built pathway has a capstone;
+          4 more are outlined with their curriculum visible</li>
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
