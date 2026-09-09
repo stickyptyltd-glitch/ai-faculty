@@ -56,23 +56,30 @@
     {
       "id": "attach_domain_dns",
       "label": "Point aifaculty.org at the Pages project (DNS record)",
-      "status": "todo",
+      "status": "done",
       "cost": 0,
-      "notes": "Custom domain aifaculty.org already added to the Pages project via API (status 'pending'), but the wrangler OAuth token cannot write DNS records. FOUNDER: Cloudflare dash -> aifaculty.org -> DNS -> Records -> Add: CNAME, name '@', target 'aifaculty.pages.dev', Proxied ON. Pages then validates and issues the cert (a few minutes). Optional: CNAME 'www' -> 'aifaculty.pages.dev' proxied too."
+      "notes": "Founder added apex CNAME @ -> aifaculty.pages.dev (proxied). Custom domain validated, cert issued. Optional: add www CNAME + redirect."
     },
     {
       "id": "verify_live",
       "label": "Verify aifaculty.org end-to-end",
+      "status": "done",
+      "cost": 0,
+      "notes": "2026-09-09: https://aifaculty.org/ -> landing 200; /app/ -> prototype 200 (noindex, inline-style CSP); /signup -> Worker 201 + KV write, OPTIONS 204. All confirmed via live requests + headless render."
+    },
+    {
+      "id": "revoke_pasted_token",
+      "label": "Revoke the GitHub token pasted in chat during setup",
       "status": "todo",
       "cost": 0,
-      "notes": "After DNS: https://aifaculty.org loads the landing page, https://aifaculty.org/app/ loads the prototype, and a signup on the landing form writes to KV via the same-origin /signup route."
+      "notes": "A gho_ token with repo scope was pasted into the assistant conversation. Revoke: GitHub -> Settings -> Applications -> GitHub CLI (or the token list). Re-run gh auth login when next needed."
     },
     {
       "id": "go_live",
       "label": "Announce / update countdown copy",
       "status": "todo",
       "cost": 0,
-      "notes": "HTTPS is automatic via Cloudflare. Update landing copy if desired before announcing."
+      "notes": "Site is live now but not announced. HTTPS automatic. Review landing copy before any public announcement. Countdown target 2026-12-01."
     }
   ]
 }

@@ -178,6 +178,45 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
   `aifaculty.org/app/`, and a real signup end-to-end.
 - Redeploy the site anytime: `./build.sh && npx wrangler pages deploy dist --project-name aifaculty --branch master`
 
+## v0.14 — 2026-09-09 — aifaculty.org LIVE
+
+- Founder added the apex DNS record (`CNAME @ -> aifaculty.pages.dev`, proxied). Cloudflare
+  validated the custom domain and issued the cert.
+- **Live and verified end-to-end:**
+  - `https://aifaculty.org/` → landing page (200, countdown + signup form)
+  - `https://aifaculty.org/app/` → the prototype (200, renders; `X-Robots-Tag: noindex`,
+    CSP with `style-src 'unsafe-inline'`)
+  - `https://aifaculty.org/signup` → Worker route (POST 201, writes to KV; OPTIONS 204)
+- Commit `e665493` pushed to `origin/master`. GitHub auth on this machine had to fall back to
+  a token (`gh` device flow kept timing out on api.github.com).
+
+## Resume here — state + next steps
+
+**Deployed and working.** The site is `aifaculty.org` (landing `/`, prototype `/app/`, signup
+`/signup`). Deploy is **direct upload** (not git-connected) — after any change to `landing/` or
+`app/`, run `./build.sh && npx wrangler pages deploy dist --project-name aifaculty --branch master`.
+Worker: `cd workers/signup && npx wrangler deploy`.
+
+Key IDs: Cloudflare account `b0bcef4fb406db6e7be003337571b42a` (`lecheyne24@gmail.com`, shared
+with the unrelated `onlyus2` project — be careful with account-wide ops). Zone
+`53034bfea4de24f2a0fdd6b6f7327fa1`. KV `SIGNUPS` = `1764d7ac08d14438aa1179e4a748cbce`.
+Pages project `aifaculty`.
+
+**Housekeeping / optional infra (not blocking):**
+- A GitHub token was pasted in the assistant chat during setup — **revoke it** (GitHub →
+  Settings → Applications → GitHub CLI, or the token list) and re-`gh auth login` when needed.
+- Optional: `www.aifaculty.org` CNAME + redirect to apex.
+- Optional: connect the Pages project to the GitHub repo for auto-deploy on push (currently
+  manual). Build command `bash build.sh`, output dir `dist`.
+- Optional: `npx wrangler secret put RESEND_API_KEY` + Cloudflare Email Routing for
+  `earlyaccess@aifaculty.org` → signup confirmation emails (currently KV-only).
+- Optional: Cloudflare Rate Limiting / WAF on the zone.
+
+**Product backlog (the real work — see Open threads below):** author the 4 remaining pathways
+(Ops, Support, Education, ML Practitioner); diagnostic → pathway recommendation; C2–C7 authored
+content; prereq enforcement for non-founder learners; LLM/Control-Plane integration; review
+landing copy before any public announcement; act on findings from founder testing of `/app/`.
+
 ## Open threads
 - **Author the 4 outlined pathways** — the "Using AI at work" set (Ops, Support, Education) +
   ML Practitioner.
