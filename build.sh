@@ -40,5 +40,10 @@ User-agent: *
 Disallow: /app/
 EOF
 
+# --- www -> apex (takes effect once the www DNS record + Pages domain are live) ---
+cat > dist/_redirects <<'EOF'
+https://www.aifaculty.org/* https://aifaculty.org/:splat 301
+EOF
+
 echo "built dist/ ->"
 find dist -type f | sort | sed 's/^/  /'
