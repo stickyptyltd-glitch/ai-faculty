@@ -262,12 +262,35 @@ landing copy before any public announcement; act on findings from founder testin
 - New `_COMPETENCIES` consts live just before `const PATHWAYS`; a `// BROADER-SCOPE PATHWAYS`
   banner marks the section.
 
+## v0.17 — 2026-09-09 — Assessment-heuristic hardening + draft-content labelling
+
+- **Critique-challenge signal fixes** (`content.js`): removed bare high-frequency English words
+  from `expected[].signals` arrays that made a rubric line auto-pass on any 30-word submission —
+  `"and"` (ED1.2), `"age"` (HR1.2), `"log"` (O1.2), `"time"` (R1.2, ML2.2), `"gap"` (R5.1,
+  ML4.2), `"may"` (R4.1), `"who"` (M1.2), `"bar"` (ED1.2). Replaced with specific multi-word
+  signals. Rule reinforced: signals must be lowercase **and** specific — never a common word or
+  a substring of one (`faculty.js` matches with `text.includes(sig)`).
+- **`rubric.length > fields.length` fix** (`content.js`): `faculty.js` pairs rubric↔fields by
+  index, so a rubric item past the field count rendered as an unassessed pass. Merged S2.1
+  (4→3), S3.2 (3→2), F1.1 (3→2) rubrics to match their field counts. Sweep now also checks this
+  direction.
+- **Draft-content labelling** (`main.js`): the four regulated-domain pathways (Legal, Finance,
+  HR, Healthcare) now show a "Draft content — not yet expert-verified" notice on their overview
+  page; About page carries the general version. Honest framing per Constitution + `docs/09` §5
+  (real-world examples need Research Faculty R2+). **Governance item for the founder:** decide
+  whether these run as a formal *experimental academy* (a `status: "experimental"` value +
+  banner) or get their regulatory specifics verified to R2+ before non-founder learners.
+- Redeployed to `aifaculty.org/app/` (deployment `6402e9f6`); verified live (content diff,
+  notice text, single CSP header, headless render of the Legal overview).
+
 ## Open threads
 - **More domains** — professional-services variants, public sector, sales-engineering, product
   management, design/UX, journalism, and industry-specific academies.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
 - **Enforce pathway prerequisites** for real (non-founder) learners — currently advisory only.
+- **Regulated-domain pathways** (Legal/Finance/HR/Healthcare) — decide experimental-academy
+  status vs R2+ verification of regulatory specifics before non-founder learners (see v0.17).
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.
 - Faculty role full specs (mission/scope/boundaries/…) still to be written.

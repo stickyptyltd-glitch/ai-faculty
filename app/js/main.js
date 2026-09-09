@@ -694,6 +694,11 @@
       <h1>${esc(p.title)}</h1>
       <p class="lead">${esc(p.tagline)}</p>
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
+      ${["legal","finance","hr","health"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
+        <strong>Draft content — not yet expert-verified.</strong> This pathway teaches AI-workflow
+        judgement, not the law/regulation of your jurisdiction. Regulatory and professional-standard
+        details here are illustrative and pending Research Faculty verification (R2+). Check specifics
+        against a qualified source before acting on them.</div>` : ""}
       ${p.prereq && p.prereq !== "foundation" && C.pathway(p.prereq)
         ? `<div class="notice" style="margin-bottom:14px">Best taken after the
            <a data-nav href="#/pathway/${p.prereq}">${esc(C.pathway(p.prereq).title)}</a> pathway —
@@ -765,7 +770,7 @@
   function viewAbout() {
     return `
       <h1>About this prototype</h1>
-      <p class="lead">AI Faculty v0.5 — foundation module + first work pathway.</p>
+      <p class="lead">AI Faculty v0.6 — foundation module + 16 work &amp; build pathways.</p>
       <ul>
         <li><strong>Diagnostic</strong> → Learner Intelligence Model</li>
         <li><strong>Foundation module</strong> (AI-Assisted Workflow Designer, C1–C7): each competency is a
@@ -780,6 +785,10 @@
           Agentic Systems, AI Safety)</li>
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
+      <p>Pathway content is an authored first draft. It teaches AI-workflow judgement, not the
+      domain itself — worked examples and any regulatory or professional-standard detail are
+      illustrative and pending Research Faculty verification (R2+). The regulated-domain pathways
+      (Legal, Finance, HR, Healthcare) carry this note on their overview page.</p>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
       (<code>js/faculty.js</code>) — one swappable seam for a real model later.</p>
       <p>Data lives only in this browser (<code>localStorage</code>). “Reset learner” in the footer clears it.</p>
