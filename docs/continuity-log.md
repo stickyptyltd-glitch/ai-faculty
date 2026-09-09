@@ -236,9 +236,35 @@ landing copy before any public announcement; act on findings from founder testin
 - Next: **broader-scope pathways** — new domains beyond the initial catalogue (professional
   services, healthcare & sciences, commercial roles, and further).
 
+## v0.16 — 2026-09-09 — Broader-scope pathways: Legal, Sales, Finance, HR, Healthcare
+
+- Built 5 new-domain pathways, each: full 6-step lessons + 2 challenges + quick-checks per
+  competency, plus a capstone.
+  - **Legal & Contracts** (L1–L5, LEGCAP): scope the review · ground every AI claim in the
+    document · redlines with a human editor · privilege & confidentiality · AI is a first pass,
+    not the opinion. Ties into R3 (source verification).
+  - **Sales** (SL1–SL5, SALESCAP): account research with traceable facts · outreach that isn't
+    spam · call prep & live assist · follow-ups & CRM hygiene · honesty, disclosure & pressure.
+  - **Finance & Accounting** (FN1–FN5, FINCAP): AI does not do arithmetic · reconciliation &
+    categorisation · models & spreadsheets · reporting & commentary · controls, close & the
+    audit trail.
+  - **HR & People** (HR1–HR5, HRCAP): de-biased job specs & criteria · CV screening &
+    shortlisting · writing about and to people · employee data & privacy · people decisions
+    stay human.
+  - **Healthcare & Clinical Support** (HC1–HC5, HEALTHCAP): what AI can/can't touch clinically ·
+    clinical documentation & scribing · summarising records · patient-facing information ·
+    governance, safety & the incident path. Scope is deliberately admin / documentation /
+    info-support with heavy guardrails — not clinical decision-making.
+- **16 pathways now built** (11 "using AI at work" + 5 "building AI"), 86 competencies,
+  16 capstones. All `status: "available"`. `docs/09` catalogue + prototype table + About text
+  updated. Validated (syntax + vm load + full structural sweep + headless render) and deployed
+  to `aifaculty.org/app/`.
+- New `_COMPETENCIES` consts live just before `const PATHWAYS`; a `// BROADER-SCOPE PATHWAYS`
+  banner marks the section.
+
 ## Open threads
-- **Broader-scope pathways** — new domains: professional services (legal, accounting,
-  consulting), healthcare & sciences, commercial roles (sales, HR, account management), and more.
+- **More domains** — professional-services variants, public sector, sales-engineering, product
+  management, design/UX, journalism, and industry-specific academies.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
 - **Enforce pathway prerequisites** for real (non-founder) learners — currently advisory only.

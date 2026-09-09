@@ -1459,6 +1459,316 @@ window.CONTENT = (function () {
         { label: "Never — retrain on a fixed calendar only", ok: false, why: "A schedule ignores actual performance — it over- or under-retrains." },
       ]},
     ],
+
+    // ---- Legal & Contracts pathway ----
+    L1: [
+      { q: "Before AI reviews a contract, you should:", options: [
+        { label: "Let it 'find all the issues' and sort them after", ok: false, why: "You get stylistic noise and miss the clause that matters." },
+        { label: "Define the review's purpose and a checklist of what matters for this deal", ok: true, why: "The checklist is what turns AI from a noise generator into a checker." },
+        { label: "Ask it for a risk score", ok: false, why: "A number with no checklist behind it means nothing." },
+      ]},
+      { q: "Who decides what counts as a deal-breaker in a contract review?", options: [
+        { label: "The AI, based on what's unusual", ok: false, why: "Unusual is not the same as unacceptable-for-you." },
+        { label: "The reviewer, based on the situation — AI checks against that", ok: true, why: "The line is a judgement about your risk and leverage." },
+        { label: "Whatever the other side flags", ok: false, why: "They flag what suits them." },
+      ]},
+    ],
+    L2: [
+      { q: "An AI says your contract \"has no indemnification clause\". This claim is:", options: [
+        { label: "Reliable — AI read the whole document", ok: false, why: "Absence claims are exactly where AI is least reliable." },
+        { label: "Unverified until you search the document yourself", ok: true, why: "\"It's not there\" is a claim you confirm by hand." },
+        { label: "Fine to repeat if the AI sounds confident", ok: false, why: "Confidence is not evidence." },
+      ]},
+      { q: "Why must every AI statement about the contract quote the clause?", options: [
+        { label: "It looks more rigorous", ok: false, why: "Not the reason." },
+        { label: "So you can check the clause exists and says what the AI claims — AI describes contracts from the average of all contracts", ok: true, why: "The quote is what lets you verify against *this* document." },
+        { label: "The AI needs the quote to reason", ok: false, why: "The quote is for you, not the model." },
+      ]},
+    ],
+    L3: [
+      { q: "The most dangerous error in an AI-drafted clause is:", options: [
+        { label: "A typo", ok: false, why: "Annoying, not dangerous." },
+        { label: "The direction of an obligation being backwards — professional-looking language, opposite meaning", ok: true, why: "It reads right and binds the wrong party." },
+        { label: "British vs American spelling", ok: false, why: "Cosmetic." },
+      ]},
+      { q: "After AI drafts a clause referencing 'clause 9.2', you should:", options: [
+        { label: "Trust the reference — the AI wrote both", ok: false, why: "References silently break when clauses get renumbered." },
+        { label: "Open 9.2 and confirm it says what the reference implies", ok: true, why: "Cross-references are a known AI weak spot." },
+        { label: "Renumber everything", ok: false, why: "Overkill — just check the reference resolves." },
+      ]},
+    ],
+    L4: [
+      { q: "Pasting a confidential contract into an AI tool is:", options: [
+        { label: "Fine if you delete the chat afterwards", ok: false, why: "Deleting your view doesn't remove data already ingested." },
+        { label: "A disclosure — permitted only if the tool's terms and your confidentiality / NDA obligations allow it", ok: true, why: "It leaves your control the moment you paste it." },
+        { label: "Fine for summaries, risky for drafting", ok: false, why: "The input is disclosed either way." },
+      ]},
+      { q: "Before client contract text goes into an AI tool, the key thing to check is:", options: [
+        { label: "How fast it responds", ok: false, why: "Irrelevant to confidentiality." },
+        { label: "Whether it trains on / retains your inputs, and whether that breaches confidentiality or privilege", ok: true, why: "That's the line between an approved tool and a disclosure." },
+        { label: "Whether it supports your file format", ok: false, why: "Not the risk." },
+      ]},
+    ],
+    L5: [
+      { q: "AI can tell you a contract clause \"differs from standard\". It cannot tell you:", options: [
+        { label: "Which section the clause is in", ok: false, why: "It can — verified against the text." },
+        { label: "Whether that difference is an acceptable risk for you", ok: true, why: "That's situational judgement — your risk, your leverage." },
+        { label: "How the clause is typically worded", ok: false, why: "It can — that's its strength." },
+      ]},
+      { q: "\"We ran it through the AI and it flagged nothing\" should be treated as:", options: [
+        { label: "Equivalent to a qualified review finding nothing", ok: false, why: "The AI missing things is expected." },
+        { label: "One input — a qualified person still owns the opinion on anything consequential", ok: true, why: "AI's silence is not a clean bill of health." },
+        { label: "Sufficient for low-value contracts", ok: false, why: "'Low-value' can still carry high risk." },
+      ]},
+    ],
+
+    // ---- Sales pathway ----
+    SL1: [
+      { q: "An AI research brief says the prospect 'recently raised a Series B'. Before you say it on a call:", options: [
+        { label: "Trust it — AI research is thorough", ok: false, why: "Thorough-looking and wrong is the failure mode." },
+        { label: "Find the actual announcement; if you can't, don't lead with it", ok: true, why: "Facts you'll say aloud need a source you've seen." },
+        { label: "Hedge it as 'I think you raised recently'", ok: false, why: "Still stating an unverified fact." },
+      ]},
+      { q: "The first step of AI-assisted account research is:", options: [
+        { label: "Generate the full brief", ok: false, why: "A brief about the wrong company is worse than none." },
+        { label: "Confirm you've got the right company / person — name collisions are common", ok: true, why: "Everything downstream depends on the entity being right." },
+        { label: "List the pain points", ok: false, why: "Later, and only as hypotheses." },
+      ]},
+    ],
+    SL2: [
+      { q: "'Personalised' outreach where the personalisation isn't backed by a source is:", options: [
+        { label: "Still better than a plain template", ok: false, why: "It performs worse and can annoy." },
+        { label: "Just a template with a name field", ok: true, why: "Format personalisation, generic substance." },
+        { label: "Fine if the volume is low", ok: false, why: "Volume isn't the issue — substance is." },
+      ]},
+      { q: "A good AI-drafted outreach email has:", options: [
+        { label: "An impressive opener and three calls-to-action", ok: false, why: "Multiple asks kill reply rates." },
+        { label: "One sourced reason, one true claim, one clear ask", ok: true, why: "Specific, honest, easy to act on." },
+        { label: "As much personalisation detail as possible", ok: false, why: "More detail isn't the goal; a real reason is." },
+      ]},
+    ],
+    SL3: [
+      { q: "AI 'live assist' during a sales call is safe for:", options: [
+        { label: "Real-time competitor specs and pricing", ok: false, why: "Stale or wrong, in front of a knowledgeable buyer." },
+        { label: "Surfacing a discovery question or customer story you'd have known", ok: true, why: "A memory aid for things you could verify." },
+        { label: "Reading talking points verbatim", ok: false, why: "You sound like a bot and say its mistakes." },
+      ]},
+      { q: "AI assist surfaces a factual claim mid-call. You should:", options: [
+        { label: "State it — that's what the tool is for", ok: false, why: "Unverified facts in a live call cost trust." },
+        { label: "State it only if you already know it's true; otherwise 'let me confirm and follow up'", ok: true, why: "Confirm-or-defer keeps you credible." },
+        { label: "State it with 'the AI tells me...'", ok: false, why: "Passing the buck to the AI doesn't make it true." },
+      ]},
+    ],
+    SL4: [
+      { q: "AI summaries of sales calls tend to:", options: [
+        { label: "Understate how interested the prospect was", ok: false, why: "The bias runs the other way." },
+        { label: "Round 'maybe' up to 'yes' — overstating commitment", ok: true, why: "And that flows straight into the forecast." },
+        { label: "Be too cautious for the CRM", ok: false, why: "The opposite." },
+      ]},
+      { q: "Before saving an AI-suggested CRM stage update, check:", options: [
+        { label: "That it's a higher stage than last time", ok: false, why: "Progress isn't automatic." },
+        { label: "That you've actually done what that stage requires — the stage feeds the forecast", ok: true, why: "An overstated stage is a lie the team plans around." },
+        { label: "Nothing — the AI read the transcript", ok: false, why: "The AI overstates; you check." },
+      ]},
+    ],
+    SL5: [
+      { q: "AI generates a specific customer quote attributed to a real client who never said it. Using it is:", options: [
+        { label: "Fine if the sentiment is roughly accurate", ok: false, why: "Attributed words have to be real words." },
+        { label: "Fabrication — you need a real quote with permission, or no quote", ok: true, why: "This is how deals and reputations end." },
+        { label: "Acceptable with a small disclaimer", ok: false, why: "A disclaimer doesn't un-fabricate the quote." },
+      ]},
+      { q: "An AI-drafted capability claim ('integrates with your ERP') should be included only if:", options: [
+        { label: "It's on the roadmap", ok: false, why: "Roadmap is not 'does'." },
+        { label: "It's true today, checked by someone who'd know", ok: true, why: "The buyer will test it in a trial." },
+        { label: "The buyer doesn't ask for detail", ok: false, why: "Truth doesn't depend on whether they check." },
+      ]},
+    ],
+
+    // ---- Finance & Accounting pathway ----
+    FN1: [
+      { q: "For arithmetic (sums, growth rates, multi-step models), AI is:", options: [
+        { label: "Reliable if you ask clearly", ok: false, why: "It predicts text, not computes." },
+        { label: "Not reliable — do the maths in a spreadsheet and have AI describe the result", ok: true, why: "Keep calculation out of the model's hands." },
+        { label: "Reliable for simple sums only", ok: false, why: "Even those it can get wrong in context." },
+      ]},
+      { q: "A number appears in an AI's financial analysis. Before you use it:", options: [
+        { label: "Trust it if the analysis looks careful", ok: false, why: "Careful-looking isn't correct." },
+        { label: "Re-derive it yourself or trace it to your own calculation", ok: true, why: "Every number is your number before it's used." },
+        { label: "Check it's a round number", ok: false, why: "Irrelevant." },
+      ]},
+    ],
+    FN2: [
+      { q: "AI-assisted transaction categorisation should auto-apply:", options: [
+        { label: "Everything, with a note to review later", ok: false, why: "'Later' becomes a year-end cleanup." },
+        { label: "Only above a confidence threshold; unusual or new items go to a review queue", ok: true, why: "Speed on the clean ones, humans on the judgement ones." },
+        { label: "Nothing — it's not worth it", ok: false, why: "The clean matches are a real time saving." },
+      ]},
+      { q: "The check that would catch a systematic miscategorisation early is:", options: [
+        { label: "Asking the AI if it's sure", ok: false, why: "Self-assessed confidence isn't accuracy." },
+        { label: "A weekly sample of auto-categorised items checked against source documents", ok: true, why: "Catches the pattern in week 1, not at year-end." },
+        { label: "A year-end review", ok: false, why: "Too late — the story's cleanup was 400 transactions." },
+      ]},
+    ],
+    FN3: [
+      { q: "The classic error in an AI-written spreadsheet formula is:", options: [
+        { label: "Using the wrong font", ok: false, why: "Cosmetic." },
+        { label: "A hardcoded number where a cell reference should be — so it doesn't update", ok: true, why: "The model looks fine and silently stops responding to the assumptions." },
+        { label: "Too many decimal places", ok: false, why: "Not a correctness issue." },
+      ]},
+      { q: "The AI explained each formula and it 'made sense'. That means:", options: [
+        { label: "The model is verified", ok: false, why: "A description isn't a check." },
+        { label: "Nothing about whether the formula is correct — you still trace the logic and test with known inputs", ok: true, why: "Hearing the intent isn't seeing the cell." },
+        { label: "You can skip testing", ok: false, why: "Testing is where the errors surface." },
+      ]},
+    ],
+    FN4: [
+      { q: "You ask AI to explain a revenue dip. It gives a specific, confident reason you didn't provide. That reason is:", options: [
+        { label: "Probably inferred correctly from the data", ok: false, why: "AI can't know your business events." },
+        { label: "Likely fabricated — you supply every explanation or it's flagged 'under investigation'", ok: true, why: "AI generates plausible causes; that's not knowledge." },
+        { label: "Fine to include with 'likely'", ok: false, why: "A fabricated cause hedged is still fabricated." },
+      ]},
+      { q: "In AI-drafted financial narrative, the language should:", options: [
+        { label: "Soften bad news ('some softening')", ok: false, why: "That misrepresents what the numbers say." },
+        { label: "Match the precision of the numbers ('declined 6%')", ok: true, why: "State what happened, at the precision the data supports." },
+        { label: "Always be optimistic about recovery", ok: false, why: "Not unless there's a real, owned forecast." },
+      ]},
+    ],
+    FN5: [
+      { q: "With AI in the close process, segregation of duties means:", options: [
+        { label: "The AI reviews the preparer's work", ok: false, why: "AI is not a reviewer." },
+        { label: "The person who prepares with AI is not the person who reviews and approves", ok: true, why: "Preparer ≠ approver still holds." },
+        { label: "It no longer applies since AI did the work", ok: false, why: "Controls don't bend for AI." },
+      ]},
+      { q: "An AI-assisted figure in the accounts needs:", options: [
+        { label: "Nothing — the chat history is enough", ok: false, why: "Not structured, retained, or reproducible." },
+        { label: "A workpaper: the inputs, the method, AI's role, and the reviewer's sign-off", ok: true, why: "That's what makes it auditable." },
+        { label: "Only a note if the auditor asks", ok: false, why: "By then it's a finding." },
+      ]},
+    ],
+
+    // ---- HR & People pathway ----
+    HR1: [
+      { q: "AI drafts a job spec from:", options: [
+        { label: "The specific requirements you gave it, cleanly", ok: false, why: "It also imports patterns from all specs it's seen." },
+        { label: "The average of all job specs — including biased language and credential inflation", ok: true, why: "That's where the coded language and inflated requirements come from." },
+        { label: "Official occupational standards", ok: false, why: "Not its source." },
+      ]},
+      { q: "'5+ years experience' on a spec should be:", options: [
+        { label: "Kept — more experience is always better", ok: false, why: "It screens for tenure, not the skill the job needs." },
+        { label: "Challenged — does the job need the tenure, or the skill? It's often copied from similar posts", ok: true, why: "Requirements get inflated by copying." },
+        { label: "Increased to filter harder", ok: false, why: "Filtering harder on a non-job-related metric is worse, not better." },
+      ]},
+    ],
+    HR2: [
+      { q: "An AI screener trained on your past 'successful hires' will tend to:", options: [
+        { label: "Find the most objectively qualified candidates", ok: false, why: "It learns your past patterns, biases included." },
+        { label: "Reproduce who you hired before, including biased patterns", ok: true, why: "Trained on past outcomes = trained on past bias." },
+        { label: "Correct for historical bias automatically", ok: false, why: "It has no reason to." },
+      ]},
+      { q: "AI-assisted CV screening should score against:", options: [
+        { label: "A learned 'good candidate' model", ok: false, why: "That's where the bias hides." },
+        { label: "Explicit, job-related criteria, with a human reviewing rejections", ok: true, why: "Legible criteria + human review of who's out." },
+        { label: "Overall impression", ok: false, why: "Unaccountable and unmeasurable." },
+      ]},
+    ],
+    HR3: [
+      { q: "AI 'polishing' a performance review tends to:", options: [
+        { label: "Keep the facts and improve the wording", ok: false, why: "It invents specifics and shifts the rating's meaning." },
+        { label: "Invent specific incidents and shift the rating's meaning", ok: true, why: "It adds colour and drifts optimistic." },
+        { label: "Make it more critical", ok: false, why: "The drift is usually toward inflation." },
+      ]},
+      { q: "In an AI-drafted written warning, the specific incidents come from:", options: [
+        { label: "The AI, based on context", ok: false, why: "It invents these — dangerous in a legal document." },
+        { label: "You — the AI structures and words it, it doesn't source the facts", ok: true, why: "The facts are yours; the drafting is AI's." },
+        { label: "The employee's file, retrieved by the AI", ok: false, why: "Not unless you've verified each one against the file yourself." },
+      ]},
+    ],
+    HR4: [
+      { q: "Before employee data goes into an AI tool, a key check is:", options: [
+        { label: "Whether the tool is fast enough", ok: false, why: "Irrelevant to privacy." },
+        { label: "Whether it's approved (DPA, no training) and the use is compatible with what employees were told", ok: true, why: "Tool + lawful basis + compatible use." },
+        { label: "Whether it can output a chart", ok: false, why: "Not the risk." },
+      ]},
+      { q: "An AI's written output about a named employee is:", options: [
+        { label: "Just a summary, not sensitive", ok: false, why: "It's personal data about that person." },
+        { label: "Personal data — access-controlled and retained like any HR record", ok: true, why: "It doesn't stop being sensitive because a model wrote it." },
+        { label: "The AI vendor's data", ok: false, why: "It's the organisation's, about the employee." },
+      ]},
+    ],
+    HR5: [
+      { q: "A decision to put someone on a performance plan should be based on:", options: [
+        { label: "An AI 'performance trajectory' score", ok: false, why: "Opaque, likely biased, and nobody actually made the decision." },
+        { label: "Documented, job-related evidence a manager can explain and the employee can contest", ok: true, why: "A legible human judgement, not a score." },
+        { label: "An AI score plus manager sign-off", ok: false, why: "Sign-off on a biased score isn't a fix." },
+      ]},
+      { q: "In a people decision (hire, promote, pay, dismiss), AI's role is limited to:", options: [
+        { label: "Producing the score that determines the outcome", ok: false, why: "That makes the AI the decision-maker." },
+        { label: "Organising information, applying an explicit rubric, surfacing things, drafting — not deciding", ok: true, why: "Support the human; don't replace them." },
+        { label: "Ranking people so the manager just picks the top", ok: false, why: "That's the AI deciding, with a human clicking." },
+      ]},
+    ],
+
+    // ---- Healthcare & Clinical Support pathway ----
+    HC1: [
+      { q: "In a clinical setting, AI can help with:", options: [
+        { label: "Triaging patients by how urgent their symptoms are", ok: false, why: "That's a clinical decision." },
+        { label: "Drafting referral letters from the clinician's notes, with clinician sign-off", ok: true, why: "Admin drafting from supplied facts, checked." },
+        { label: "Interpreting blood results", ok: false, why: "Results interpretation as the decision is clinical." },
+      ]},
+      { q: "Software intended to inform a clinical decision is:", options: [
+        { label: "Just a productivity tool", ok: false, why: "It's likely a regulated medical device." },
+        { label: "Likely a regulated medical device — a general AI tool used this way is probably non-compliant", ok: true, why: "Decision-informing = device territory." },
+        { label: "Fine if it has a disclaimer", ok: false, why: "A disclaimer doesn't change the regulatory status." },
+      ]},
+    ],
+    HC2: [
+      { q: "An AI scribe's note that says 'patient denies chest pain' when it was never asked is:", options: [
+        { label: "A reasonable default to include", ok: false, why: "It's a fabricated statement in a legal record." },
+        { label: "Fabricated content in a legal record — the clinician must catch and remove it before signing", ok: true, why: "Only what was actually said or done belongs in the note." },
+        { label: "Fine if the patient probably doesn't have chest pain", ok: false, why: "'Probably' isn't 'was asked and denied'." },
+      ]},
+      { q: "With an AI scribe, the clinician saves time on:", options: [
+        { label: "Reviewing the note", ok: false, why: "That still has to be done properly." },
+        { label: "Typing — not on reading and correcting the note before signing", ok: true, why: "The review is unchanged; the typing is what's saved." },
+        { label: "Clinical accountability for the record", ok: false, why: "Accountability is unchanged." },
+      ]},
+    ],
+    HC3: [
+      { q: "An AI summary of a record says 'no known drug allergies'. Before prescribing, you:", options: [
+        { label: "Trust it — the AI read the whole record", ok: false, why: "A safety-critical negative is never acted on from a summary." },
+        { label: "Check the allergy status against the source record", ok: true, why: "Allergies, meds and key diagnoses are always verified against the source." },
+        { label: "Trust it if the summary looks thorough", ok: false, why: "Thorough-looking isn't verified." },
+      ]},
+      { q: "'The allergy isn't in the AI summary' means:", options: [
+        { label: "There's no allergy", ok: false, why: "Absence in the summary is not absence in the record." },
+        { label: "The AI didn't surface one — which is not the same as there not being one", ok: true, why: "It may be on page 140." },
+        { label: "The record is incomplete", ok: false, why: "The record may be fine; the summary missed it." },
+      ]},
+    ],
+    HC4: [
+      { q: "AI-drafted patient information about a medication must be:", options: [
+        { label: "Published quickly while it's useful", ok: false, why: "Speed doesn't override clinical checking." },
+        { label: "Approved by a clinician against local guidelines, with dosing, interactions and warnings checked line by line", ok: true, why: "Patient information is a clinical document." },
+        { label: "Fine if it has a disclaimer", ok: false, why: "A disclaimer doesn't fix a wrong dose." },
+      ]},
+      { q: "A fluent AI translation of a patient leaflet:", options: [
+        { label: "Is safe to use — the meaning carries over", ok: false, why: "Fluent isn't the same as clinically accurate." },
+        { label: "Still needs a check that it's clinically accurate, not just readable", ok: true, why: "A fluent but inaccurate translation is worse than none." },
+        { label: "Only needs checking for spelling", ok: false, why: "The risk is clinical meaning, not spelling." },
+      ]},
+    ],
+    HC5: [
+      { q: "The test for whether a clinical AI use has enough governance:", options: [
+        { label: "Does it have a disclaimer", ok: false, why: "Disclaimers aren't governance." },
+        { label: "If it produced a harmful output tomorrow — would we catch it, could we stop it, does someone own it", ok: true, why: "Catch, stop, own." },
+        { label: "Did the vendor certify it", ok: false, why: "Necessary maybe, not sufficient." },
+      ]},
+      { q: "After a vendor updates a clinical AI tool, you should:", options: [
+        { label: "Assume it still works the same", ok: false, why: "Updates can change behaviour silently." },
+        { label: "Re-check its output quality — behaviour can change silently", ok: true, why: "The story's garbled medication lists appeared after an update." },
+        { label: "Wait for a clinician to complain", ok: false, why: "By then it's been wrong for weeks." },
+      ]},
+    ],
   };
 
   // =================================================================
@@ -4139,7 +4449,7 @@ window.CONTENT = (function () {
             { label: "No map of the current process — the existing checks and their owners aren't known", signals: ["no map", "map the process", "current process", "existing checks", "what are the checks", "how is it done now", "walk it"] },
             { label: "PO matching is a judgement call (partial deliveries, price changes, substitutions), not a lookup", signals: ["judgement", "partial", "price change", "substitut", "not a lookup", "not exact", "discrepanc", "match isn't simple"] },
             { label: "\"Schedules payment\" is an irreversible money step with no human gate", signals: ["payment", "money", "irreversible", "human gate", "approval", "no one checks", "no sign-off", "hard to undo"] },
-            { label: "No handling for invoices that don't match any PO or don't match cleanly", signals: ["no match", "doesn't match", "exception", "what happens when", "no PO", "review queue", "fallback"] },
+            { label: "No handling for invoices that don't match any PO or don't match cleanly", signals: ["no match", "doesn't match", "exception", "what happens when", "no po", "review queue", "fallback"] },
             { label: "No audit trail / record of what the AI decided", signals: ["audit", "trail", "record", "log", "reconstruct", "what it decided", "no record"] },
           ],
           "transferable"),
@@ -5631,6 +5941,1978 @@ window.CONTENT = (function () {
   // outline = the planned curriculum for a pathway that isn't built yet (visible in its overview)
   const ol = (id, name, canDo) => ({ id, name, canDo });
 
+  // =================================================================
+  //  BROADER-SCOPE PATHWAYS — new domains beyond the initial catalogue.
+  // =================================================================
+
+  // ---- Legal & Contracts pathway ----
+  const LEGAL_COMPETENCIES = [
+    {
+      id: "L1", name: "Scope what you're actually checking",
+      canDo: "Turn \"review this contract\" into a specific checklist of what matters for this deal — before AI reads a word.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "You asked AI to \"review this NDA\". It returned 15 \"issues\" — mostly stylistic nitpicks and one hallucinated clause reference. The actual problem — a 5-year non-compete buried in the definitions — it didn't flag, because you never told it non-competes were the thing you cared about.",
+          point: "\"Review this\" with no checklist gets you a pile of noise and misses the one clause that matters for your situation.",
+        },
+        explain: {
+          paras: [
+            "A contract review has a purpose: you're signing, you're negotiating, you're checking compliance, you're assessing deal risk. Name it, then build the checklist.",
+            "The checklist has four parts: the **deal-specific risks** (for this counterparty, this money, this dependency); the **standard clauses you always check** (liability caps, indemnities, termination, IP, governing law, auto-renewal); the **must-haves and deal-breakers**; and **what's out of scope**.",
+            "AI checks the contract against your checklist. It doesn't decide what the checklist is.",
+          ],
+          keyIdea: "Name the review's purpose, then a checklist: deal-specific risks + your standard clauses + must-haves / deal-breakers + out-of-scope. AI checks against it; it doesn't set it.",
+        },
+        demonstrate: {
+          task: "Reviewing a SaaS vendor agreement you're about to sign.",
+          steps: [
+            { move: "Name the purpose", think: "Why are we reading this?", result: "We're signing; the risk is our data and vendor lock-in." },
+            { move: "Deal-specific risks", think: "This counterparty, this dependency.", result: "They'll hold our customer data — check data processing, breach notification, deletion on exit, sub-processors." },
+            { move: "Standard clauses", think: "The ones you always check.", result: "Liability cap vs our exposure; auto-renewal + notice period; termination for convenience; price-increase terms." },
+            { move: "Deal-breakers", think: "Decided by you, up front.", result: "No liability cap below 12 months' fees; no data return on termination; unilateral price increases." },
+          ],
+          full: "The checklist is four data clauses (deal-specific), four standard clauses, and three explicit deal-breakers. AI reads the contract against exactly that — not \"find all issues\".",
+        },
+        deconstruct: [
+          "Naming the purpose narrowed 40 pages to the ~11 clauses that matter.",
+          "The deal-breakers are decided by you, not discovered by the AI.",
+          "\"Out of scope\" (their indemnity wording, say) stops the review ballooning into a full rewrite.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're reviewing an employment contract for a senior hire your company is making.",
+          fields: [
+            { key: "purpose", label: "The review's purpose", hint: "Which side, what for.", minWords: 4 },
+            { key: "dealspecific", label: "Risks specific to this hire", hint: "IP, restrictive covenants, the offer terms.", minWords: 6 },
+            { key: "standard", label: "Clauses you always check for employment", hint: "Your standard list.", minWords: 5 },
+            { key: "breakers", label: "Deal-breakers", hint: "What you won't accept.", minWords: 4 },
+          ],
+          model: {
+            purpose: "We're the employer, making the offer; the risk is future disputes and IP ownership.",
+            dealspecific: "IP assignment covers the work with a prior-inventions carve-out; restrictive covenants are enforceable in our jurisdiction and proportionate; notice period; bonus / equity terms match the offer letter.",
+            standard: "Governing law, confidentiality, garden leave, termination grounds, what survives termination.",
+            breakers: "IP assignment with no clear scope; a non-compete our lawyers say is unenforceable (worse than none); equity terms that don't match what was agreed.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("L1.1", "Reproduce", "Scope a real contract review",
+          "Take a contract you'd review (or a realistic one). Scope the review before any AI.",
+          "Strong answer: the review's purpose is named; the checklist separates deal-specific risks from standard clauses; must-haves / deal-breakers are explicit and decided by the reviewer; and a scope boundary is stated.",
+          [
+            { key: "contract", label: "The contract + your side", hint: "One line.", minWords: 4 },
+            { key: "purpose", label: "The review's purpose", hint: "Sign / negotiate / comply / assess.", minWords: 3 },
+            { key: "checklist", label: "The checklist — deal-specific + standard clauses", hint: "Both.", minWords: 8 },
+            { key: "breakers", label: "Must-haves / deal-breakers", hint: "Your line.", minWords: 4 },
+          ],
+          [
+            { label: "The review's purpose is named" },
+            { label: "Checklist separates deal-specific risks from standard clauses" },
+            { label: "Deal-breakers are explicit and set by the reviewer; scope boundary stated" },
+          ],
+          "independent"),
+        critiqueChallenge("L1.2", "Adapt", "Fix a scopeless review request",
+          "Here is how the review was handed over. Find every problem before AI touches it.",
+          "\"Here's the master services agreement — can you get AI to check it over and tell me if there's anything bad in it?\"",
+          [
+            { label: "No purpose — signing? negotiating? which side are we on?", signals: ["purpose", "which side", "signing", "negotiating", "what for", "why are we reviewing", "our side"] },
+            { label: "\"Anything bad\" is not a checklist — every contract has clauses you could improve", signals: ["not a checklist", "anything bad", "too vague", "every contract", "what counts as bad", "no criteria", "define"] },
+            { label: "No deal-specifics — the money, the dependency, the counterparty risk", signals: ["deal-specific", "the money", "dependency", "counterparty", "what's at stake", "this deal", "context"] },
+            { label: "No deal-breakers named", signals: ["deal-breaker", "must-have", "won't accept", "red line", "non-negotiable"] },
+            { label: "Risk that AI returns stylistic noise and misses the clause that matters", signals: ["noise", "nitpick", "stylistic", "misses", "the one clause", "false issues", "signal"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "L2", name: "Ground every AI claim in the document",
+      canDo: "Make AI cite the exact clause for every statement it makes about the contract, and check each citation.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI summary said \"the agreement includes a mutual limitation of liability at 12 months' fees.\" The contract had no liability cap at all. The AI had pattern-matched to what these contracts usually say. The deal nearly closed on that summary.",
+          point: "AI describes contracts from the average of every contract it's seen. What it says is in *this* one has to be checked against *this* one.",
+        },
+        explain: {
+          paras: [
+            "Every AI statement about the contract must **quote the clause** — section number and the actual text — so you can verify it.",
+            "Then check: does the quoted text say what the AI claims? does it exist? is the paraphrase accurate, or has it softened or strengthened the clause?",
+            "For anything the AI says is *absent* (\"there's no indemnity clause\"), that's a claim to verify by searching yourself. Absence is exactly what AI gets wrong. An uncited AI claim about the contract is unverified.",
+          ],
+          keyIdea: "Every AI claim about the contract quotes the clause (section + text). Check the quote exists, says what's claimed, and isn't a softened paraphrase. Claims of absence get verified by hand.",
+        },
+        demonstrate: {
+          task: "AI says: \"Clause 9.2 caps liability at the total fees paid in the prior 12 months.\"",
+          steps: [
+            { move: "Find 9.2", think: "Does it exist?", result: "Open the contract to 9.2 — it exists." },
+            { move: "Read it", think: "Word for word.", result: "It says 'the fees paid in the 12 months preceding the claim' — different from 'prior 12 months', and it's one-directional, not mutual." },
+            { move: "Check the paraphrase", think: "Complete?", result: "9.2 also excludes indirect losses — two mechanisms; the AI mentioned one." },
+            { move: "Check the absence claim", think: "Search yourself.", result: "AI said 'no super-cap carve-outs'. Search for 'notwithstanding' / 'unlimited' near clause 9 → 9.4 makes data-breach liability uncapped." },
+          ],
+          full: "The cited clause existed but the AI's paraphrase was loose (timing, mutuality) and incomplete (missed the exclusion), and its claim of 'no carve-outs' was wrong — 9.4 uncaps data-breach liability. All caught by reading the actual text.",
+        },
+        deconstruct: [
+          "The AI's paraphrase drifted toward the *standard* version of the clause.",
+          "\"No carve-outs\" is an absence claim — the highest-risk kind.",
+          "Reading 9.4 yourself is the check that mattered most.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "AI has summarised a partnership agreement with three claims: \"Either party may terminate on 60 days notice (cl. 14).\" \"IP created jointly is jointly owned (cl. 8.3).\" \"There is no non-solicitation clause.\"",
+          fields: [
+            { key: "cite", label: "How you'd verify claim 1", hint: "Open clause 14.", minWords: 5 },
+            { key: "paraphrase", label: "What you'd check about claim 2", hint: "'Jointly owned' can mean many things.", minWords: 5 },
+            { key: "absence", label: "How you'd check claim 3", hint: "It's an absence claim.", minWords: 5 },
+            { key: "rule", label: "Your rule for uncited claims", hint: "One line.", minWords: 4 },
+          ],
+          model: {
+            cite: "Go to clause 14. Confirm it exists, says 60 days (not 30, not 90), 'either party' (not just one), and check whether 'terminate' there means the whole agreement or just a schedule.",
+            paraphrase: "Read 8.3. Can each party use the IP freely? license it? Does 8.3 actually say joint ownership, or something like 'the commissioning party owns it'? Check the AI didn't simplify.",
+            absence: "Search the whole document for 'solicit', 'poach', 'hire', 'employees of', and read the clauses near confidentiality and restrictive covenants. Absence claims are where AI is least reliable.",
+            rule: "Any statement about the contract without a clause citation I can open and read is unverified and doesn't go in my advice.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("L2.1", "Reproduce", "Verify an AI contract summary",
+          "Take an AI summary of a real contract (or a provided one). Verify it against the document.",
+          "Strong answer: each claim is checked against the actual clause text; paraphrase accuracy is assessed (softened / strengthened / incomplete); absence claims are verified by independent search; and uncited claims are flagged as unverified.",
+          [
+            { key: "claims", label: "3+ AI claims about the contract", hint: "Quote them.", minWords: 6 },
+            { key: "verification", label: "How you checked each", hint: "Quote found, paraphrase accurate, absence searched.", minWords: 10 },
+            { key: "findings", label: "What was off", hint: "The discrepancies.", minWords: 5 },
+          ],
+          [
+            { label: "Each claim checked against the actual clause text" },
+            { label: "Paraphrase accuracy assessed; absence claims independently searched" },
+            { label: "Uncited claims flagged as unverified" },
+          ],
+          "independent"),
+        scenarioChallenge("L2.2", "Create", "The AI described a clause that isn't there",
+          "An AI review of a supply contract confidently describes a force majeure clause with specific carve-outs. You can't find any force majeure clause in the document.",
+          "What do you conclude and do?",
+          [
+            { id: "a", label: "It must be there — search again more carefully, the AI read the whole thing", ok: false, why: "A confident AI description of a non-existent clause is a known failure. Your search is the ground truth." },
+            { id: "b", label: "Treat it as a hallucination — the contract likely has no force majeure clause, which is itself a finding (a risk) to raise", ok: true, why: "The absence is real and worth flagging; the AI's description of the missing clause is noise." },
+            { id: "c", label: "Ask the AI to point to the clause number", ok: false, why: "It will often invent one just as confidently." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "L3", name: "Redlines and drafting with a human editor",
+      canDo: "Use AI to draft clauses and redlines fast, then edit every one as if a junior wrote it.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI-drafted indemnity clause looked professional and was used in three contracts before someone noticed it indemnified the wrong party — the indemnifier and indemnitee were reversed. Standard-looking language, backwards meaning.",
+          point: "AI drafts legal language that reads right and can mean the opposite of what you need. Fluent ≠ correct.",
+        },
+        explain: {
+          paras: [
+            "AI is fast at: first-draft clauses from a plain-English intent, redline suggestions against a position, reformatting, and alternative phrasings to negotiate with.",
+            "It is unreliable at: the *direction* of obligations, cross-references (clause 9.2 becomes 9.3 after an edit and the reference doesn't update), defined terms used consistently, and jurisdiction-specific enforceability.",
+            "Workflow: give AI the intent and your position; get a draft; **read it as the meaning, not the words** — who owes what to whom, when, capped at what; check every cross-reference and defined term; and a qualified person signs off on anything that creates a legal obligation.",
+          ],
+          keyIdea: "AI drafts from intent fast; you check the *meaning* (direction of obligations, caps, timing), every cross-reference and defined term, and jurisdiction fit. A qualified human signs off on anything creating an obligation.",
+        },
+        demonstrate: {
+          task: "Drafting a confidentiality clause with AI.",
+          steps: [
+            { move: "Intent to AI", think: "Plain English + position.", result: "'Mutual confidentiality, survives 3 years post-termination, standard carve-outs (public domain, independently developed, required by law).'" },
+            { move: "Read the meaning", think: "Who is bound?", result: "Check it's actually mutual (not just binding the other side); the 3 years runs from the right date; the carve-outs are the ones asked for." },
+            { move: "Check cross-refs", think: "Do they resolve?", result: "It references 'the Purpose defined in clause 2' — confirm clause 2 defines a Purpose and it's the right scope." },
+            { move: "Sign-off", think: "Anything binding.", result: "A lawyer reviews before it goes in a contract that will be signed." },
+          ],
+          full: "The AI produced a usable first draft in seconds. The review checked mutuality, the survival period's start date, the carve-outs, and the cross-reference to the defined Purpose — then a qualified person approved it.",
+        },
+        deconstruct: [
+          "Reading \"who is bound\" caught whether the clause is actually mutual.",
+          "Cross-references silently break when clauses get renumbered.",
+          "The sign-off is non-negotiable for anything that will be signed.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You need AI to suggest a redline to a client's proposed payment terms — they want 90 days, you want 30.",
+          fields: [
+            { key: "brief", label: "What you give the AI", hint: "The clause + your position + a fallback.", minWords: 6 },
+            { key: "meaning", label: "What you check in the meaning of its redline", hint: "Did it actually change the period?", minWords: 5 },
+            { key: "refs", label: "Cross-reference / defined-term checks", hint: "Fees definition, schedules, numbers.", minWords: 4 },
+            { key: "signoff", label: "Who approves and when", hint: "For a redline going to the client.", minWords: 4 },
+          ],
+          model: {
+            brief: "'Here's clause 5 (payment terms). Our position: net 30, late-payment interest at [X]%, right to suspend services after 45 days overdue. Suggest a redline and a fallback to net 45.'",
+            meaning: "Does the redline actually change the payment period to 30 (not just add words)? Does 'suspend' mean what we want, or did it write 'terminate'? Is the interest rate a placeholder we must fill, or did it invent one?",
+            refs: "If it references a 'Fees' definition or a schedule, confirm those exist and match. Check clause numbers if it moved anything.",
+            signoff: "Whoever owns the negotiation reviews it; a lawyer if the clause affects our liability or termination rights.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("L3.1", "Reproduce", "Draft-and-check a real clause",
+          "Take a clause you need. Draft it with AI and check it.",
+          "Strong answer: the brief gives intent and position, not just \"write a clause\"; the check is on meaning — direction of obligations, caps, timing — not wording; cross-references and defined terms are checked; and a qualified sign-off is named for anything binding.",
+          [
+            { key: "clause", label: "The clause + your intent / position", hint: "One or two lines.", minWords: 5 },
+            { key: "aidraft", label: "The brief you'd give the AI", hint: "Intent + position.", minWords: 5 },
+            { key: "meaningcheck", label: "What you verify in the meaning", hint: "Direction, caps, timing.", minWords: 6 },
+            { key: "signoff", label: "The approval for anything binding", hint: "Who, when.", minWords: 3 },
+          ],
+          [
+            { label: "The brief gives intent and position, not just \"write a clause\"" },
+            { label: "The check is on meaning — obligations, caps, timing — not wording" },
+            { label: "Cross-references and defined terms checked; qualified sign-off for anything binding" },
+          ],
+          "independent"),
+        critiqueChallenge("L3.2", "Adapt", "Review an AI-drafted clause",
+          "Here is an AI-drafted clause for a services agreement. Find every problem.",
+          "\"The Supplier shall indemnify and hold harmless the Client against any and all losses, damages, and costs, including legal fees, arising from the Client's breach of this Agreement or the Client's negligence.\"",
+          [
+            { label: "The direction is backwards — the Supplier is indemnifying the Client against the *Client's own* breach and negligence", signals: ["backwards", "direction", "wrong party", "client's own", "reversed", "should be the supplier's", "nonsensical", "indemnifier"] },
+            { label: "\"any and all losses ... including\" with no cap is an unlimited indemnity", signals: ["unlimited", "no cap", "uncapped", "any and all", "should be capped", "exposure", "no limit"] },
+            { label: "No carve-out for the Client's contributory negligence", signals: ["contributory", "carve-out", "to the extent", "except where the client", "own negligence", "proportion"] },
+            { label: "\"arising from\" is broad — \"to the extent caused by\" is tighter", signals: ["arising from", "to the extent caused by", "broad", "causation", "tighter", "scope"] },
+            { label: "A lawyer must review before this is used", signals: ["lawyer", "qualified", "review", "sign-off", "not use as-is", "legal review"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "L4", name: "Privilege, confidentiality and what you put in the prompt",
+      canDo: "Decide what contract and client information can go into an AI tool, and set that up so mistakes can't happen.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A lawyer pasted a full M&A contract into a consumer AI chatbot for a summary. The counterparty's name, the price, and the deal terms — all now in a third party's systems, potentially used for training, on a deal under strict NDA. The client was not pleased.",
+          point: "Pasting a confidential document into an AI tool is a disclosure. Whether it's a *permitted* one depends entirely on the tool and the terms.",
+        },
+        explain: {
+          paras: [
+            "Before any client or contract text goes into an AI tool: **What's the tool's data policy?** Does it train on inputs? Retain them? Where? A consumer chatbot and an enterprise tool with a data-processing agreement are completely different.",
+            "**Does putting this here breach confidentiality, privilege, or the NDA on this matter?** Privileged material and matters under NDA have the tightest limits.",
+            "**Can you redact?** Names, figures, identifying details out; structure and clause text in — often enough for a review task.",
+            "**Enforce it**: an approved tool with the right contract in place, and a rule (ideally technical) against pasting into anything else. Disclosure isn't reversible.",
+          ],
+          keyIdea: "Before client/contract text goes in: check the tool's data policy (train? retain?), whether it breaches confidentiality / privilege / NDA, whether you can redact identifiers, and enforce an approved-tool-only rule. Disclosure isn't reversible.",
+        },
+        demonstrate: {
+          task: "A paralegal wants to use AI to summarise a set of leases for a property deal.",
+          steps: [
+            { move: "Tool check", think: "Data policy.", result: "The firm's enterprise AI tool has a DPA, no training on inputs, EU data residency — approved for client data." },
+            { move: "Matter check", think: "Extra restrictions?", result: "The deal isn't under a special NDA beyond normal client confidentiality — the enterprise tool is within policy." },
+            { move: "Redaction", think: "Cheap insurance.", result: "Redact the tenant names and exact rents; the clause structure is what the summary needs." },
+            { move: "Enforce", think: "Make it real.", result: "The work is done only in the approved tool; the consumer chatbot is blocked on work devices." },
+          ],
+          full: "The task goes ahead — but only because the tool was checked (DPA, no training, data residency), the matter had no extra restrictions, identifiers were redacted anyway, and the approved-tool-only rule was enforced technically.",
+        },
+        deconstruct: [
+          "\"No training on inputs\" plus a DPA is the line between an approved tool and a disclosure.",
+          "Redacting identifiers is cheap insurance even on an approved tool.",
+          "The technical block on consumer tools is what makes the policy real.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're a solo founder who wants to use AI to review contracts for your startup. No legal team, no enterprise AI subscription.",
+          fields: [
+            { key: "toolpolicy", label: "What to check before using a tool", hint: "Training, retention.", minWords: 5 },
+            { key: "whatnot", label: "What you should never paste, even into a paid tool", hint: "The hard limits.", minWords: 5 },
+            { key: "redact", label: "What you'd redact for a review task", hint: "Identifiers.", minWords: 4 },
+            { key: "setup", label: "How you'd set this up safely", hint: "The practical rule.", minWords: 5 },
+          ],
+          model: {
+            toolpolicy: "Read the specific plan's terms: does it train on your inputs? (Many consumer tiers do; many paid/business tiers don't — check, don't assume.) Retention period? A business tier with a 'no training, zero retention' option is the minimum.",
+            whatnot: "Anything under a specific NDA that names the AI-tool risk; anything where the counterparty could object; live deal terms for an unannounced deal if leakage would matter.",
+            redact: "Counterparty name, figures, individuals' names, anything that identifies the deal. Keep the clause text and structure — that's what a review needs.",
+            setup: "One paid business-tier tool with training off. A personal rule: redact identifiers, never paste into a free tool, and for anything high-stakes get a real lawyer — AI is a first pass, not the review.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("L4.1", "Reproduce", "Confidentiality plan for AI contract work",
+          "For your situation, write the plan for keeping client / contract information safe when using AI.",
+          "Strong answer: the tool's training and retention policy is checked, not assumed; privilege / NDA / confidentiality limits are identified; a redaction approach is described; and enforcement is technical or procedural, not just intent.",
+          [
+            { key: "context", label: "Your situation", hint: "Solo / firm / in-house.", minWords: 3 },
+            { key: "toolcheck", label: "What you verify about the tool", hint: "Training, retention, residency.", minWords: 5 },
+            { key: "limits", label: "What never goes in", hint: "Privilege, NDA.", minWords: 4 },
+            { key: "enforcement", label: "How the rule is made real", hint: "Technical or procedural.", minWords: 4 },
+          ],
+          [
+            { label: "The tool's training and retention policy is checked, not assumed" },
+            { label: "Privilege / NDA / confidentiality limits identified; a redaction approach described" },
+            { label: "Enforcement is technical or procedural, not just intent" },
+          ],
+          "independent"),
+        scenarioChallenge("L4.2", "Create", "A colleague pasted a client contract into a free chatbot",
+          "You discover a colleague has been pasting client contracts into a free consumer AI tool for months. The tool's terms say inputs may be used to improve the service.",
+          "What's the situation and what do you do?",
+          [
+            { id: "a", label: "Delete the chat history and move on — the damage is contained", ok: false, why: "Deleting your view of the history doesn't remove data already ingested or used, and there may be a duty to disclose to clients." },
+            { id: "b", label: "Treat it as a confidentiality incident: stop the practice now, assess which clients / matters were exposed, take advice on disclosure obligations, and put an approved tool + technical block in place", ok: true, why: "It's an incident — handle it like one, and fix the process so it can't recur." },
+            { id: "c", label: "It's probably fine since no one has complained", ok: false, why: "The breach exists whether or not anyone noticed." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "L5", name: "AI is a first pass, not the legal opinion",
+      canDo: "Know exactly where AI's contract help stops and a qualified human's judgement has to take over.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A founder used an AI tool to \"check\" a term sheet, it said \"looks standard\", and they signed. The liquidation preference was 3x participating — highly non-standard and very expensive. The AI had seen enough term sheets to recognise the format, not enough to know that number was a problem for the founder.",
+          point: "AI can tell you what a contract *says* and how it compares to typical language. It can't tell you whether it's *right for you* — that's judgement about your situation, your risk, your leverage.",
+        },
+        explain: {
+          paras: [
+            "**AI can**: extract and summarise clauses (verified), flag deviations from a standard or your playbook, draft first-pass language, speed up version comparison, surface questions to ask.",
+            "**AI cannot be the final word on**: whether a risk is acceptable *for you*, negotiation strategy, enforceability in a jurisdiction, whether to sign, anything where being confidently wrong is expensive and hard to reverse — and it cannot carry the professional responsibility.",
+            "For anything consequential (signing, advising a client, litigation), AI's output is an input to a qualified person's opinion, logged as such. If you're not qualified and the stakes are real, that person is a lawyer.",
+          ],
+          keyIdea: "AI: extract / summarise (verified), flag deviations, draft, compare, surface questions. Not AI's call: is this risk acceptable for me, strategy, enforceability, whether to sign. Consequential = a qualified human owns the opinion; AI is a logged input.",
+        },
+        demonstrate: {
+          task: "Using AI on a commercial lease before signing.",
+          steps: [
+            { move: "What AI did", think: "The mechanical first pass.", result: "Summarised the key terms (verified against the lease), flagged that the repair obligation and break clause differ from a standard lease, listed 6 questions to raise." },
+            { move: "Where it stopped", think: "The judgement calls.", result: "Whether a full-repairing lease is acceptable given the building's age; whether the rent review is market (needs a surveyor); whether to sign." },
+            { move: "The handoff", think: "To a qualified person.", result: "The AI's summary and flags go to a property solicitor, who advises on the repair and break-clause risk." },
+            { move: "Logged", think: "Reviewable.", result: "The file records that AI was used for the first pass and a solicitor gave the opinion." },
+          ],
+          full: "AI did the mechanical first pass and surfaced the right questions. The judgement calls — acceptable risk, market terms, whether to sign — went to a qualified person, with the AI's role logged as an input.",
+        },
+        deconstruct: [
+          "\"Differs from standard\" is an AI-findable fact; \"is that difference acceptable for you\" is not.",
+          "The questions the AI surfaced are useful even though the answers aren't the AI's.",
+          "Logging the AI's role protects everyone if the deal goes wrong.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're informally advising a friend who's about to sign a franchise agreement. You've run it through an AI tool.",
+          fields: [
+            { key: "aican", label: "What the AI output is genuinely useful for here", hint: "The map.", minWords: 5 },
+            { key: "ainot", label: "The judgement calls that are not the AI's — or yours", hint: "Be honest about your own limits.", minWords: 5 },
+            { key: "handoff", label: "Who the real advice should come from", hint: "The qualified person.", minWords: 4 },
+            { key: "honest", label: "What you'd honestly tell your friend about the AI's 'review'", hint: "Prep, not advice.", minWords: 6 },
+          ],
+          model: {
+            aican: "A clear summary of the key obligations, the fees and their triggers, the term and renewal, the territory, and the exit terms — plus a list of the clauses that look unusual or one-sided.",
+            ainot: "Whether the franchise economics actually work; whether the restrictions are enforceable; whether the initial fee is reasonable; whether to sign. And it's not my call either — I'm not qualified.",
+            handoff: "A solicitor who does franchise agreements, and ideally an accountant on the numbers. Before signing anything.",
+            honest: "'The AI gave us a good map of what's in it and what to ask about — but it can't tell you if this is a good deal or a fair contract. For something you'll be locked into for 10 years, get a franchise solicitor to look at it. Treat the AI summary as prep, not advice.'",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("L5.1", "Reproduce", "Draw the line for a real contract situation",
+          "Take a contract situation. Draw the line between AI's help and the qualified-human judgement.",
+          "Strong answer: AI's useful role is specific (extract, flag, draft, compare, question); the non-AI judgement calls are named (acceptable risk, strategy, enforceability, whether to sign); a qualified opinion-owner is identified for consequential matters; and the AI's role is logged as an input.",
+          [
+            { key: "situation", label: "The contract + your role", hint: "One line.", minWords: 4 },
+            { key: "aican", label: "What AI genuinely helps with", hint: "Specific.", minWords: 5 },
+            { key: "ainot", label: "The judgement calls outside AI — and whether outside you too", hint: "Risk, strategy, enforceability, sign?", minWords: 5 },
+            { key: "handoff", label: "Who owns the opinion; how the AI role is logged", hint: "Qualified person + record.", minWords: 4 },
+          ],
+          [
+            { label: "AI's useful role is specific (extract, flag, draft, compare, question)" },
+            { label: "The non-AI judgement calls are named" },
+            { label: "A qualified opinion-owner is identified; the AI's role is logged" },
+          ],
+          "independent"),
+        scenarioChallenge("L5.2", "Create", "\"The AI said it was standard\"",
+          "Someone on your team advised a client that a contract was 'fine to sign — we ran it through the AI and it flagged nothing unusual.' The client signed. A clause the AI didn't flag turns out to be a serious problem.",
+          "What went wrong in how the AI was used?",
+          [
+            { id: "a", label: "The AI model wasn't good enough — use a better one", ok: false, why: "A better model still can't own a professional opinion or judge acceptable risk for the client." },
+            { id: "b", label: "\"The AI flagged nothing\" was treated as \"a qualified review found nothing\" — the AI's output should have been an input to a person's opinion, not the opinion itself", ok: true, why: "The AI missing something is expected; a person still owns the judgement on anything consequential." },
+            { id: "c", label: "The client should have read it themselves", ok: false, why: "The failure is on the advice given, not the client." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // ---- Sales pathway ----
+  const SALES_COMPETENCIES = [
+    {
+      id: "SL1", name: "Account & prospect research",
+      canDo: "Use AI to build a picture of an account fast — with every claim traceable to a real source.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "Your AI-researched call prep said the prospect had \"recently raised a Series B and was expanding into Europe.\" On the call you led with it. They hadn't raised anything — the AI had confused them with a similarly-named company. The call never recovered.",
+          point: "AI research for sales is confidently specific and often wrong about exactly the facts you'd open a call with.",
+        },
+        explain: {
+          paras: [
+            "Build the picture with AI — company, role, likely priorities, recent news, tech stack, org changes — but **every fact you'll say out loud gets a source you've seen**: the press release, the LinkedIn post, the earnings call, the job listing.",
+            "Anything AI asserts without a source is a hypothesis, not a fact.",
+            "Watch for: the wrong company (name collisions), stale news presented as recent, and invented specifics (\"they use Salesforce\" when nothing says so). Separate \"confirmed\" from \"likely\" from \"guess\" in your notes.",
+          ],
+          keyIdea: "Build the account picture with AI, but every fact you'll say gets a source you've seen. Uncited AI claims are hypotheses. Watch for wrong-company, stale-as-recent, and invented specifics.",
+        },
+        demonstrate: {
+          task: "Prepping for a discovery call with a mid-market prospect.",
+          steps: [
+            { move: "Gather", think: "The starting brief.", result: "AI drafts: company size, the buyer's role, industry pressures, recent news, likely pain points." },
+            { move: "Source the facts", think: "Anything you'd say aloud.", result: "'Expanding to Europe' — find the actual announcement; can't → mark 'unconfirmed', don't lead with it." },
+            { move: "Check the entity", think: "Right company?", result: "Confirm the name, domain and size match before trusting anything in the brief." },
+            { move: "Tier the notes", think: "By confidence.", result: "Confirmed: 400 employees, new VP Eng (LinkedIn). Likely: cost pressure (sector-wide). Guess: current tooling." },
+          ],
+          full: "The AI brief is a starting point. The facts worth opening with are each traced to a source, the company identity is confirmed, and everything else is labelled by confidence so nothing unverified comes out on the call.",
+        },
+        deconstruct: [
+          "Checking the entity first prevents the whole brief being about the wrong company.",
+          "\"Mark it unconfirmed, don't lead with it\" is the rule that saves the call.",
+          "Tiering notes by confidence keeps you honest live.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're researching a prospect account before a first meeting with their Head of Operations.",
+          fields: [
+            { key: "gather", label: "What you'd have AI pull together", hint: "The brief.", minWords: 6 },
+            { key: "source", label: "Which facts must have a source you've seen", hint: "Anything you'd state.", minWords: 5 },
+            { key: "entitycheck", label: "How you confirm it's the right company/person", hint: "Independent check.", minWords: 4 },
+            { key: "tiers", label: "How you'd label confidence", hint: "Confirmed / likely / guess.", minWords: 4 },
+          ],
+          model: {
+            gather: "Company overview, the Head of Ops' background and tenure, the ops challenges typical for their size and sector, any recent funding / M&A / leadership news, and hypotheses about what they're trying to fix.",
+            source: "Anything I'd state as fact on the call: headcount, funding, named initiatives, 'you recently did X'. Each needs a link I've opened.",
+            entitycheck: "Match the company domain, employee count and location to what I expect; check the person's current title and company on LinkedIn directly — not an AI summary of it.",
+            tiers: "Confirmed (I've seen the source) / Likely (reasonable inference from sector or size) / Guess (AI asserted it, no source). Only 'Confirmed' goes in the opener.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SL1.1", "Reproduce", "Prep a real account with traceable facts",
+          "Take an account you'd research. Prep it so every fact for the conversation is traceable.",
+          "Strong answer: every fact intended for the conversation has a source the seller has seen; the company / person identity is confirmed independently; claims are tiered confirmed / likely / guess; and nothing unsourced is in the opener.",
+          [
+            { key: "account", label: "The account", hint: "One line.", minWords: 3 },
+            { key: "brief", label: "What AI pulls together", hint: "The picture.", minWords: 5 },
+            { key: "sourced", label: "The facts you'd say + their sources", hint: "Each with a link you've seen.", minWords: 6 },
+            { key: "confidence", label: "How you label the rest", hint: "Confirmed / likely / guess.", minWords: 4 },
+          ],
+          [
+            { label: "Every fact for the conversation has a source the seller has seen" },
+            { label: "The company / person identity is confirmed independently" },
+            { label: "Claims are tiered; nothing unsourced is in the opener" },
+          ],
+          "independent"),
+        scenarioChallenge("SL1.2", "Create", "The AI brief was about the wrong company",
+          "Halfway through prep you realise the AI's research brief has mixed in facts about a different company with a similar name — funding, headcount, and a product launch that all belong to someone else.",
+          "What do you do, and what changes next time?",
+          [
+            { id: "a", label: "Use the parts that seem right and drop the rest", ok: false, why: "You can't tell which parts are contaminated without re-checking everything." },
+            { id: "b", label: "Discard the brief, rebuild from confirmed sources, and make entity-confirmation the first step of every prep", ok: true, why: "The contamination is unbounded; start clean and fix the process." },
+            { id: "c", label: "Ask the AI to correct it", ok: false, why: "It may just swap in different wrong facts." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SL2", name: "Outreach that isn't spam",
+      canDo: "Draft personalised outreach at volume where the personalisation is real, the claims are true, and the ask is clear.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI-generated sequence sent 300 \"personalised\" emails that all said \"I noticed you're focused on scaling\" — to everyone, regardless of role or company. Reply rate: 0.3%. Two people replied to complain.",
+          point: "AI makes it easy to send mail that's personalised in format and generic in substance — which performs worse than an honest template.",
+        },
+        explain: {
+          paras: [
+            "Good AI outreach: **one real, specific reason for reaching out to this person** (a trigger event, a role-specific problem, a mutual connection — sourced, per SL1); a **claim about your product that's true and verifiable**; **one clear ask** (a 15-minute call, a specific question); and a length a busy person will actually read.",
+            "Bad AI outreach: fake-personal openers (\"Loved your post!\" — which post?), vague value (\"help you scale\"), multiple asks, and volume that outruns your ability to have the resulting conversations.",
+            "Personalisation you can't back with a source is just a template with a name field.",
+          ],
+          keyIdea: "Real reason (sourced) + a true, verifiable product claim + one clear ask + readable length. Not: fake-personal openers, vague value, multiple asks, volume beyond your follow-through.",
+        },
+        demonstrate: {
+          task: "Drafting outreach to a VP of Support at a growing SaaS company.",
+          steps: [
+            { move: "The reason", think: "Sourced and specific.", result: "They just posted 3 support roles (sourced) — likely scaling pain." },
+            { move: "The claim", think: "True and defensible.", result: "'Teams your size typically cut first-response time 30–40% with us' — a real number from real customers." },
+            { move: "The ask", think: "One thing.", result: "'Worth 15 minutes to see if it fits? I can share how [similar company] approached it.'" },
+            { move: "The length", think: "Readable.", result: "4 sentences — reason, claim, proof, ask." },
+          ],
+          full: "The email opens with a sourced, specific reason, makes one true claim with real proof, asks for one small thing, and is short. It could be sent to 50 similar VPs and still be honest.",
+        },
+        deconstruct: [
+          "\"They posted 3 support roles\" is real personalisation; \"loved your post\" without naming the post is not.",
+          "One ask, not \"a call or a demo or check out our webinar\".",
+          "If the reason and claim are true for the segment, volume doesn't make it dishonest.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're writing outreach to procurement leads at manufacturing companies about a spend-analysis tool.",
+          fields: [
+            { key: "reason", label: "The real, sourced reason to contact this segment", hint: "Specific.", minWords: 5 },
+            { key: "claim", label: "A true product claim you can back", hint: "With proof.", minWords: 5 },
+            { key: "ask", label: "The one ask", hint: "Specific, small.", minWords: 3 },
+            { key: "avoid", label: "What makes AI outreach spammy that you'd cut", hint: "The tells.", minWords: 4 },
+          ],
+          model: {
+            reason: "Rising input costs are squeezing manufacturing margins (sector-wide, easily sourced) — procurement is under pressure to find savings without switching suppliers.",
+            claim: "'Customers typically surface 3–5% of addressable spend as quick savings in the first quarter' — a real median from real deployments, and I can name a comparable customer.",
+            ask: "'Open to a 20-minute look at how [comparable manufacturer] found their first savings?'",
+            avoid: "'I've been following your company' (I haven't specifically), 'revolutionise your procurement', a P.S. with a second ask, and blasting 2,000 at once when I can handle 20 conversations a week.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SL2.1", "Reproduce", "Draft honest outreach for a real segment",
+          "Take a segment you'd sell to. Draft outreach that's honest at volume.",
+          "Strong answer: the reason is specific to the segment and sourced; the product claim is true and the seller can back it with proof; there's exactly one clear ask; and the email would be honest sent to the whole segment.",
+          [
+            { key: "segment", label: "Who", hint: "The segment.", minWords: 3 },
+            { key: "reason", label: "The sourced reason", hint: "Specific to them.", minWords: 5 },
+            { key: "claim", label: "True + backable", hint: "The proof.", minWords: 4 },
+            { key: "ask", label: "One ask", hint: "Specific.", minWords: 3 },
+          ],
+          [
+            { label: "The reason is specific to the segment and sourced" },
+            { label: "The product claim is true and backable with proof" },
+            { label: "Exactly one clear ask; honest sent to the whole segment" },
+          ],
+          "independent"),
+        critiqueChallenge("SL2.2", "Adapt", "Fix a spammy AI sequence",
+          "Here is an AI-generated outreach email. Find everything that makes it spam and say how you'd fix it.",
+          "\"Hi {FirstName}, I hope this email finds you well! I've been really impressed by the amazing work {Company} is doing in the space. I'd love to show you how our revolutionary AI-powered platform can 10x your team's productivity and transform your operations. Are you free for a quick call Tuesday? Also, feel free to check out our case studies and sign up for our webinar!\"",
+          [
+            { label: "'I've been really impressed by the amazing work' — generic, no specific reason", signals: ["generic", "no specific reason", "impressed by the amazing work", "not personalised", "vague opener", "no trigger"] },
+            { label: "'revolutionary AI-powered platform' / '10x productivity' — vague, unbackable claims", signals: ["revolutionary", "10x", "unbackable", "vague claim", "can't back", "hype", "unverifiable"] },
+            { label: "'transform your operations' means nothing", signals: ["transform your operations", "means nothing", "empty", "no substance", "buzzword"] },
+            { label: "Three asks (call, case studies, webinar)", signals: ["three asks", "multiple asks", "call, case studies, webinar", "one ask", "too many ctas", "second ask"] },
+            { label: "'I hope this email finds you well' + exclamation marks — template tells, and nothing is sourced", signals: ["hope this email finds you well", "exclamation", "template", "tells", "no source", "not real personalisation"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SL3", name: "Call prep and live assist",
+      canDo: "Use AI to prepare for a sales conversation and support it live — without reading a script or trusting it on facts.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The rep used an AI \"live assist\" that fed talking points during calls. It surfaced a competitor comparison with a spec that was two years out of date. The rep repeated it. The prospect, who used that competitor, corrected them — and stopped trusting anything the rep said.",
+          point: "AI in a live call is fast but not current, and a confidently wrong fact in front of a knowledgeable buyer is worse than a pause.",
+        },
+        explain: {
+          paras: [
+            "**Prep**: AI helps build the likely-objections list, the discovery questions, the relevant customer stories, and a competitor cheat-sheet — all fact-checked before the call, not during.",
+            "**Live assist**: useful for surfacing a customer story or a discovery question you'd forgotten; dangerous for real-time facts (specs, pricing, competitor claims) which may be stale or wrong.",
+            "Rule: anything AI surfaces live that's a factual claim, you either already know it's true or you say \"let me confirm that and follow up.\" Never read AI output verbatim — you'll sound like it, and you'll say its mistakes.",
+          ],
+          keyIdea: "Prep with AI (objections, questions, stories, competitor sheet) — fact-checked before the call. Live: fine for prompts you'd have known; for any factual claim it surfaces, confirm-or-defer. Never read it verbatim.",
+        },
+        demonstrate: {
+          task: "Prepping for a call with a prospect who's also evaluating a competitor.",
+          steps: [
+            { move: "Objections", think: "Anticipate.", result: "AI lists likely objections for this segment; you add the two you always get; draft a real answer to each." },
+            { move: "Competitor sheet", think: "Verify every line.", result: "AI drafts a comparison; you check every line against the competitor's current docs — dropping anything you can't confirm." },
+            { move: "Stories", think: "Relevant and allowed.", result: "AI surfaces 3 customer stories in the prospect's industry; you check the details are right and you're cleared to use them." },
+            { move: "Live rule", think: "Facts on faith?", result: "If AI assist surfaces a 'fact' mid-call, I confirm it or I say I'll follow up — I don't repeat it on faith." },
+          ],
+          full: "The prep is AI-assisted and fully fact-checked in advance. The competitor sheet is verified line by line. Live, the AI is a memory aid for things the rep would know — not a source of new facts to state.",
+        },
+        deconstruct: [
+          "Verifying the competitor sheet before the call is the difference between confidence and an on-call correction.",
+          "\"Confirm or follow up\" is a fine thing to say and builds trust.",
+          "Reading verbatim makes you sound like a bot and imports its errors.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You have a renewal call with an existing customer who's been quiet and might be considering leaving.",
+          fields: [
+            { key: "prep", label: "What AI helps you prepare", hint: "The materials.", minWords: 5 },
+            { key: "verify", label: "What you fact-check before the call", hint: "The claims that would sink it.", minWords: 5 },
+            { key: "live", label: "How you'd use AI during the call, if at all", hint: "Prompts vs facts.", minWords: 4 },
+            { key: "never", label: "What you won't let AI do here", hint: "Commitments.", minWords: 4 },
+          ],
+          model: {
+            prep: "A summary of their usage and support history, the value they've gotten (with numbers), likely reasons a quiet customer churns, and questions to open the real conversation.",
+            verify: "The usage numbers and any 'you achieved X' claims — against the actual account data, not an AI summary of it. Getting a value claim wrong on a renewal call is fatal.",
+            live: "Maybe a discreet list of the discovery questions I want to get through. Not real-time facts about their account — I'll have those memorised and verified.",
+            never: "Generate on-the-fly commitments, discounts, or roadmap promises. Those are mine to make, deliberately, not prompted.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SL3.1", "Reproduce", "AI-assisted prep for a real call",
+          "Take a call you'd prepare for. Plan the AI-assisted prep and the live rule.",
+          "Strong answer: AI is used for prep — objections, questions, stories, competitor sheet; every factual claim is verified before the call, not during; the live rule is confirm-or-defer for facts, never verbatim; and commitments stay the rep's.",
+          [
+            { key: "call", label: "The call", hint: "One line.", minWords: 3 },
+            { key: "prep", label: "What AI helps prepare", hint: "The materials.", minWords: 5 },
+            { key: "verified", label: "What's fact-checked before", hint: "Every factual claim.", minWords: 5 },
+            { key: "liverule", label: "Your rule for AI during the call", hint: "Confirm-or-defer.", minWords: 4 },
+          ],
+          [
+            { label: "AI used for prep — objections, questions, stories, competitor sheet" },
+            { label: "Every factual claim verified before the call, not during" },
+            { label: "Live rule is confirm-or-defer; commitments stay the rep's" },
+          ],
+          "independent"),
+        scenarioChallenge("SL3.2", "Create", "The live assist fed a stale fact",
+          "During a call, your AI assist surfaced 'the competitor doesn't offer SSO on their mid-tier plan' — so you said it. The prospect replied that they do, and have for a year.",
+          "What went wrong, and what's the fix?",
+          [
+            { id: "a", label: "The AI assist needs a more recent knowledge cutoff", ok: false, why: "A fresher model still isn't a reliable real-time source of competitor specifics — the process is the problem." },
+            { id: "b", label: "Competitor claims should be verified in prep and only stated if you know they're current; live, you say 'my understanding is X, let me confirm'", ok: true, why: "Move competitor facts to verified prep, and don't state unverified ones live." },
+            { id: "c", label: "Stop using live assist entirely", ok: false, why: "It's useful for prompts you'd know; the fix is not stating unverified facts." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SL4", name: "Follow-ups, notes and CRM hygiene",
+      canDo: "Use AI to turn call notes into accurate summaries, follow-ups and CRM updates — checked before they're sent or saved.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI meeting summary said the prospect \"confirmed budget approval and a Q3 start.\" They'd said they were \"hopeful about budget\" and \"maybe Q3 or Q4.\" The forecast got updated to committed. The deal slipped two quarters and the manager's questions were pointed.",
+          point: "AI summaries of sales calls round \"maybe\" up to \"yes\" — and that error flows straight into the forecast.",
+        },
+        explain: {
+          paras: [
+            "AI is good at drafting: a call summary, a follow-up email, next steps, and CRM field updates from your notes or a transcript.",
+            "It reliably **overstates commitment** — \"interested\" becomes \"ready to buy\", \"I'll check\" becomes \"confirmed\".",
+            "Before anything is sent or saved: check the **commitment language** against what was actually said (a hedge stays a hedge), the **next steps and owners** are right, the **numbers** (budget, timeline, seats) match, and no **promise** was invented in the follow-up. The CRM update feeds the forecast — an overstated stage is a lie the whole team plans around.",
+          ],
+          keyIdea: "AI drafts summaries / follow-ups / CRM updates; it overstates commitment. Check commitment language (hedge stays a hedge), next steps and owners, the numbers, and that no promise was invented — before sending or saving.",
+        },
+        demonstrate: {
+          task: "Turning notes from a discovery call into a follow-up and a CRM update.",
+          steps: [
+            { move: "The summary", think: "Against the note.", result: "AI: 'they said they need this by year-end.' Note: 'would like it by year-end ideally.' Restore the hedge." },
+            { move: "The follow-up email", think: "Did I say that?", result: "AI's draft: 'as discussed, we'll have you live in 4 weeks' — I never said that. Cut it." },
+            { move: "Next steps", think: "Right owner?", result: "AI: 'customer to send security questionnaire.' Note: I offered to send them ours. Fix the owner." },
+            { move: "CRM", think: "Where's the deal really?", result: "AI suggests 'Proposal'. We haven't discussed pricing. Stays at 'Discovery'." },
+          ],
+          full: "Every draft is checked against the actual notes: a softened timeline restored, an invented go-live promise cut, a next-step owner corrected, and the CRM stage held where the deal actually is.",
+        },
+        deconstruct: [
+          "\"Would like it ideally\" vs \"need it\" is the kind of drift that moves a forecast.",
+          "The invented \"live in 4 weeks\" is a promise you'd be held to.",
+          "The CRM stage is the one everyone else plans around.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "After a demo, you're using AI to draft the recap email and update the opportunity in the CRM.",
+          fields: [
+            { key: "draftcheck", label: "What you check in the AI's recap email", hint: "Against your notes.", minWords: 5 },
+            { key: "commitment", label: "How you verify commitment language", hint: "Word against word.", minWords: 5 },
+            { key: "crm", label: "What you check before updating the CRM", hint: "Stage, date, amount.", minWords: 5 },
+            { key: "promises", label: "How you catch invented promises", hint: "Dates, numbers, 'we'll'.", minWords: 4 },
+          ],
+          model: {
+            draftcheck: "Does the recap match my actual notes — the concerns they raised, what I actually committed to, the real next step? Not a polished version that drifts optimistic.",
+            commitment: "Line up every 'they will / they want / they agreed' against what was said. 'Sounded positive' is not 'agreed'. 'Asked about pricing' is not 'requested a proposal'.",
+            crm: "Stage matches reality (have we done what this stage requires?); close date is the customer's timeline not my hope; amount matches what was discussed, or is blank.",
+            promises: "Search the draft for any date, number, or 'we'll' I didn't actually say. Delivery dates, discounts, feature commitments — cut anything I didn't commit to on the call.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SL4.1", "Reproduce", "Check an AI recap + CRM update for a real call",
+          "Take a call you'd recap. Plan how you check the AI's recap and CRM update.",
+          "Strong answer: the recap is checked against actual notes for optimistic drift; commitment language is verified word-against-word; the CRM stage / date / amount reflect reality not hope; and invented promises (dates, discounts, features) are caught.",
+          [
+            { key: "call", label: "The call", hint: "One line.", minWords: 3 },
+            { key: "recapchecks", label: "What you verify in the recap", hint: "Against notes.", minWords: 5 },
+            { key: "commitmentcheck", label: "How you keep hedges as hedges", hint: "Word against word.", minWords: 4 },
+            { key: "crmcheck", label: "What you check before saving", hint: "Stage, date, amount.", minWords: 4 },
+          ],
+          [
+            { label: "The recap is checked against actual notes for optimistic drift" },
+            { label: "Commitment language is verified word-against-word" },
+            { label: "CRM stage / date / amount reflect reality; invented promises are caught" },
+          ],
+          "independent"),
+        critiqueChallenge("SL4.2", "Adapt", "Find the overstatements",
+          "Here are call notes and an AI recap. Find every place the recap overstates what happened.",
+          "Notes: 'Spoke to Dana (ops manager). Likes the product. Says budget is tight this year but might free up. Wants to loop in her director. No firm timeline — maybe early next year. Asked what our pricing looks like for ~20 users.'\n\nAI recap: 'Dana confirmed strong interest and budget availability. Next step: present to her director. Target go-live: Q1. Dana requested a formal proposal for 20 seats.'",
+          [
+            { label: "'confirmed strong interest and budget availability' — notes say budget is tight and might free up", signals: ["budget", "tight", "might free up", "confirmed", "overstate", "not available", "budget availability"] },
+            { label: "'Target go-live: Q1' — notes say no firm timeline, maybe early next year", signals: ["go-live", "q1", "no firm timeline", "maybe", "timeline", "invented date", "early next year"] },
+            { label: "'requested a formal proposal' — she asked what pricing looks like", signals: ["formal proposal", "asked what pricing", "requested", "not a proposal", "pricing question", "overstate"] },
+            { label: "'20 seats' stated firmly — notes say '~20 users'", signals: ["20 seats", "~20", "approximately", "firm number", "stated firmly", "about 20"] },
+            { label: "The recap upgrades every hedge to a commitment — inflating CRM stage and forecast", signals: ["every hedge", "upgrades", "commitment", "inflate", "forecast", "crm stage", "pattern"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SL5", name: "Honesty, disclosure and pressure",
+      canDo: "Keep AI-assisted selling honest: no fabricated proof, no undisclosed AI where it matters, no pressure the buyer can't check.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The rep asked AI for \"a customer quote about ROI for the deck.\" It produced a polished, specific quote — attributed to a named company that had never said it. It went in a proposal. The prospect's team found the real case study, which said something much more modest, and the deal — and the relationship — was over.",
+          point: "AI will generate proof that doesn't exist, in exactly the format you asked for. Using it is fraud, whether or not you meant it that way.",
+        },
+        explain: {
+          paras: [
+            "Lines that don't move: **never present AI-generated content as customer proof** — quotes, case-study numbers, references, logos — unless it's real and you can produce the source.",
+            "**Don't misrepresent capability** — if AI drafts \"our platform does X\", X has to be true today, not roadmap.",
+            "**Disclose AI use where the buyer would care** — AI-written personalised outreach is normal; an AI-generated \"custom analysis of your business\" presented as human work is not.",
+            "**Don't use AI to manufacture urgency** — fake scarcity, invented deadlines, \"prices go up Friday\" that isn't true. The buyer is making a real decision with real money; everything you put in front of them has to survive their diligence.",
+          ],
+          keyIdea: "Never pass AI content off as customer proof; don't claim roadmap as current capability; disclose AI where the buyer would care; no AI-manufactured urgency. Everything you show must survive the buyer's diligence.",
+        },
+        demonstrate: {
+          task: "Building a proposal deck with AI help.",
+          steps: [
+            { move: "Proof", think: "Real and sourced.", result: "AI offers to 'add a testimonial' — no. Every quote, number and logo is real, from an approved case study or reference." },
+            { move: "Capability", think: "True today?", result: "AI writes 'integrates with your ERP' — check: do we, today, with their ERP? If it's roadmap, it says roadmap or comes out." },
+            { move: "The 'analysis'", think: "Represented honestly.", result: "AI drafts a 'custom ROI analysis' — fine as a start, but presented as an estimate with stated assumptions, not a bespoke study we ran." },
+            { move: "Urgency", think: "Real reason only.", result: "No AI-generated 'limited-time' framing; if there's a real reason to move by a date, it's a real reason." },
+          ],
+          full: "The deck uses AI for structure and drafting, but every piece of proof is real and sourced, capability claims are true today, the ROI model is labelled as an assumption-based estimate, and there's no manufactured urgency.",
+        },
+        deconstruct: [
+          "A fabricated testimonial is the fastest way to lose a deal and a reputation.",
+          "\"Integrates with X\" is a claim the buyer will test in a trial.",
+          "A \"custom analysis\" that's actually a template misrepresents the work.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're using AI to help respond to an RFP (request for proposal).",
+          fields: [
+            { key: "proof", label: "How you handle proof points and references", hint: "Real and approved.", minWords: 5 },
+            { key: "capability", label: "How you keep capability answers truthful", hint: "True today.", minWords: 5 },
+            { key: "disclosure", label: "Where you'd disclose AI's role, if anywhere", hint: "Where the buyer would care.", minWords: 4 },
+            { key: "pressure", label: "How you avoid manufactured urgency in the close", hint: "Real reasons only.", minWords: 4 },
+          ],
+          model: {
+            proof: "Every reference, metric and customer name in the response is real and approved for this use. If AI drafts 'reduced costs 40% for a Fortune 500 client', it only stays if that's a real, citable result.",
+            capability: "Answer each requirement with what's true today. 'Yes' means available now; 'Yes, on the roadmap for Q3' if that's honest; 'No' if no. AI drafts, a product owner checks the yes/no answers.",
+            disclosure: "AI-assisted writing of the response is normal and doesn't need disclosing. If they asked for a 'custom-built solution design' and we used AI to generate it, that's worth being straight about.",
+            pressure: "No invented deadlines or discount clocks. If our pricing genuinely changes or a slot is genuinely limited, that's stated plainly with the real reason.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SL5.1", "Reproduce", "The honesty rules for your AI-assisted selling",
+          "For what you sell, write the honesty rules for using AI in the sales process.",
+          "Strong answer: no AI-generated content is presented as customer proof without a real source; capability claims are limited to what's true today, checked by someone who'd know; a position on disclosure is taken; and urgency is only ever real.",
+          [
+            { key: "context", label: "What you sell, how", hint: "One line.", minWords: 3 },
+            { key: "proof", label: "Your rule for proof points", hint: "Real, sourced, approved.", minWords: 5 },
+            { key: "capability", label: "Keeping claims true-today", hint: "Who checks.", minWords: 4 },
+            { key: "pressure", label: "Avoiding manufactured urgency", hint: "Real reasons only.", minWords: 4 },
+          ],
+          [
+            { label: "No AI content presented as customer proof without a real source" },
+            { label: "Capability claims limited to true-today, checked by someone who'd know" },
+            { label: "A position on disclosure is taken; urgency is only ever real" },
+          ],
+          "independent"),
+        scenarioChallenge("SL5.2", "Create", "The AI offered a testimonial",
+          "You ask AI to help with a one-pager. It generates a glowing customer quote with a name and title attached — for a customer you do have, but who never said this.",
+          "What do you do?",
+          [
+            { id: "a", label: "Use it but soften it so it's less specific", ok: false, why: "A fabricated quote attributed to a real person is fabrication regardless of how vague." },
+            { id: "b", label: "Don't use it — get a real quote from that customer (with permission) or use no quote", ok: true, why: "Attributed words have to be real words." },
+            { id: "c", label: "Use it as a 'representative example' with a disclaimer", ok: false, why: "Attributing invented words to a named customer isn't saved by a disclaimer." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // ---- Finance & Accounting pathway ----
+  const FINANCE_COMPETENCIES = [
+    {
+      id: "FN1", name: "AI does not do arithmetic",
+      canDo: "Know where AI is reliable in finance (structure, categorisation, explanation) and where it isn't (calculation), and check accordingly.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI \"analysis\" of the quarterly numbers stated revenue was up 12% and margin was down 3 points. Revenue was up 12%. Margin was flat. Someone presented the wrong margin story to the board before anyone re-ran the numbers.",
+          point: "AI language models predict text, not compute. They'll produce a number that looks right and is wrong — especially in multi-step calculations.",
+        },
+        explain: {
+          paras: [
+            "**Good for**: categorising transactions, drafting variance commentary, explaining a concept or a standard, restructuring a messy spreadsheet's logic, spotting a pattern to investigate, drafting a report's narrative.",
+            "**Not reliable for**: arithmetic — sums, percentages, growth rates, multi-step models. Do those in a spreadsheet or with a tool the AI calls, then have AI *describe* the results.",
+            "Rule: **every number in an AI output either came from your calculation, or gets re-derived by you before it's used.** Treat an AI-stated figure like a figure from an intern who's bad at maths but good at writing.",
+          ],
+          keyIdea: "AI: categorise, comment, explain, restructure, pattern-spot, narrate. Not AI: arithmetic. Every number in an AI output is re-derived by you or came from your own calculation before it's used.",
+        },
+        demonstrate: {
+          task: "Using AI to help with the monthly management accounts commentary.",
+          steps: [
+            { move: "The calc", think: "Not the AI.", result: "The actuals-vs-budget variances are computed in the spreadsheet." },
+            { move: "AI's job", think: "The story.", result: "AI drafts the commentary — 'marketing overspent due to the campaign brought forward from next quarter'." },
+            { move: "Check the numbers it repeats", think: "Against the sheet.", result: "AI's draft says 'a £40k overspend' — the sheet says £38k. Fix it." },
+            { move: "The narrative", think: "Hypothesis, not fact.", result: "AI's explanation of *why* is confirmed with the budget owner before it goes in." },
+          ],
+          full: "The spreadsheet does every calculation. AI drafts the story around the numbers. Every figure AI restates is checked against the sheet, and every causal claim is confirmed with the person who'd know.",
+        },
+        deconstruct: [
+          "The variance maths lives in the spreadsheet where it's auditable.",
+          "AI restated £40k for £38k — small, but it's the pattern that matters.",
+          "\"Why did marketing overspend\" is a claim to verify, not accept.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You want AI to help analyse why gross margin moved between two periods.",
+          fields: [
+            { key: "calc", label: "What you compute yourself", hint: "The maths.", minWords: 5 },
+            { key: "aijob", label: "What you use AI for", hint: "Not arithmetic.", minWords: 5 },
+            { key: "numbercheck", label: "How you check numbers AI states", hint: "Trace to a cell.", minWords: 4 },
+            { key: "causal", label: "How you handle AI's explanations of 'why'", hint: "Hypothesis.", minWords: 4 },
+          ],
+          model: {
+            calc: "The margin bridge itself — price, volume, mix, cost effects — built in the spreadsheet with the components adding to the total change. AI does not compute the bridge.",
+            aijob: "Draft the commentary explaining the bridge in plain language; suggest which effect is worth digging into; check my component logic reads sensibly.",
+            numbercheck: "Every number in AI's draft traces back to a cell in my bridge. A figure that isn't in my model is wrong or invented — remove it.",
+            causal: "AI's 'margin fell because input costs rose' is a hypothesis. Confirm against the actual cost data and with procurement before stating it as the reason.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("FN1.1", "Reproduce", "Split the work for a real finance analysis",
+          "Take a finance analysis you'd do. Split it: what you calculate, what AI does, how numbers are checked.",
+          "Strong answer: all arithmetic is done in a spreadsheet / tool, not by AI; AI is used for categorisation, commentary, explanation, restructuring; every number AI states is re-derived or traced to the source; and causal claims are marked as hypotheses to confirm.",
+          [
+            { key: "analysis", label: "The analysis", hint: "One line.", minWords: 3 },
+            { key: "computed", label: "What you calculate yourself", hint: "The maths.", minWords: 4 },
+            { key: "aiassist", label: "What AI does", hint: "Not arithmetic.", minWords: 4 },
+            { key: "verification", label: "How every number in the output is checked", hint: "Re-derive or trace.", minWords: 5 },
+          ],
+          [
+            { label: "All arithmetic is done in a spreadsheet / tool, not by AI" },
+            { label: "AI is used for categorisation, commentary, explanation, restructuring" },
+            { label: "Every number AI states is re-derived or traced; causal claims flagged" },
+          ],
+          "independent"),
+        critiqueChallenge("FN1.2", "Adapt", "Find the trust errors",
+          "Here is how the analysis was done. Find every place AI was trusted where it shouldn't be.",
+          "\"I gave the AI our P&L and asked it to calculate the year-on-year growth for each line, work out the compound annual growth rate over 3 years, and tell me which cost lines grew faster than revenue. It gave me a clean table and a summary. I've put it straight into the board pack.\"",
+          [
+            { label: "Multi-step arithmetic (YoY per line, CAGR, comparisons) done entirely by the AI", signals: ["arithmetic", "calculation", "ai did the maths", "multi-step", "yoy", "cagr", "growth", "compute", "not reliable"] },
+            { label: "'A clean table' looking right is not the same as being right", signals: ["looks right", "clean table", "not the same", "looks correct", "presentation", "no check"] },
+            { label: "'Straight into the board pack' — no re-derivation before a high-stakes use", signals: ["board pack", "high-stakes", "no re-derivation", "didn't check", "straight in", "unverified"] },
+            { label: "CAGR is a compounding calculation AI frequently gets wrong", signals: ["cagr", "compound", "compounding", "gets wrong", "unreliable", "3 years", "growth rate"] },
+            { label: "No source spreadsheet where the maths can be audited", signals: ["no spreadsheet", "no source", "can't audit", "no workpaper", "where's the maths", "not auditable"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "FN2", name: "Reconciliation and transaction categorisation",
+      canDo: "Use AI to speed up matching and categorising — with a confidence threshold, a review queue, and a sample check.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI bookkeeping assistant auto-categorised 6 months of transactions. At year-end the accountant found it had been putting all payments to one supplier under \"office supplies\" — the supplier was actually a contractor, and the misclassification changed the tax treatment. 400 transactions to fix.",
+          point: "AI categorisation is fast and mostly right — and \"mostly\" compounds into a big cleanup when nobody's checking.",
+        },
+        explain: {
+          paras: [
+            "The pattern: AI proposes a category or a match; it applies **only above a confidence threshold**; **below the threshold or on anything unusual (new payee, round number, unusual amount) → a review queue**, not a guess; **new rules a human confirms once**; and a **weekly sample** checked against source documents.",
+            "For reconciliation: AI can suggest matches, but a match involving a write-off, a partial payment, or a currency difference goes to a human.",
+            "Never let AI create or post a journal entry unreviewed.",
+          ],
+          keyIdea: "AI proposes categories / matches above a confidence threshold; unusual or low-confidence → review queue, not a guess; new rules confirmed once by a human; weekly sample vs source docs. No unreviewed journal entries.",
+        },
+        demonstrate: {
+          task: "Setting up AI-assisted bank reconciliation.",
+          steps: [
+            { move: "Auto-match", think: "Only the clean ones.", result: "AI matches transactions to invoices where amount, date and reference align and confidence is high." },
+            { move: "Queue", think: "Judgement → human.", result: "Partial payments, write-offs, FX differences, and anything unmatched → a human queue." },
+            { move: "New payees", think: "Human sets the rule.", result: "A payee not seen before → flagged; a human sets the category, and AI remembers the rule." },
+            { move: "Sample", think: "Against source docs.", result: "Each week, pull 20 auto-categorised transactions and check them against the actual receipts / invoices." },
+          ],
+          full: "AI clears the clean matches. Everything with judgement in it — write-offs, partials, FX, new payees — goes to a person. A weekly sample against source documents catches any systematic error early.",
+        },
+        deconstruct: [
+          "The confidence threshold is what stops a wrong category being applied silently.",
+          "\"New payee → human sets the rule\" prevents the compounding misclassification from the story.",
+          "The weekly sample against receipts would have caught the error at week 1, not year-end.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're using AI to categorise expenses for a small business's bookkeeping.",
+          fields: [
+            { key: "threshold", label: "What AI auto-applies vs queues", hint: "The confidence line.", minWords: 5 },
+            { key: "unusual", label: "What always goes to a human regardless of confidence", hint: "Judgement items.", minWords: 5 },
+            { key: "rules", label: "How new categorisation rules get set", hint: "Human-confirmed.", minWords: 4 },
+            { key: "sample", label: "The check you run and how often", hint: "Against source docs.", minWords: 4 },
+          ],
+          model: {
+            threshold: "Auto-apply where the payee is known and previously categorised the same way, and the amount is in the normal range. Anything else proposed but not applied.",
+            unusual: "New payee; amount over £[X]; round-number amounts; anything that could be capital vs expense; personal-looking spend; anything near a period end.",
+            rules: "When a human categorises a new payee, that becomes a rule ('Payee = X → Category = Y') the human confirmed — AI applies it going forward but a human set it.",
+            sample: "Weekly: 15–20 auto-categorised items checked against the actual receipt or invoice. Track the error rate; if it rises, tighten the threshold.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("FN2.1", "Reproduce", "Design AI-assisted categorisation for real books",
+          "Take a set of books you know. Design AI-assisted categorisation with a review layer.",
+          "Strong answer: a confidence threshold governs what's auto-applied; unusual items (new payee, capital-vs-expense, period-end, large / round) always go to a human; new rules are human-confirmed; and a regular sample against source documents is defined.",
+          [
+            { key: "scope", label: "What's being categorised", hint: "One line.", minWords: 3 },
+            { key: "threshold", label: "Auto vs queue", hint: "The confidence line.", minWords: 4 },
+            { key: "alwayshuman", label: "What bypasses auto regardless", hint: "Judgement items.", minWords: 4 },
+            { key: "sample", label: "The source-document check", hint: "How much, how often.", minWords: 4 },
+          ],
+          [
+            { label: "A confidence threshold governs what's auto-applied" },
+            { label: "Unusual items always go to a human; new rules are human-confirmed" },
+            { label: "A regular sample against source documents is defined" },
+          ],
+          "independent"),
+        scenarioChallenge("FN2.2", "Create", "Six months of miscategorised transactions",
+          "At year-end you find the AI has miscategorised every payment to one supplier for six months, changing the tax treatment. There was no review process.",
+          "What's the fix going forward?",
+          [
+            { id: "a", label: "Correct the entries and add a note to check that supplier", ok: false, why: "One note doesn't prevent the next systematic error." },
+            { id: "b", label: "Correct the entries, then add: a confidence threshold with a review queue for new / unusual payees, human-confirmed rules, and a weekly sample against source documents", ok: true, why: "Build the review layer that would have caught it in week 1." },
+            { id: "c", label: "Stop using AI for categorisation", ok: false, why: "The fix is the review layer, not abandoning the speed-up." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "FN3", name: "Models and spreadsheets",
+      canDo: "Use AI to build and debug financial models — then check the logic, the links and the assumptions yourself.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI-built cash-flow model looked polished and showed 14 months of runway. A hardcoded number had been dropped into what should have been a formula cell, so it never updated when the assumptions changed. Real runway was 9 months. The board found out the hard way.",
+          point: "AI produces spreadsheet formulas that look right and contain the classic errors — hardcodes in formula cells, off-by-one ranges, sign errors, broken links.",
+        },
+        explain: {
+          paras: [
+            "AI helps: draft a model structure, write a complex formula from a description, explain an inherited formula, find why two numbers don't tie, suggest sensitivity cases.",
+            "The checks you still do: **trace the logic** (does each output derive from the inputs?); **hunt for hardcodes** in formula cells; **check ranges** (does the SUM include the right rows, exclude the total?); **check signs**; **test with known inputs** (put in numbers where you know the answer); **stress the assumptions** (do extreme inputs break it?).",
+            "A model drives decisions; its errors are expensive and quiet.",
+          ],
+          keyIdea: "AI drafts structure, formulas, explanations, tie-outs. You trace the logic input-to-output, hunt hardcodes in formula cells, check ranges and signs, test with known inputs, and stress the assumptions.",
+        },
+        demonstrate: {
+          task: "Using AI to build a revenue model for a subscription business.",
+          steps: [
+            { move: "Structure", think: "Match reality.", result: "AI drafts the model — new customers, churn, expansion, by month; check it matches how the business actually works." },
+            { move: "Formulas", think: "Trace one by hand.", result: "AI writes the MRR roll-forward; trace one month manually to confirm it does what it says." },
+            { move: "Hardcode hunt", think: "Numbers where links belong.", result: "Found a '0.95' typed into the retention calc instead of linking to the assumption cell." },
+            { move: "Known-input test", think: "Where you know the answer.", result: "Churn = 0, new = 100/month → does month 12 show 1,200 customers? Yes. Churn = 100% → goes to zero? Yes." },
+          ],
+          full: "AI built the structure and formulas fast. Tracing one month by hand, hunting hardcodes (found one), and testing with inputs where the answer is known confirmed the model actually computes what it claims.",
+        },
+        deconstruct: [
+          "The hardcoded 0.95 is the exact error from the story — a number where a link should be.",
+          "Tracing one month by hand is the highest-value check.",
+          "Known-input tests (churn = 0, churn = 100%) expose structural errors fast.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You've asked AI to build a three-statement model (P&L, balance sheet, cash flow) for a scenario analysis.",
+          fields: [
+            { key: "logic", label: "How you'd check the logic ties together", hint: "Statements link, balance sheet balances.", minWords: 5 },
+            { key: "hardcodes", label: "How you'd hunt for hardcodes", hint: "Your method.", minWords: 4 },
+            { key: "tests", label: "The known-input tests you'd run", hint: "Where you know the answer.", minWords: 5 },
+            { key: "assumptions", label: "How you'd check the assumptions", hint: "Visible and sensible.", minWords: 4 },
+          ],
+          model: {
+            logic: "Confirm the three statements link — net income flows to retained earnings and to the cash flow; the balance sheet balances in *every* period, not just period 1. If it doesn't balance, something's wrong regardless of how good it looks.",
+            hardcodes: "Show formulas, scan for constants inside formula cells (especially in the projection columns). Every projected number should trace to an assumption or a prior calculation.",
+            tests: "Set revenue growth to 0 — do the statements stay static and consistent? Double every assumption — does anything break or go negative that shouldn't? Set a cost to zero — does it flow through correctly?",
+            assumptions: "All assumptions in one clearly labelled block, not scattered. Each sense-checked against reality. Anything AI assumed silently gets surfaced and confirmed.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("FN3.1", "Reproduce", "Check an AI-built model",
+          "Take a model you'd build with AI. Plan how you check it.",
+          "Strong answer: the logic is traced from inputs to outputs (and statements tie if it's a three-statement model); a concrete method for finding hardcodes in formula cells is described; known-input tests are specified; and assumptions are surfaced, consolidated and sense-checked.",
+          [
+            { key: "model", label: "The model", hint: "One line.", minWords: 3 },
+            { key: "logictrace", label: "How you trace input to output", hint: "The path.", minWords: 4 },
+            { key: "hardcodehunt", label: "Your method for finding hardcodes", hint: "In formula cells.", minWords: 4 },
+            { key: "knowninput", label: "The known-input tests", hint: "Where you know the answer.", minWords: 4 },
+            { key: "assumptioncheck", label: "How assumptions are verified", hint: "Surfaced, sense-checked.", minWords: 4 },
+          ],
+          [
+            { label: "Logic traced from inputs to outputs (statements tie if applicable)" },
+            { label: "A concrete method for finding hardcodes in formula cells" },
+            { label: "Known-input tests specified; assumptions surfaced and sense-checked" },
+          ],
+          "independent"),
+        critiqueChallenge("FN3.2", "Adapt", "Spot the model risks",
+          "Here is how the model was built and checked. Find every risk.",
+          "\"The AI built our fundraising model in about an hour. It has a clean dashboard, a scenario toggle, and it shows 18 months of runway in the base case. The formulas are complex but it explained each one and they made sense when it described them. We're sending it to investors tomorrow.\"",
+          [
+            { label: "'made sense when it described them' — the AI's description of a formula is not a check of the formula", signals: ["description", "explained", "made sense", "not a check", "isn't verification", "still trace", "hearing it"] },
+            { label: "No independent trace of the logic", signals: ["no trace", "didn't trace", "independent check", "logic trace", "by hand", "verify the logic"] },
+            { label: "No hardcode hunt mentioned", signals: ["hardcode", "no hardcode hunt", "constants", "formula cells", "stray numbers"] },
+            { label: "No known-input testing", signals: ["known input", "no testing", "test with", "sanity test", "extreme inputs", "stress"] },
+            { label: "'complex formulas' + 'built in an hour' + investors is exactly when errors hide", signals: ["complex", "an hour", "investors", "high stakes", "errors hide", "fast build", "rushed"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "FN4", name: "Reporting and commentary",
+      canDo: "Use AI to draft financial narrative — accurate to the numbers, appropriately cautious, and free of invented explanations.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI-drafted investor update said \"the dip in Q2 was driven by a one-off legal settlement and underlying growth remained strong.\" There was no legal settlement. The AI had generated a plausible-sounding reason for a number it was asked to explain. An investor asked for the settlement details.",
+          point: "Asked to explain a number, AI will invent a cause that fits — a confident, specific, wrong explanation.",
+        },
+        explain: {
+          paras: [
+            "AI drafts well: variance commentary, board narrative, investor updates, the notes around a set of accounts, an executive summary.",
+            "Rules: **numbers in the narrative match the numbers in the statements** (check every one); **explanations of 'why' are yours, not the AI's** — AI can draft the wording once you've supplied the reason, but it must not generate the reason; **caution matches certainty** (\"revenue declined 4%\" not \"a temporary softening\"); **nothing forward-looking is stated as fact**.",
+            "If you can't source the explanation for a movement, the narrative says \"under investigation\", not a guess.",
+          ],
+          keyIdea: "AI drafts the narrative; numbers must match the statements; the *reasons* for movements are supplied by you, not generated by AI; caution matches certainty; an unexplained movement is \"under investigation\", not a plausible guess.",
+        },
+        demonstrate: {
+          task: "Drafting the board commentary for a month where costs spiked.",
+          steps: [
+            { move: "Supply the reason", think: "You know it.", result: "The cost spike is an annual software renewal that lands this month — I tell the AI that." },
+            { move: "AI drafts", think: "Using your reason.", result: "AI writes the commentary using the reason I gave." },
+            { move: "Check the numbers", think: "Against the accounts.", result: "Every figure in the draft matched to the management accounts." },
+            { move: "Check for invention", think: "Plausible filler.", result: "AI added 'partially offset by efficiency savings elsewhere' — there were none. Cut it." },
+          ],
+          full: "The reason for the spike came from me; AI wrote it up. Every number is checked against the accounts, and an invented 'offsetting saving' the AI added for narrative balance is removed.",
+        },
+        deconstruct: [
+          "Supplying the reason first stops the AI generating one.",
+          "\"Efficiency savings elsewhere\" is the kind of plausible filler AI adds — and it's a false statement.",
+          "Checking every number against the source is non-negotiable in a financial report.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're using AI to draft the quarterly business review narrative for the leadership team.",
+          fields: [
+            { key: "numbers", label: "How you ensure narrative numbers match the statements", hint: "The cross-check.", minWords: 5 },
+            { key: "reasons", label: "How you handle explanations of movements", hint: "Human-supplied.", minWords: 5 },
+            { key: "caution", label: "How you keep the language calibrated", hint: "Precision matches the numbers.", minWords: 4 },
+            { key: "forward", label: "How you handle any forward-looking statements", hint: "Labelled, with assumptions.", minWords: 4 },
+          ],
+          model: {
+            numbers: "Every figure in the narrative is cross-checked against the finalised QBR pack. A number in the words that doesn't match a number in the tables is a defect.",
+            reasons: "For each material movement, I provide the cause (confirmed with the relevant owner). AI writes it up. AI is explicitly instructed not to speculate — an unexplained movement is flagged 'reason being confirmed'.",
+            caution: "'Declined 6%' not 'saw some softening'. 'Below budget by £Xk' not 'tracking slightly behind'. The narrative states what happened at the precision the numbers support.",
+            forward: "Projections are labelled as projections with the key assumptions stated. No 'we expect to recover next quarter' unless that's a real, owned forecast — and even then it's 'the forecast assumes X'.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("FN4.1", "Reproduce", "Draft checked commentary for a real report",
+          "Take a financial report you'd write. Plan how AI drafts it and how you check it.",
+          "Strong answer: every number in the narrative is checked against the statements; explanations of movements are supplied by a human, not generated by AI; unexplained movements are flagged, not guessed; language precision matches what the numbers support; and forward-looking statements are labelled with assumptions.",
+          [
+            { key: "report", label: "The report", hint: "One line.", minWords: 3 },
+            { key: "numbercheck", label: "How narrative numbers are verified", hint: "Against the statements.", minWords: 4 },
+            { key: "reasonsource", label: "How movement explanations are sourced", hint: "Human-supplied.", minWords: 4 },
+            { key: "languagecheck", label: "How caution is calibrated", hint: "Precision matches numbers.", minWords: 4 },
+          ],
+          [
+            { label: "Every number in the narrative is checked against the statements" },
+            { label: "Explanations are human-supplied; unexplained movements flagged not guessed" },
+            { label: "Language precision matches the numbers; forward statements labelled" },
+          ],
+          "independent"),
+        scenarioChallenge("FN4.2", "Create", "The AI invented a reason",
+          "Your AI-drafted investor update explains a revenue dip as being 'due to a one-off customer offboarding' — but you never told the AI that, and you're not aware of any such event.",
+          "What happened, and what's your rule now?",
+          [
+            { id: "a", label: "It's probably right — the AI may have inferred it from the data", ok: false, why: "The AI cannot know your customer events; it generated a plausible cause." },
+            { id: "b", label: "The AI fabricated a cause to explain the number; the rule is that AI never generates reasons — I supply every explanation or the update says 'under investigation'", ok: true, why: "Reasons come from people who know; AI writes them up." },
+            { id: "c", label: "Leave it in but soften it to 'possibly due to'", ok: false, why: "A fabricated cause hedged is still fabricated." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "FN5", name: "Controls, close and the audit trail",
+      canDo: "Fit AI into the financial close and controls so the process stays segregated, reviewed and auditable.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "During the audit, the auditors asked how the accruals were calculated. The answer was \"the AI worked them out from last year's pattern.\" There was no workpaper, no method, no review — just an AI output that had been posted. The audit finding wrote itself.",
+          point: "Finance runs on controls — segregation of duties, review, evidence. An AI step that skips those doesn't speed up the close; it creates an audit finding.",
+        },
+        explain: {
+          paras: [
+            "When AI enters a finance process: **segregation of duties still applies** — the person who uses AI to prepare something can't also review and approve it.",
+            "**Every AI-assisted figure needs a workpaper** — the inputs, the method, the AI's role, and the reviewer. **AI does not post** — journal entries, payments and filings are prepared-then-approved by people.",
+            "**The close checklist** gains a review step for anything AI touched. The **audit trail** records where AI was used, what it produced, who checked it, and against what.",
+            "The goal: an auditor can see exactly how every number was arrived at and that a competent person owned it.",
+          ],
+          keyIdea: "AI-in-finance keeps segregation of duties, a workpaper per AI-assisted figure (inputs, method, reviewer), no AI posting, a close-checklist review step for AI-touched items, and an audit trail of where AI was used and who checked it.",
+        },
+        demonstrate: {
+          task: "Using AI to help prepare the month-end accruals.",
+          steps: [
+            { move: "Prepare", think: "With a workpaper.", result: "AI drafts the accruals estimate from the pattern of prior months and known commitments; I document the method and inputs in a workpaper." },
+            { move: "Segregate", think: "Preparer ≠ approver.", result: "I prepared it (with AI); my manager reviews and approves — not me." },
+            { move: "No posting", think: "The approver posts.", result: "The journal is prepared as a draft; the approver posts it." },
+            { move: "Trail", think: "Reviewable.", result: "The workpaper notes: AI used to draft the estimate, inputs [X], method [Y], reviewed and approved by [manager] on [date]." },
+          ],
+          full: "AI speeds up the estimate. A workpaper captures the method and inputs. A different person reviews and approves. The journal is posted by the approver, not the preparer. The audit trail shows exactly how the accrual was built and who owned it.",
+        },
+        deconstruct: [
+          "Segregation of duties doesn't bend for AI — preparer ≠ approver still holds.",
+          "The workpaper is what turns an AI output into auditable work.",
+          "\"The approver posts\" keeps AI out of the posting step.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Your team wants to use AI to speed up the quarterly close — specifically the flux analysis and the supporting schedules.",
+          fields: [
+            { key: "segregation", label: "How duties stay separated with AI in the mix", hint: "Preparer, reviewer.", minWords: 5 },
+            { key: "workpapers", label: "What each AI-assisted item needs documented", hint: "Method, inputs, reviewer.", minWords: 5 },
+            { key: "posting", label: "What AI is not allowed to do", hint: "The boundary.", minWords: 4 },
+            { key: "audittrail", label: "What the trail records about AI use", hint: "For the auditors.", minWords: 4 },
+          ],
+          model: {
+            segregation: "The preparer may use AI. The reviewer / approver is a different person and reviews the substance — not just that a review happened. AI is not a reviewer.",
+            workpapers: "For each AI-assisted schedule: the source data, the method (what AI was asked to do), what AI produced, what the preparer changed, and the reviewer's sign-off. Enough for someone else to reproduce it.",
+            posting: "AI does not post journals, approve payments, or submit filings. It prepares drafts; people approve and post.",
+            audittrail: "A close log noting which tasks used AI, what it produced, who reviewed each against what source, and the date. Available to the auditors without a scramble.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("FN5.1", "Reproduce", "Fit AI into a real close / controls process",
+          "Take a close or controls process you know. Fit AI into it without breaking the controls.",
+          "Strong answer: segregation of duties is preserved — preparer ≠ approver, AI is not a reviewer; every AI-assisted figure has a workpaper with method, inputs and reviewer; AI does not post / approve / file; and the audit trail records AI use, output, reviewer and source.",
+          [
+            { key: "process", label: "The process", hint: "One line.", minWords: 3 },
+            { key: "segregation", label: "How it's kept", hint: "Preparer, reviewer.", minWords: 4 },
+            { key: "workpaper", label: "What AI-assisted items document", hint: "Method, inputs, reviewer.", minWords: 4 },
+            { key: "trail", label: "What's recorded", hint: "AI use, output, reviewer, source.", minWords: 4 },
+          ],
+          [
+            { label: "Segregation preserved — preparer ≠ approver, AI is not a reviewer" },
+            { label: "Every AI-assisted figure has a workpaper (method, inputs, reviewer)" },
+            { label: "AI does not post / approve / file; audit trail records AI use" },
+          ],
+          "independent"),
+        critiqueChallenge("FN5.2", "Adapt", "Find the control failures",
+          "Here is a proposed AI-in-the-close setup. Find every control failure.",
+          "\"To speed up our close: the junior uses AI to prepare the accruals, the prepayments schedule, and the flux commentary, and posts them once the AI output looks reasonable. We've cut two days off the close. The AI's method is in the chat history if anyone needs it.\"",
+          [
+            { label: "The junior both prepares and posts — no segregation of duties, no independent review", signals: ["prepares and posts", "segregation", "same person", "no review", "no approver", "independent"] },
+            { label: "'once the AI output looks reasonable' is not a review of substance", signals: ["looks reasonable", "not a review", "substance", "no real check", "rubber stamp", "eyeballed"] },
+            { label: "AI output is being posted, not prepared-then-approved by a person", signals: ["ai output posted", "no approval step", "prepared-then-approved", "posts them", "no human posts"] },
+            { label: "'method is in the chat history' is not a workpaper — not structured, retained, or reproducible", signals: ["chat history", "not a workpaper", "not retained", "not reproducible", "not structured", "no documentation"] },
+            { label: "An auditor would have no trail of who checked what against what", signals: ["auditor", "no trail", "audit trail", "who checked", "against what", "no evidence"] },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // ---- HR & People pathway ----
+  const HR_COMPETENCIES = [
+    {
+      id: "HR1", name: "Job specs and screening criteria",
+      canDo: "Use AI to draft job descriptions and screening rubrics — then check them for bias, inflation and irrelevant filters.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI-drafted job spec asked for a \"digital native\" with \"boundless energy\" who could \"hit the ground running\" — and listed a degree as required for a role that didn't need one. The applicant pool skewed young, and two strong career-changers self-selected out.",
+          point: "AI drafts job specs from the average of all job specs — including the biased language and the credential inflation baked into the training data.",
+        },
+        explain: {
+          paras: [
+            "AI is useful for a first-draft spec and a screening rubric from the real requirements. Then check it.",
+            "**Biased or coded language** ('digital native', 'young and dynamic', 'cultural fit', gendered terms) — out. **Credential inflation** — is the degree / years-of-experience actually needed, or copied from similar posts? **Irrelevant filters** — requirements that screen out capable people for no job-related reason.",
+            "**The rubric measures the job** — each criterion maps to something the person will actually do. Write the criteria as observable and job-related, then AI can help apply them consistently.",
+          ],
+          keyIdea: "AI drafts the spec and rubric; you strip coded language, challenge every credential and years-of-experience requirement, remove non-job-related filters, and make each criterion map to real work.",
+        },
+        demonstrate: {
+          task: "Drafting the spec and screening rubric for a customer success role.",
+          steps: [
+            { move: "Draft", think: "From the responsibilities.", result: "AI produces a spec from the responsibilities you give it." },
+            { move: "De-bias", think: "Coded language out.", result: "Cut 'rockstar', 'work hard play hard', '5+ years' (the job needs the skill, not the tenure); replace 'native English speaker' with 'clear written communication'." },
+            { move: "Test the filters", think: "Job-related?", result: "'Degree required' — does this job need one? No. Change to 'or equivalent experience'." },
+            { move: "The rubric", think: "Each criterion → a task.", result: "'Can de-escalate a frustrated customer' → assessed by a role-play, not a keyword." },
+          ],
+          full: "The AI draft is a starting point. Coded language and inflated credentials are removed, non-job-related filters are dropped, and every rubric criterion is rewritten to map to something the person will actually do.",
+        },
+        deconstruct: [
+          "'5+ years' screens for tenure, not skill — often not what the job needs.",
+          "'Native English speaker' is both discriminatory and imprecise.",
+          "A rubric criterion that isn't tied to a task is measuring the wrong thing.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're using AI to write the spec and screening criteria for a junior data analyst role.",
+          fields: [
+            { key: "draft", label: "What AI drafts", hint: "From what you give it.", minWords: 4 },
+            { key: "bias", label: "The language you'd check for and cut", hint: "Coded terms.", minWords: 5 },
+            { key: "credentials", label: "How you'd challenge the requirements", hint: "Degree, years.", minWords: 5 },
+            { key: "rubric", label: "How you'd make the criteria job-related", hint: "Each → a task.", minWords: 5 },
+          ],
+          model: {
+            draft: "The responsibilities, the must-have and nice-to-have skills, the team context — AI drafts it from what I give it.",
+            bias: "'Digital native', 'fast-paced', 'ninja / rockstar / guru', 'culture fit', anything gendered, 'recent graduate' (age proxy). Replace with plain descriptions of the work and the skills.",
+            credentials: "Does a junior data analyst need a specific degree? Probably not — 'demonstrated ability to work with data (any route)'. '2 years experience' for a junior role is contradictory — cut it.",
+            rubric: "'Can write a SQL query to answer a defined question' (short exercise). 'Can explain a finding to a non-technical person' (interview). Each one is something they'll do on day one.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HR1.1", "Reproduce", "Draft and de-bias a real job spec + rubric",
+          "Take a role you'd hire for. Draft the spec and rubric with AI, then de-bias them.",
+          "Strong answer: coded / biased language is identified and removed; every credential and years-of-experience requirement is challenged against the actual job; non-job-related filters are dropped; and each rubric criterion maps to observable work.",
+          [
+            { key: "role", label: "The role", hint: "One line.", minWords: 3 },
+            { key: "draft", label: "What AI drafts", hint: "From your inputs.", minWords: 4 },
+            { key: "debias", label: "The language cut + why", hint: "Coded terms.", minWords: 5 },
+            { key: "rubric", label: "Criteria mapped to real tasks", hint: "Each → work.", minWords: 5 },
+          ],
+          [
+            { label: "Coded / biased language is identified and removed" },
+            { label: "Every credential and years requirement is challenged against the job" },
+            { label: "Each rubric criterion maps to observable work" },
+          ],
+          "independent"),
+        critiqueChallenge("HR1.2", "Adapt", "Fix an AI-drafted spec",
+          "Here is an AI-drafted job spec. Find every problem.",
+          "\"We're looking for a young, energetic marketing rockstar to join our fast-paced team. The ideal candidate is a digital native with 7+ years of experience, a marketing degree from a top university, and the drive to work whatever hours it takes. Must be a great culture fit.\"",
+          [
+            { label: "'young', 'energetic', 'rockstar', 'digital native' — age-coded and vague", signals: ["young", "energetic", "rockstar", "digital native", "age", "coded", "vague", "ageist"] },
+            { label: "'7+ years' with 'young' is contradictory and likely inflated", signals: ["7+ years", "contradictory", "inflated", "years of experience", "tenure", "does the job need"] },
+            { label: "'degree from a top university' — credential inflation and an access filter with no job relevance", signals: ["top university", "credential", "inflation", "access", "class", "not job-related", "degree"] },
+            { label: "'work whatever hours it takes' can deter carers and disabled applicants", signals: ["whatever hours", "boundaries", "carers", "disabled", "deter", "hours it takes", "burnout"] },
+            { label: "'culture fit' is a bias vector — should be values alignment or specific behaviours", signals: ["culture fit", "bias", "values", "specific behaviours", "vague", "in-group"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HR2", name: "CV screening and shortlisting",
+      canDo: "Use AI to screen applications consistently — against job-related criteria, with human review of rejections and bias checks.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI screening tool ranked 400 applicants. HR interviewed the top 20. Later analysis showed the model had down-ranked anyone with an employment gap and anyone whose name suggested they were from a particular region — patterns it learned from the company's past \"successful hire\" data.",
+          point: "An AI trained on who you hired before will reproduce who you hired before — including the parts you'd rather not repeat.",
+        },
+        explain: {
+          paras: [
+            "If AI helps screen: it scores against **explicit job-related criteria** (the rubric from HR1), not a learned 'good candidate' pattern.",
+            "**A human reviews the decisions** — at minimum every rejection near the line, and a sample of clear rejects. **Bias is checked** — does the pass rate differ by gender, age proxy, ethnicity proxy, employment gap, non-traditional background? If so, investigate the criterion causing it.",
+            "**Candidates can get the basis** for a decision. In many places, **fully automated rejection is legally restricted** — know your rules. The AI makes screening consistent and faster; it does not get to decide who's out.",
+          ],
+          keyIdea: "AI scores against explicit job-related criteria (not a learned pattern); a human reviews rejections; bias is measured across groups and investigated; candidates can get the basis; automated-only rejection may be restricted. AI doesn't decide who's out.",
+        },
+        demonstrate: {
+          task: "Screening 300 applications for a project manager role.",
+          steps: [
+            { move: "Criteria", think: "The rubric, with evidence.", result: "AI scores each CV against the 5 rubric criteria, quoting the evidence it found." },
+            { move: "Human review", think: "Read the actual CV.", result: "A recruiter reviews everyone scored borderline, plus a 10% sample of low scores." },
+            { move: "Bias check", think: "Across groups.", result: "Compare shortlist rate by gender and by employment gap — a gap-penalty shows up; 'continuous recent experience' is removed as not job-related." },
+            { move: "Basis", think: "Recorded.", result: "Each rejected candidate's record notes which criteria weren't met and the CV lines cited." },
+          ],
+          full: "AI applied the rubric consistently and fast, quoting its evidence. A human read every borderline case and a sample of rejects. A bias check found and removed an employment-gap penalty. Every decision has a recorded, job-related basis.",
+        },
+        deconstruct: [
+          "Scoring against the explicit rubric (not 'good candidate') is what keeps it job-related.",
+          "The bias check on employment gaps caught a pattern the model learned.",
+          "Reading the actual CV for borderline cases is the human judgement that matters.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You want to use AI to help shortlist for a high-volume entry-level role (500+ applicants).",
+          fields: [
+            { key: "criteria", label: "What the AI scores against", hint: "Explicit, job-related.", minWords: 5 },
+            { key: "humanrole", label: "Where a human reviews, given the volume", hint: "Borderline + sample + requests.", minWords: 5 },
+            { key: "biascheck", label: "What you'd measure", hint: "Pass rate by group.", minWords: 5 },
+            { key: "legal", label: "What you'd check about automated decisions", hint: "The rules where the candidates are.", minWords: 4 },
+          ],
+          model: {
+            criteria: "The explicit, job-related must-haves — 'available for shift work', 'evidence of reliability in a previous role', 'basic numeracy' — each scored with the supporting text quoted. Not a holistic 'fit' score.",
+            humanrole: "A human reviews everyone within a band of the cut line; a random 10–15% sample of clear rejects; and anyone who requests a review.",
+            biascheck: "Shortlist rate by gender, by age band (from graduation year if present), by postcode cluster as a proxy, by employment-gap presence. Any gap over a threshold → investigate the driving criterion.",
+            legal: "In the UK / EU a candidate has rights around solely-automated decisions with significant effects — build in the human review and the ability to explain and contest. Check the specific rules for where the candidates are.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HR2.1", "Reproduce", "Design AI-assisted screening for a real role",
+          "Take a role you'd screen for. Design the AI-assisted screening.",
+          "Strong answer: the AI scores against explicit job-related criteria, not a learned 'good hire' pattern; a human reviews rejections (borderline + a sample); bias is measured across groups with an action threshold; and the legal position on automated rejection is considered.",
+          [
+            { key: "role", label: "The role", hint: "One line.", minWords: 3 },
+            { key: "scoring", label: "Against what", hint: "Explicit criteria.", minWords: 4 },
+            { key: "humanreview", label: "Where, given volume", hint: "Borderline + sample.", minWords: 4 },
+            { key: "bias", label: "What's measured + threshold", hint: "Pass rate by group.", minWords: 4 },
+          ],
+          [
+            { label: "AI scores against explicit job-related criteria, not a learned pattern" },
+            { label: "A human reviews rejections (borderline + a sample)" },
+            { label: "Bias measured across groups with a threshold; automated-rejection law considered" },
+          ],
+          "independent"),
+        scenarioChallenge("HR2.2", "Create", "The screener learned your past bias",
+          "Analysis shows your AI screener down-ranks applicants with career breaks and certain name origins — patterns from your historical hiring data.",
+          "What do you do?",
+          [
+            { id: "a", label: "Add a rule telling the AI to ignore names and career breaks", ok: false, why: "A model trained on biased outcomes routes the bias through correlated proxies; telling it to ignore obvious features doesn't remove it." },
+            { id: "b", label: "Stop scoring against a learned 'good candidate' model; score only against explicit job-related criteria, add human review of rejections, and keep measuring pass rates by group", ok: true, why: "Remove the learned pattern entirely; make the criteria explicit and checkable." },
+            { id: "c", label: "Retrain the model on more recent hiring data", ok: false, why: "Recent data likely carries the same bias." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HR3", name: "Writing about and to people",
+      canDo: "Use AI to draft HR communications — offers, feedback, reviews, difficult messages — accurately, fairly, and without leaking things.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The manager used AI to \"polish\" a performance review. It added specific incidents that never happened, inflated a rating to sound more positive, and included a phrase the employee later cited as evidence of a promise. The review went in the file.",
+          point: "AI 'improving' a document about a person invents specifics and shifts meaning — and HR documents are the ones that end up in disputes.",
+        },
+        explain: {
+          paras: [
+            "AI can help draft: offer letters, rejection messages, feedback, review narratives, policy comms, meeting summaries.",
+            "The checks: **every specific about the person is true** — incidents, dates, ratings, quotes (AI invents these to add colour); **the meaning matches your intent** — a rating, a warning, a commitment shouldn't drift; **no promise is created** ('opportunities for growth' can be read as a commitment); **tone is fair** — not harsher or softer than warranted; **nothing confidential leaks** — other people's information, unshared decisions, legal advice.",
+            "For anything with legal weight (warnings, dismissals, settlements), AI drafts and a qualified person owns it.",
+          ],
+          keyIdea: "AI drafts HR comms; you verify every specific about the person, check the meaning didn't drift, cut any implied promise, check the tone is fair, and stop confidential leaks. Legal-weight documents are owned by a qualified person.",
+        },
+        demonstrate: {
+          task: "Drafting a written warning with AI help.",
+          steps: [
+            { move: "Supply the facts", think: "AI doesn't source these.", result: "You give the AI the actual incidents, dates, prior conversations." },
+            { move: "Draft", think: "Structure and tone.", result: "AI writes it up in the right structure and tone." },
+            { move: "Check specifics", think: "Anything invented?", result: "AI added 'and on several other occasions' — there's no record of others. Cut it." },
+            { move: "Check for promises", think: "Implied commitments.", result: "AI wrote 'we're confident you can turn this around' — reads as a commitment not to dismiss. Change to a factual statement of the improvement required." },
+          ],
+          full: "The facts come from you; AI structures the warning. An invented 'several other occasions' is cut, an implied commitment is removed, and the HR lead owns the final document — because a warning has legal weight.",
+        },
+        deconstruct: [
+          "'Several other occasions' is exactly the kind of specific AI adds and a tribunal would scrutinise.",
+          "'Confident you can turn this around' can undermine a later dismissal.",
+          "A warning is not something AI or an untrained manager finalises alone.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're using AI to help write end-of-year performance review narratives for your team.",
+          fields: [
+            { key: "facts", label: "What you supply vs what AI generates", hint: "Examples come from you.", minWords: 5 },
+            { key: "specifics", label: "How you check the specifics", hint: "Against your notes.", minWords: 4 },
+            { key: "meaning", label: "How you keep ratings / messages from drifting", hint: "You set the rating.", minWords: 4 },
+            { key: "leaks", label: "What confidential content you watch for", hint: "Others' data.", minWords: 4 },
+          ],
+          model: {
+            facts: "I supply the examples, the metrics, the feedback from others (anonymised as appropriate). AI turns my notes into a clear narrative — it does not add examples or evidence.",
+            specifics: "Every incident, project, number and quote in the draft is checked against my notes and the record. Anything AI added that I didn't provide is removed.",
+            meaning: "The narrative matches the rating I've decided. AI shouldn't nudge a 'meets expectations' narrative to sound like 'exceeds' or vice versa. I set the rating; AI writes to it.",
+            leaks: "No comparison to named colleagues; no mention of others' ratings, salaries or performance; no unshared org decisions; no repeating something told to me in confidence.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HR3.1", "Reproduce", "Draft a real HR communication with AI, checked",
+          "Take an HR communication you'd write. Plan how AI drafts it and how you check it.",
+          "Strong answer: the person-specific facts are supplied by the human, not generated; every specific in the draft is verified; meaning / rating is set by the human and not drifted by AI; implied promises are cut; confidential leaks are checked; and legal-weight docs are owned by a qualified person.",
+          [
+            { key: "comm", label: "What it is", hint: "One line.", minWords: 3 },
+            { key: "supplied", label: "Facts you provide", hint: "AI doesn't source these.", minWords: 4 },
+            { key: "checks", label: "Specifics, meaning, promises, leaks", hint: "The four checks.", minWords: 6 },
+            { key: "ownership", label: "Who owns it if it has legal weight", hint: "Qualified person.", minWords: 3 },
+          ],
+          [
+            { label: "Person-specific facts are supplied by the human, not generated; every specific verified" },
+            { label: "Meaning / rating set by the human; implied promises cut; leaks checked" },
+            { label: "Legal-weight documents owned by a qualified person" },
+          ],
+          "independent"),
+        critiqueChallenge("HR3.2", "Adapt", "Find the problems in an AI-polished review",
+          "Here is a manager's note and the AI-polished review. Find every problem.",
+          "Manager's note: 'Sam did ok this year. Missed a couple of deadlines. Good with the team.'\n\nAI-polished review: 'Sam has been an exceptional team player and a cornerstone of the department's success this year. While there were isolated instances of timeline slippage on the Q2 and Q3 initiatives, Sam consistently demonstrated leadership and is clearly on track for advancement. We look forward to Sam taking on greater responsibilities.'",
+          [
+            { label: "'exceptional', 'cornerstone', 'consistently demonstrated leadership' — massive inflation from 'did ok'", signals: ["inflation", "exceptional", "cornerstone", "did ok", "overstate", "exaggerat", "leadership", "not what the manager said"] },
+            { label: "'Q2 and Q3 initiatives' — specific incidents the manager didn't mention, likely invented", signals: ["q2 and q3", "specific", "invented", "didn't mention", "made up", "initiatives", "fabricat"] },
+            { label: "'clearly on track for advancement' / 'greater responsibilities' — an implied promotion promise", signals: ["promotion", "advancement", "promise", "greater responsibilities", "implied", "commitment", "on track"] },
+            { label: "The meaning has drifted from 'ok, some issues' to 'star performer'", signals: ["meaning", "drifted", "star performer", "shifted", "ok some issues", "changed the message", "different rating"] },
+            { label: "A document this inflated undermines any future performance management of Sam", signals: ["undermine", "future performance management", "can't later", "record", "dispute", "contradicts"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HR4", name: "Employee data and privacy",
+      canDo: "Decide what employee information can go into an AI tool, and keep people's data from leaking through prompts, logs or outputs.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "An HR analyst pasted a spreadsheet of the whole team's salaries, performance ratings and personal notes into an AI tool to \"find patterns\". The data was now in a third-party system. One row included a disclosed health condition. This was a reportable data breach.",
+          point: "Employee data is some of the most sensitive data an organisation holds. A prompt is a place it can leak.",
+        },
+        explain: {
+          paras: [
+            "**Is the tool approved for this?** — a DPA, no training on inputs, appropriate security and residency; consumer tools are not.",
+            "**Do you have a lawful basis and is this use compatible with what employees were told?** — using HR data for AI analysis they weren't informed of can breach data-protection law.",
+            "**Minimise** — do you need names? salaries? the free-text notes? Aggregate or pseudonymise; special-category data (health, ethnicity, union membership) has extra rules and usually stays out.",
+            "**Outputs and logs** — AI outputs about individuals are also personal data. **Enforce** — approved tools only, and don't let 'quick analysis' bypass the process.",
+          ],
+          keyIdea: "Before employee data goes in: approved tool (DPA, no training), a lawful and compatible basis, data minimised / pseudonymised (special-category data stays out), outputs and logs treated as personal data, and enforcement so 'quick analysis' can't bypass it.",
+        },
+        demonstrate: {
+          task: "An HR team wants AI help analysing engagement-survey results.",
+          steps: [
+            { move: "Tool", think: "Approved for this.", result: "Use the enterprise tool with a DPA and no training on inputs — not a consumer chatbot." },
+            { move: "Basis + notice", think: "Compatible use?", result: "The survey privacy notice said results would be analysed to improve the workplace — AI-assisted analysis is compatible; confirm with the DPO." },
+            { move: "Minimise", think: "How little is enough?", result: "Feed aggregated results and anonymised free-text comments — not response-level data with team sizes small enough to identify people." },
+            { move: "Outputs", think: "Still personal data.", result: "The AI's summary is treated as an HR document — access-controlled, retained per the HR retention schedule." },
+          ],
+          full: "The analysis goes ahead on the approved tool, on aggregated and anonymised data, within the basis employees were told about, with the DPO consulted and the output handled as the personal data it is.",
+        },
+        deconstruct: [
+          "'Small teams' is where anonymised comments stop being anonymous.",
+          "The privacy notice sets the boundary of compatible use.",
+          "The AI's output about people is personal data too — it doesn't stop being sensitive because a model wrote it.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "A manager wants to use AI to draft individual development plans for their team, feeding in each person's review history, 1:1 notes and skills assessments.",
+          fields: [
+            { key: "tool", label: "What tool and why", hint: "Approved for employee data.", minWords: 4 },
+            { key: "basis", label: "The data-protection questions", hint: "Lawful + compatible.", minWords: 5 },
+            { key: "minimise", label: "What you'd reduce or remove", hint: "Names, raw notes, special-category.", minWords: 5 },
+            { key: "outputs", label: "How the plans and any logs are handled", hint: "As HR records.", minWords: 4 },
+          ],
+          model: {
+            tool: "The organisation's approved AI tool with a data-processing agreement, no training on inputs, and access limited to the manager. Not a personal AI account.",
+            basis: "Is 'AI-assisted development planning' within what employees were told their review / 1:1 data would be used for? If not, it needs a basis and probably informing them. Special-category data (e.g. a disclosed disability affecting a development need) needs specific care or exclusion.",
+            minimise: "Feed the skills assessment and agreed development goals. Be cautious with raw 1:1 notes — they often contain offhand personal detail. Pseudonymise if the tool doesn't need names.",
+            outputs: "The draft plans are HR records — stored in the HR system, access-controlled, shared with the employee, retained per policy. The AI tool's chat logs are cleared or covered by the retention rules.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HR4.1", "Reproduce", "Employee-data plan for an AI HR task",
+          "Take an AI-assisted HR task. Write the employee-data plan.",
+          "Strong answer: the tool is approved for employee data (DPA, no training); there's a lawful basis and the use is compatible with what employees were told; data is minimised and special-category data is handled specifically or excluded; and outputs and logs are treated as personal data.",
+          [
+            { key: "task", label: "The task", hint: "One line.", minWords: 3 },
+            { key: "tool", label: "Approved, why", hint: "DPA, no training.", minWords: 4 },
+            { key: "basis", label: "Lawful + compatible use", hint: "What employees were told.", minWords: 4 },
+            { key: "minimisation", label: "What's removed / aggregated", hint: "Names, special-category.", minWords: 4 },
+            { key: "outputs", label: "How outputs and logs are handled", hint: "As personal data.", minWords: 4 },
+          ],
+          [
+            { label: "The tool is approved for employee data (DPA, no training)" },
+            { label: "A lawful basis; the use is compatible with what employees were told" },
+            { label: "Data minimised, special-category handled specifically; outputs treated as personal data" },
+          ],
+          "independent"),
+        scenarioChallenge("HR4.2", "Create", "A whole-team spreadsheet went into a chatbot",
+          "An analyst pasted the team's salaries, ratings and personal notes — including one disclosed health condition — into a consumer AI tool to find patterns.",
+          "What's the situation and what do you do?",
+          [
+            { id: "a", label: "Delete the conversation and note it as a near-miss", ok: false, why: "Special-category data disclosed to a third party is likely a reportable breach, not a near-miss." },
+            { id: "b", label: "Treat it as a personal-data breach: contain it, assess severity (special-category data involved), follow the breach-notification process and timelines, inform affected employees as required, and put an approved tool + training + technical controls in place", ok: true, why: "Handle it as the incident it is, and fix the process." },
+            { id: "c", label: "Check whether the tool actually stored it before deciding it's a breach", ok: false, why: "The disclosure occurred on paste; you act on that." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HR5", name: "People decisions stay human",
+      canDo: "Keep AI out of the decision on hiring, promotion, pay, discipline and dismissal — as an input, never the decision-maker.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The performance-management system used an AI \"flight risk\" and \"performance trajectory\" score. A manager, trusting it, put someone on a performance plan. The score turned out to be driven mostly by the person having taken parental leave. The grievance was upheld.",
+          point: "AI scores about people carry the biases of their training data and a false air of objectivity — and a decision 'the system flagged it' is one nobody actually made.",
+        },
+        explain: {
+          paras: [
+            "Decisions about people — to hire, promote, pay, discipline, dismiss, manage out — stay with accountable humans.",
+            "AI **can**: organise information, apply an explicit rubric consistently, surface things to look at, draft the write-up. AI **must not**: produce the score that determines the outcome, rank people for redundancy, predict 'flight risk' or 'potential' as a basis for treatment, or be the reason given for a decision.",
+            "For each people-decision, a named person can explain the reasoning in job-related terms, the employee can contest it, and 'the AI recommended it' is never the explanation. Consequential + about a person + hard to reverse = human decides, with the AI's role logged and limited.",
+          ],
+          keyIdea: "People decisions (hire, promote, pay, discipline, dismiss) stay with accountable humans. AI organises, applies an explicit rubric, surfaces, drafts — it doesn't score-to-decide, rank for redundancy, or predict potential / flight-risk as a basis for treatment. A named person explains every decision in job-related terms.",
+        },
+        demonstrate: {
+          task: "Running a promotion round with AI assistance.",
+          steps: [
+            { move: "What AI does", think: "Compile, draft.", result: "Compiles each candidate's evidence against the promotion criteria, quoting sources; drafts the panel's summary." },
+            { move: "What AI doesn't do", think: "No score, no rank.", result: "No 'promotion readiness score'; no ranking. The panel reads the evidence and decides." },
+            { move: "The check", think: "Reasoning in criteria terms.", result: "The panel's reasoning for each decision is written in terms of the criteria and the evidence — not 'the tool said'." },
+            { move: "The trail", think: "Who decided.", result: "The record shows AI compiled the evidence pack, the panel made the decision, and the reasoning." },
+          ],
+          full: "AI made the evidence-gathering consistent and fast. The panel of humans read it and made every call, with reasoning tied to the criteria. No AI score decided anything, and every outcome is explainable and contestable.",
+        },
+        deconstruct: [
+          "Compiling evidence against criteria is a good AI use; a 'readiness score' would quietly become the decision.",
+          "'The panel decided, here's why' is the accountability that 'the tool flagged it' destroys.",
+          "The employee being able to contest depends on the reasoning being job-related and legible.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Leadership wants to use an AI tool that scores employees on 'performance trajectory' and 'retention risk' to help with talent and comp decisions.",
+          fields: [
+            { key: "concern", label: "What's wrong with using these scores for decisions", hint: "Opacity, proxies, deference.", minWords: 6 },
+            { key: "aiok", label: "What AI could legitimately do in talent / comp processes", hint: "Organise, surface, draft.", minWords: 5 },
+            { key: "humanline", label: "What stays a human decision and how it's explained", hint: "Job-related reasoning.", minWords: 5 },
+            { key: "safeguards", label: "What you'd require if any AI scoring is used at all", hint: "Transparency, audit, review.", minWords: 5 },
+          ],
+          model: {
+            concern: "'Trajectory' and 'retention risk' scores are opaque, likely encode protected characteristics via proxies (leave, caring patterns, age), and give managers a number that feels objective and makes the decision for them. Using them for pay or performance action is high-risk and possibly unlawful.",
+            aiok: "Compile someone's actual results against explicit criteria; surface that a high performer hasn't had a raise in two years; draft calibration notes from manager input; check a comp proposal for internal consistency.",
+            humanline: "Whether to promote, what to pay, whether to act on performance — decided by managers / panels who can explain it in terms of the person's work, and which the employee can question.",
+            safeguards: "Transparency to the employee, a bias audit across groups, human review of every score-influenced decision, no score as the stated reason, and a documented job-related rationale for each outcome.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HR5.1", "Reproduce", "Draw the line for a real people process",
+          "Take a people process (hiring, promotion, pay, discipline, redundancy). Draw the line between AI's role and the human decision.",
+          "Strong answer: AI is limited to organising, applying an explicit rubric, surfacing, drafting; no AI score determines an outcome and no ranking-for-treatment; a named human decides and can explain in job-related terms; the employee can contest; and the AI's role is logged.",
+          [
+            { key: "process", label: "The process", hint: "Pick one.", minWords: 3 },
+            { key: "aiok", label: "What AI legitimately does", hint: "Organise, surface, draft.", minWords: 5 },
+            { key: "humandecision", label: "What stays human + how it's explained", hint: "Job-related reasoning.", minWords: 5 },
+            { key: "trail", label: "How the AI's role is logged and limited", hint: "The record.", minWords: 4 },
+          ],
+          [
+            { label: "AI limited to organising, applying an explicit rubric, surfacing, drafting" },
+            { label: "No AI score determines an outcome; no ranking-for-treatment" },
+            { label: "A named human decides and can explain in job-related terms; employee can contest" },
+          ],
+          "independent"),
+        scenarioChallenge("HR5.2", "Create", "The 'flight risk' score drove a performance plan",
+          "A manager put an employee on a performance plan largely because an AI 'performance trajectory' score was low. The score was mostly driven by the employee's recent parental leave. A grievance was upheld.",
+          "What's the fix?",
+          [
+            { id: "a", label: "Adjust the model to exclude leave from the score", ok: false, why: "Excluding one feature doesn't fix an opaque score standing in for a human judgement, and other proxies remain." },
+            { id: "b", label: "Stop using trajectory / risk scores as a basis for performance action; performance decisions are made by a manager on documented, job-related evidence the employee can see and contest", ok: true, why: "Remove the score from the decision; put a legible human judgement in its place." },
+            { id: "c", label: "Require two managers to agree before acting on the score", ok: false, why: "Two people deferring to the same biased score isn't a fix." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // ---- Healthcare & Clinical Support pathway ----
+  const HEALTH_COMPETENCIES = [
+    {
+      id: "HC1", name: "What AI can and can't touch in a clinical setting",
+      canDo: "Map clinical tasks to where AI is safe (admin, drafting, summarising with checks) and where it must not go (diagnosis, treatment, triage) — and know the regulatory line.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A clinic used a general AI chatbot to answer patients' symptom questions via the website. It told a patient with chest-pain-and-arm-numbness that it was \"likely muscular strain, try rest and ibuprofen.\" The patient delayed calling emergency services.",
+          point: "A general AI tool giving clinical advice is not a productivity feature — it's an unregulated medical device making decisions it isn't safe or lawful to make.",
+        },
+        explain: {
+          paras: [
+            "**AI can help with** (with checks): appointment scheduling and reminders, drafting letters and documentation from clinician-supplied facts, summarising a record for a clinician to verify, clinician-approved patient-education material, coding and billing support, transcribing dictation.",
+            "**AI must not**: diagnose, recommend or change treatment, triage acuity, interpret results as the decision, or give patients clinical advice directly.",
+            "**The regulatory line**: software that informs clinical decisions is often a regulated medical device — a general-purpose AI tool used that way is almost certainly non-compliant and uninsured. Anything patient-facing or decision-informing goes through clinical governance, not a quick pilot.",
+          ],
+          keyIdea: "AI in healthcare: admin, drafting from supplied facts, summarising-for-verification, approved patient education, coding. Not AI: diagnosis, treatment decisions, triage, results interpretation as the decision, direct patient clinical advice. Decision-informing software is a regulated device — route it through clinical governance.",
+        },
+        demonstrate: {
+          task: "A GP practice wants to use AI to reduce admin load.",
+          steps: [
+            { move: "Safe uses", think: "Admin, drafting.", result: "AI drafts referral letters from the GP's notes; summarises incoming hospital letters for the GP to check; drafts recall messages for screening." },
+            { move: "Unsafe uses ruled out", think: "Decision-informing.", result: "No AI symptom-checker on the website; no AI 'pre-triage' of appointment requests by urgency; no AI interpreting blood results." },
+            { move: "The check on the safe ones", think: "Clinician sign-off.", result: "Every AI-drafted letter is read and signed by the GP; every summary is verified against the source before it's acted on." },
+            { move: "Governance", think: "Who approves.", result: "The practice's clinical governance lead approves the admin uses; anything touching clinical decisions needs a formal review and likely a regulated product." },
+          ],
+          full: "The admin uses go ahead with clinician sign-off on every output. The decision-touching uses are ruled out — not because AI couldn't attempt them, but because doing so safely and lawfully needs a regulated device and formal governance, not a practice pilot.",
+        },
+        deconstruct: [
+          "The split is by 'does this inform a clinical decision', not by 'how helpful would it be'.",
+          "Clinician sign-off on every draft is the safe-use control.",
+          "'It's just a pilot' is how unregulated clinical AI gets deployed.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "A hospital ward wants to use AI to help with nursing documentation and handover.",
+          fields: [
+            { key: "safe", label: "The tasks AI can help with, and the check on each", hint: "Admin, drafting from notes.", minWords: 6 },
+            { key: "unsafe", label: "The tasks AI must not do here", hint: "Acuity, escalation, interpretation.", minWords: 5 },
+            { key: "governance", label: "Who needs to approve what", hint: "Clinical governance, IG.", minWords: 4 },
+            { key: "regulatory", label: "The regulatory question to ask", hint: "Is it a device?", minWords: 4 },
+          ],
+          model: {
+            safe: "Drafting handover summaries from the nurse's notes (nurse verifies before handover); drafting discharge paperwork from clinician-entered data; summarising a long record for a clinician to check; templated family-update letters (clinician-approved).",
+            unsafe: "Prioritising patients by acuity; suggesting whether to escalate a deteriorating patient; interpreting observations or scores as the decision; drafting anything clinical that isn't checked by the responsible clinician.",
+            governance: "The ward's clinical governance and the trust's digital / IG teams approve the documentation uses. Any use that could influence clinical decisions goes to a formal clinical safety assessment.",
+            regulatory: "'Is this software intended to inform a clinical decision?' If yes, it's likely a medical device and a general AI tool used this way is non-compliant.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HC1.1", "Reproduce", "Map AI use for a real clinical setting",
+          "Take a clinical setting you know. Map where AI can and can't be used.",
+          "Strong answer: safe uses are admin / drafting / summarising-for-verification with a clinician check on every output; decision-informing, triage, diagnosis and direct patient advice are ruled out; clinical governance approval is required; and the 'is this a regulated device' question is asked.",
+          [
+            { key: "setting", label: "The setting", hint: "One line.", minWords: 3 },
+            { key: "safe", label: "Tasks + the check on each", hint: "Clinician verification.", minWords: 6 },
+            { key: "unsafe", label: "Tasks ruled out + why", hint: "Decision-informing.", minWords: 5 },
+            { key: "governance", label: "Approval + the regulatory question", hint: "Governance + device question.", minWords: 4 },
+          ],
+          [
+            { label: "Safe uses have a clinician check on every output" },
+            { label: "Decision-informing, triage, diagnosis and direct patient advice are ruled out" },
+            { label: "Clinical governance approval required; the 'regulated device' question asked" },
+          ],
+          "independent"),
+        scenarioChallenge("HC1.2", "Create", "The website chatbot gave clinical advice",
+          "A clinic added a general AI chatbot to its website that answers patients' health questions. It advised someone with cardiac symptoms to rest and take ibuprofen.",
+          "What's wrong here beyond the one bad answer?",
+          [
+            { id: "a", label: "The chatbot needs better medical training data", ok: false, why: "A better-informed general chatbot giving clinical advice is still an unregulated medical device making unsafe decisions." },
+            { id: "b", label: "A general AI tool giving patients clinical advice is an unregulated medical device operating outside clinical governance — it should be removed, and any patient-facing clinical information must be clinician-authored and governed", ok: true, why: "The category of use is the problem, not the quality of one answer." },
+            { id: "c", label: "Add a disclaimer that it's not medical advice", ok: false, why: "A disclaimer doesn't make it safe or lawful when patients act on it." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HC2", name: "Clinical documentation and scribing",
+      canDo: "Use AI scribes and documentation tools with the checks that keep the record accurate and the clinician accountable.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI scribe generated a consultation note that read well and included a \"patient denies chest pain\" line — the clinician had never asked, and the patient hadn't said it. It went into the record unchecked. Months later it mattered.",
+          point: "AI scribes produce fluent, complete-looking notes that contain things that were never said — and the note is a legal record the clinician signs.",
+        },
+        explain: {
+          paras: [
+            "AI scribes (ambient or dictation) are genuinely useful, with discipline.",
+            "**The clinician reviews and edits every note before signing** — reading for invented content ('denies X', normal findings not actually examined), missing content, and wrong specifics (doses, laterality, dates).",
+            "**Negatives and normals are the danger** — AI adds 'no red flags', 'systems review unremarkable' as boilerplate; only keep what was actually done. **Patient consent** to AI scribing where required. **The audio and transcript** are patient data. **The clinician is accountable for the note** regardless of what the AI produced.",
+          ],
+          keyIdea: "AI scribe drafts; the clinician reads and edits every note before signing — hunting invented negatives / normals, missing content, wrong specifics. Consent where required; audio / transcript is patient data; the clinician is accountable regardless.",
+        },
+        demonstrate: {
+          task: "A clinician using an ambient AI scribe in outpatient clinics.",
+          steps: [
+            { move: "Consent", think: "Patient can decline.", result: "The patient is told an AI scribe is being used and can decline." },
+            { move: "The draft", think: "Structured note.", result: "The scribe produces a structured note after the consultation." },
+            { move: "The review", think: "Edit before signing.", result: "The clinician cuts 'cardiovascular exam normal' (not performed today), fixes 'left knee' (was the right), adds the safety-netting advice given but not captured." },
+            { move: "Sign", think: "Accountable.", result: "The clinician signs the corrected note and is accountable for it." },
+          ],
+          full: "The scribe saved the typing. The clinician removed an examination that didn't happen, corrected the laterality, added missing safety-netting, and signed — accountable for the final record, not the AI's draft.",
+        },
+        deconstruct: [
+          "'Cardiovascular exam normal' not performed is a fabricated finding in a legal record.",
+          "Laterality errors (left / right) are exactly what AI transcription gets wrong and what causes harm.",
+          "The clinician signs, so the clinician owns every line.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Your department is rolling out an AI dictation / scribe tool for clinic letters and notes.",
+          fields: [
+            { key: "review", label: "What the clinician checks in every note before signing", hint: "The whole note.", minWords: 6 },
+            { key: "dangers", label: "The specific error types to hunt", hint: "Negatives, normals, specifics.", minWords: 5 },
+            { key: "consent", label: "The consent / privacy handling", hint: "Opt-out; data retention.", minWords: 4 },
+            { key: "accountability", label: "Who owns the note", hint: "The signing clinician.", minWords: 3 },
+          ],
+          model: {
+            review: "Read the whole note against memory of the consultation. Check the history, the examination findings, the plan, the medications (name, dose, route), the follow-up and safety-netting. Edit anything wrong or missing.",
+            dangers: "Invented negatives ('denies...', 'no...') and normals ('unremarkable', 'within normal limits') that weren't actually assessed; wrong laterality; wrong drug doses or frequencies; a plan that's slightly off; a symptom attributed to the wrong body system.",
+            consent: "Patients informed AI scribing is in use and able to opt out; audio and transcripts stored per the trust's retention and security policy; covered in the privacy notice.",
+            accountability: "The signing clinician is fully accountable for the note. 'The AI scribe generated it' is not a defence for an inaccurate record.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HC2.1", "Reproduce", "Safe use of an AI scribe for real documentation",
+          "Take a documentation use for an AI scribe. Plan the safe-use checks.",
+          "Strong answer: the clinician reviews and edits every note before signing; the check specifically hunts invented negatives / normals, wrong specifics (dose, laterality, dates), and missing content; consent and data retention are addressed; and the clinician's accountability for the record is explicit.",
+          [
+            { key: "use", label: "The use", hint: "One line.", minWords: 3 },
+            { key: "review", label: "The pre-sign check", hint: "The whole note.", minWords: 5 },
+            { key: "errorhunt", label: "The specific error types", hint: "Negatives, specifics, gaps.", minWords: 5 },
+            { key: "consentprivacy", label: "Consent + data handling", hint: "Opt-out, retention.", minWords: 4 },
+          ],
+          [
+            { label: "The clinician reviews and edits every note before signing" },
+            { label: "The check hunts invented negatives / normals, wrong specifics, missing content" },
+            { label: "Consent and data retention addressed; clinician accountability explicit" },
+          ],
+          "independent"),
+        critiqueChallenge("HC2.2", "Adapt", "Find the risks in a scribe rollout",
+          "Here is how the scribe is being used. Find every risk.",
+          "\"The AI scribe has been great — notes are done by the time the patient leaves. Clinicians give them a quick glance and sign. It auto-fills a full systems review and normal examination findings for every encounter, which saves loads of time. Audio is kept in the app indefinitely for quality purposes.\"",
+          [
+            { label: "'a quick glance and sign' — not a review; a legal record needs to be read properly", signals: ["quick glance", "not a review", "read properly", "legal record", "rubber stamp", "sign without reading"] },
+            { label: "Auto-filled systems review and normal exam findings for every encounter = fabricated clinical findings", signals: ["auto-fill", "systems review", "normal findings", "fabricated", "didn't happen", "not examined", "every encounter"] },
+            { label: "Documenting exams that didn't happen is a serious integrity and safety issue", signals: ["didn't happen", "integrity", "safety", "not performed", "false record", "clinical governance"] },
+            { label: "Audio kept 'indefinitely' — patient data with no retention limit, likely non-compliant", signals: ["indefinitely", "retention", "no limit", "patient data", "non-compliant", "how long"] },
+            { label: "No mention of patient consent to AI scribing", signals: ["consent", "patient consent", "opt out", "informed", "not mentioned"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HC3", name: "Summarising records and correspondence",
+      canDo: "Use AI to summarise clinical records and letters — with the summary verified against the source before anyone acts on it.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI summary of a new patient's 200-page record said \"no known drug allergies.\" The record actually documented a penicillin anaphylaxis on page 140. A prescription was written based on the summary.",
+          point: "An AI summary of a clinical record is a starting index, not a substitute for the record — and it will miss or misstate the one thing that matters.",
+        },
+        explain: {
+          paras: [
+            "AI can make a long record navigable — a timeline, a problem list, a medication history, key results.",
+            "But: **safety-critical items are checked against the source, always** — allergies, current medications, key diagnoses, resuscitation status, safeguarding flags. Never act on these from a summary.",
+            "**The summary points to the source** — every item links to where it came from. **Absence in the summary ≠ absence in the record** — 'no allergies mentioned' means the AI didn't surface one, not that there isn't one. **The clinician using it is responsible** for what they act on.",
+          ],
+          keyIdea: "AI summarises the record for navigation; safety-critical items (allergies, meds, key diagnoses, resus status, safeguarding) are always verified against the source; the summary links to sources; absence in the summary is not absence in the record; the clinician owns what they act on.",
+        },
+        demonstrate: {
+          task: "A clinician using an AI summary of a transferred patient's records.",
+          steps: [
+            { move: "Use the summary", think: "Fast orientation.", result: "Get the timeline, the problem list, the recent results." },
+            { move: "Verify the safety-critical", think: "Against the source.", result: "Open the source for allergies, current meds, and the main diagnoses — confirm each against the actual documents." },
+            { move: "The allergy check", think: "The highest-risk item.", result: "Summary says 'NKDA'; searching the record finds a penicillin allergy in an old discharge summary — the summary was wrong." },
+            { move: "Act on the source", think: "Not the summary.", result: "The prescribing decision uses the verified allergy status from the record." },
+          ],
+          full: "The summary oriented the clinician fast. Every safety-critical item was checked against the source — which caught a missed penicillin allergy. Nothing that could harm the patient was acted on from the summary alone.",
+        },
+        deconstruct: [
+          "'NKDA' in a summary is the highest-risk possible error — it has to be verified every time.",
+          "The summary linking to page 140 is what makes the check take seconds instead of an hour.",
+          "The clinician acts on the record, using the summary only to find things faster.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Your team wants AI to summarise incoming specialist letters into the GP record.",
+          fields: [
+            { key: "use", label: "What the summary is for", hint: "Triage the inbox faster.", minWords: 4 },
+            { key: "safetycritical", label: "What's always checked against the letter", hint: "Meds, diagnoses, actions.", minWords: 5 },
+            { key: "linking", label: "How the summary connects to the source", hint: "Quote or link.", minWords: 4 },
+            { key: "responsibility", label: "Who's accountable for acting on it", hint: "The actioning GP.", minWords: 3 },
+          ],
+          model: {
+            use: "A short summary of each letter — the specialist's assessment, any diagnosis, medication changes, actions for the GP, and follow-up — so the GP can process the inbox faster.",
+            safetycritical: "Any medication started / stopped / changed, any new diagnosis, any 'GP to arrange / monitor X', any red-flag safety-netting — the GP reads that part of the actual letter, not just the summary.",
+            linking: "The summary quotes or links the exact sentence in the letter for each action item, so verifying is a glance.",
+            responsibility: "The GP who actions the letter is responsible for what they do. The summary is a triage aid; the letter is the record.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HC3.1", "Reproduce", "Safe record-summarisation for a real use",
+          "Take a record-summarisation use. Plan the safe-use approach.",
+          "Strong answer: safety-critical items (allergies, meds, key diagnoses, resus, safeguarding) are always verified against the source, never acted on from the summary; the summary links to its sources; the risk that absence-in-summary ≠ absence-in-record is stated; and the acting clinician is accountable.",
+          [
+            { key: "use", label: "The use", hint: "One line.", minWords: 3 },
+            { key: "alwaysverify", label: "The safety-critical items checked against source", hint: "Allergies, meds, diagnoses.", minWords: 5 },
+            { key: "linking", label: "How the summary points to the source", hint: "Quote or link.", minWords: 4 },
+            { key: "accountability", label: "Who owns acting on it", hint: "The clinician.", minWords: 3 },
+          ],
+          [
+            { label: "Safety-critical items always verified against source, never acted on from the summary" },
+            { label: "The summary links to its sources; absence-in-summary ≠ absence-in-record is stated" },
+            { label: "The acting clinician is accountable" },
+          ],
+          "independent"),
+        scenarioChallenge("HC3.2", "Create", "The summary missed a critical allergy",
+          "A prescription was written based on an AI record summary that said 'no known drug allergies.' The record documented a penicillin anaphylaxis. The patient was harmed.",
+          "What has to change?",
+          [
+            { id: "a", label: "Use a more capable AI model for summarisation", ok: false, why: "No model is reliable enough that a safety-critical negative can be trusted without checking the source." },
+            { id: "b", label: "Safety-critical items (allergies, meds, key diagnoses) are always verified against the source record and never acted on from a summary; summaries link to sources to make that fast", ok: true, why: "Build the source-verification into how the summary is used." },
+            { id: "c", label: "Add 'verify independently' to the summary's footer", ok: false, why: "A footer note isn't a process; the verification has to be built into how the summary is used." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HC4", name: "Patient-facing information and communication",
+      canDo: "Use AI to help produce patient information and correspondence — clinician-approved, accurate, accessible, and never a substitute for clinical advice.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI-generated patient leaflet about a medication listed a dose range that was wrong for the local formulary, omitted a key interaction warning, and was written at a reading level most patients couldn't follow. It was printed and handed out for a month.",
+          point: "AI writes patient information that reads professionally and contains dosing errors, missing warnings, and language patients can't use.",
+        },
+        explain: {
+          paras: [
+            "AI can help draft: appointment and results letters (from clinician-supplied facts), patient-education material, pre / post-procedure instructions, translated versions, plain-language rewrites.",
+            "The rules: **a clinician approves every piece of clinical patient information** against the local formulary / guidelines; **dosing, interactions, warnings and red-flag advice are checked line by line**; **accessibility** — check the reading level (aim ~age 11), and that translations are clinically accurate not just fluent.",
+            "**It never replaces the consultation** — 'here's a leaflet' is not 'here's advice for your situation'. **Safety-netting** — 'if X happens, do Y' advice is explicit and correct.",
+          ],
+          keyIdea: "AI drafts patient information; a clinician approves every clinical piece against local guidelines; dosing / interactions / warnings / safety-netting are checked line by line; reading level and translation accuracy are checked; it never replaces the consultation.",
+        },
+        demonstrate: {
+          task: "Producing a post-operative instruction sheet with AI.",
+          steps: [
+            { move: "Draft", think: "From the protocol.", result: "AI drafts the sheet from the surgical team's standard post-op protocol." },
+            { move: "Clinical check", think: "Against the protocol.", result: "The AI's 'resume normal activity after 3 days' contradicts the protocol's '2 weeks'. Corrected." },
+            { move: "Safety-netting", think: "Complete and correct.", result: "Confirm the 'call us / go to A&E if...' section lists the right warning signs, completely." },
+            { move: "Accessibility", think: "Can patients use it?", result: "Check the reading level and that key actions are clear; produce the checked translations." },
+          ],
+          full: "AI drafted the structure. A surgeon corrected an instruction that contradicted the protocol, the safety-netting was verified as complete and correct, and the reading level and translations were checked before a single sheet was handed out.",
+        },
+        deconstruct: [
+          "'Resume activity after 3 days' vs '2 weeks' is the kind of confident, plausible, harmful error AI makes.",
+          "The safety-netting section is the highest-stakes part — it has to be complete.",
+          "A fluent translation that's clinically inaccurate is worse than none.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You want to use AI to create plain-language versions of your clinic's existing patient leaflets.",
+          fields: [
+            { key: "aidoes", label: "What AI does", hint: "From the approved source.", minWords: 4 },
+            { key: "clinicalcheck", label: "What a clinician verifies", hint: "Nothing lost in simplification.", minWords: 5 },
+            { key: "accessibility", label: "What you check about readability and translation", hint: "Reading age, clinical accuracy.", minWords: 4 },
+            { key: "boundary", label: "How you keep it from replacing advice", hint: "General info + contact us.", minWords: 4 },
+          ],
+          model: {
+            aidoes: "Rewrites the existing clinician-approved leaflets into plain language at a lower reading level, and drafts translations. It works from the approved source, not from scratch.",
+            clinicalcheck: "A clinician confirms the plain-language version still says the same clinically — no dose, warning, timeframe or safety-netting instruction has been lost, softened or changed. Same for each translation.",
+            accessibility: "Reading age around 11; short sentences; key actions as a clear list; important warnings not buried. Test with a patient representative if possible.",
+            boundary: "Every leaflet says it's general information and to contact the clinic / GP about their specific situation. It supports the consultation; it doesn't stand in for it.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HC4.1", "Reproduce", "Produce checked patient information with AI",
+          "Take a piece of patient information you'd produce. Plan how AI drafts it and how it's checked.",
+          "Strong answer: a clinician approves every clinical piece against local guidelines; dosing, interactions, warnings and safety-netting are checked line by line; reading level and translation clinical-accuracy are checked; and the information doesn't substitute for the consultation.",
+          [
+            { key: "piece", label: "The piece", hint: "One line.", minWords: 3 },
+            { key: "aidraft", label: "What AI drafts, from what source", hint: "The approved source.", minWords: 4 },
+            { key: "clinicalcheck", label: "Line-by-line checks", hint: "Dosing, warnings, safety-netting.", minWords: 5 },
+            { key: "accessibility", label: "Readability + translation checks", hint: "Reading age, accuracy.", minWords: 4 },
+          ],
+          [
+            { label: "A clinician approves every clinical piece against local guidelines" },
+            { label: "Dosing, interactions, warnings and safety-netting checked line by line" },
+            { label: "Reading level and translation accuracy checked; doesn't substitute for the consultation" },
+          ],
+          "independent"),
+        critiqueChallenge("HC4.2", "Adapt", "Find the problems in an AI patient leaflet process",
+          "Here is how patient leaflets are produced. Find every problem.",
+          "\"We use AI to generate patient leaflets on demand — a receptionist types the topic, the AI writes the leaflet, and it prints. It covers medications, conditions, and aftercare. Patients love how quick it is. We spot-check a few each week.\"",
+          [
+            { label: "No clinician approval before the leaflet reaches the patient — most go out unchecked", signals: ["no clinician approval", "unchecked", "spot-check a few", "before the patient", "clinical oversight", "sign-off"] },
+            { label: "A receptionist typing a topic and printing means no clinical oversight of medication content", signals: ["receptionist", "no clinical oversight", "medication", "types the topic", "not a clinician", "who writes it"] },
+            { label: "On-demand generation of clinical content is effectively an unregulated advice tool", signals: ["on demand", "unregulated", "advice tool", "generated fresh", "medical device", "each time"] },
+            { label: "Dosing and interaction information generated fresh each time will contain errors", signals: ["dosing", "interaction", "generated fresh", "errors", "each time", "inconsistent", "wrong dose"] },
+            { label: "No source — the AI writes from its training, not the local formulary / guidelines", signals: ["no source", "training", "formulary", "guidelines", "not from the approved", "makes it up"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "HC5", name: "Governance, safety and the incident path",
+      canDo: "Put the governance around clinical AI use: risk assessment, clinician accountability, an incident process, and knowing when to stop.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI documentation tool started producing subtly garbled medication lists after a vendor update. Three clinicians noticed something \"felt off\" but there was no way to report it, no owner, and no process. It took six weeks and a near-miss before anyone connected the reports.",
+          point: "Clinical AI without governance isn't a tool, it's an exposure — nobody owns it, problems don't get reported, and there's no way to turn it off.",
+        },
+        explain: {
+          paras: [
+            "For any AI used in a clinical setting: **a clinical safety case** — what could go wrong, who could be harmed, how likely, what mitigations; **a named clinical owner** accountable for the tool's safe use; **clinician accountability preserved** — the clinician using the output is responsible for it, always.",
+            "**An incident / near-miss route** — how a clinician reports 'this output was wrong', where it goes, who acts; **monitoring** — especially after vendor updates, which can change behaviour silently; **a kill switch** — the ability to stop and fall back to the manual process; **information governance** — patient data handling, DPIA, contracts.",
+            "The question for every clinical AI use: if it produced a harmful output tomorrow, would we catch it, could we stop it, and does someone own it?",
+          ],
+          keyIdea: "Clinical AI needs a safety case, a named clinical owner, preserved clinician accountability, an incident / near-miss route, monitoring (especially post-update), a kill switch to the manual process, and IG / DPIA. Test: if it harmed someone tomorrow, would we catch it, stop it, and does someone own it?",
+        },
+        demonstrate: {
+          task: "Governing an AI scribe rollout across a department.",
+          steps: [
+            { move: "Safety case", think: "Name the harms.", result: "Document the risks — fabricated content, missed content, wrong specifics — and the mitigations (mandatory clinician review before signing, error-reporting route)." },
+            { move: "Owner", think: "Named accountability.", result: "A consultant is the named clinical safety owner for the scribe." },
+            { move: "Incident route", think: "How a bad note is reported.", result: "A one-click 'report a bad note' that goes to the owner and the clinical governance log; reviewed weekly, escalated if a pattern." },
+            { move: "Monitoring + kill switch", think: "Catch and stop.", result: "Check note quality after every vendor update; if error rate rises or a serious near-miss occurs, revert to manual documentation with one instruction." },
+          ],
+          full: "The scribe runs inside a safety case, with a named consultant owner, a working error-reporting route, post-update monitoring, and a tested fallback to manual documentation. If it goes wrong, it's caught, owned and stoppable.",
+        },
+        deconstruct: [
+          "The safety case forces you to name what could go wrong before it does.",
+          "The incident route is what connects the 'felt off' reports before a near-miss.",
+          "Monitoring after vendor updates catches silent behaviour changes.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Your organisation is about to deploy an AI tool that summarises patient records for clinicians across several departments.",
+          fields: [
+            { key: "safetycase", label: "What the risk assessment covers", hint: "Harms, who's affected, mitigations.", minWords: 6 },
+            { key: "owner", label: "Who's accountable and for what", hint: "Named safety officer + local owners.", minWords: 5 },
+            { key: "incident", label: "The near-miss / incident process", hint: "Route, timing, themes.", minWords: 5 },
+            { key: "stopmonitor", label: "Monitoring and the kill switch", hint: "Post-update; revert to manual.", minWords: 5 },
+          ],
+          model: {
+            safetycase: "Risks: missed safety-critical item (allergy, med, diagnosis), misstated item, over-trust leading to acting on the summary without checking source. Mitigations: mandatory source-verification for safety-critical items, summary-to-source linking, clinician training, audit of use. Formal clinical safety assessment.",
+            owner: "A named clinical safety officer accountable for the tool; departmental clinical leads as local owners; the clinician using any summary remains accountable for what they act on.",
+            incident: "A route for clinicians to flag a wrong or misleading summary — to the safety officer and the risk system — reviewed within an agreed time, with themes reported to clinical governance. Near-misses count.",
+            stopmonitor: "Ongoing audit of summary accuracy against source (sampled); mandatory re-check after any vendor model update; a defined trigger and one-step process to disable the tool and revert to clinicians reading full records.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("HC5.1", "Reproduce", "Governance for a real clinical AI use",
+          "Take a real or planned clinical AI use. Design its governance.",
+          "Strong answer: a clinical safety case names the harms, who's affected and the mitigations; a named clinical owner is accountable and clinician accountability for outputs is preserved; there's a working incident / near-miss route; monitoring covers post-vendor-update behaviour change; and a kill switch to the manual process exists.",
+          [
+            { key: "use", label: "The use", hint: "One line.", minWords: 3 },
+            { key: "safetycase", label: "Risks + mitigations", hint: "The harms, named.", minWords: 5 },
+            { key: "owner", label: "Named accountability", hint: "Clinical owner.", minWords: 4 },
+            { key: "incident", label: "The reporting route", hint: "Where a bad output goes.", minWords: 4 },
+            { key: "stopmonitor", label: "Monitoring + kill switch", hint: "Post-update; manual fallback.", minWords: 4 },
+          ],
+          [
+            { label: "A safety case names the harms, who's affected and the mitigations" },
+            { label: "A named clinical owner; clinician accountability for outputs preserved" },
+            { label: "A working incident route; post-update monitoring; a kill switch to manual" },
+          ],
+          "independent"),
+        scenarioChallenge("HC5.2", "Create", "The tool degraded silently for six weeks",
+          "An AI documentation tool started garbling medication lists after a vendor update. Clinicians noticed but there was no reporting route, no owner, and no process. A near-miss finally triggered investigation six weeks later.",
+          "What governance was missing?",
+          [
+            { id: "a", label: "The vendor should have tested the update better", ok: false, why: "True, but the organisation had no owner, no incident route, and no post-update monitoring — those are the fixable gaps that let a noticed problem run for six weeks." },
+            { id: "b", label: "A named clinical owner, an incident / near-miss route clinicians know about, monitoring after vendor updates, and a kill switch — so a noticed problem is connected, owned and stopped in days", ok: true, why: "Build the governance that turns three 'felt off' reports into an action." },
+            { id: "c", label: "Clinicians should have raised it through normal channels", ok: false, why: "'Normal channels' clearly didn't exist for this; the system has to provide the route." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
   const PATHWAYS = [
     // ---- Using AI at work ----
     {
@@ -5732,6 +8014,53 @@ window.CONTENT = (function () {
       forRoles: "safety engineers · eval authors · anyone shipping consequential AI",
       status: "available", prereq: "engineering",
       competencies: SAFETY_COMPETENCIES, capstoneId: "SAFECAP",
+      rubricEmphasis: ["Safety", "Verification"],
+    },
+
+    // ---- Broader-scope: new domains ----
+    {
+      id: "legal", group: "work",
+      title: "Legal & Contracts",
+      tagline: "Review contracts with AI as a fast first pass — and never let it be the last word on legal risk.",
+      forRoles: "lawyers · paralegals · contract managers · founders reviewing their own contracts",
+      status: "available", prereq: "foundation",
+      competencies: LEGAL_COMPETENCIES, capstoneId: "LEGCAP",
+      rubricEmphasis: ["Verification", "Safety"],
+    },
+    {
+      id: "sales", group: "work",
+      title: "Sales",
+      tagline: "Research accounts, draft outreach and follow-ups, and prep for calls — without fabricating facts or over-promising.",
+      forRoles: "account executives · SDRs · sales leaders · founders selling",
+      status: "available", prereq: "foundation",
+      competencies: SALES_COMPETENCIES, capstoneId: "SALESCAP",
+      rubricEmphasis: ["Reasoning", "Safety"],
+    },
+    {
+      id: "finance", group: "work",
+      title: "Finance & Accounting",
+      tagline: "Analyse, reconcile, model and report with AI — with the arithmetic checked and an auditable trail.",
+      forRoles: "accountants · FP&A · bookkeepers · finance teams · founders doing their own books",
+      status: "available", prereq: "foundation",
+      competencies: FINANCE_COMPETENCIES, capstoneId: "FINCAP",
+      rubricEmphasis: ["Verification", "Evidence"],
+    },
+    {
+      id: "hr", group: "work",
+      title: "HR & People",
+      tagline: "Screen, write and support people processes with AI — without importing bias, breaching privacy, or removing the human from decisions about people.",
+      forRoles: "recruiters · HR business partners · people ops · hiring managers",
+      status: "available", prereq: "foundation",
+      competencies: HR_COMPETENCIES, capstoneId: "HRCAP",
+      rubricEmphasis: ["Safety", "Reasoning"],
+    },
+    {
+      id: "health", group: "work",
+      title: "Healthcare & Clinical Support",
+      tagline: "Use AI for admin, documentation and information support in clinical settings — where a confident wrong answer can harm someone.",
+      forRoles: "clinicians · nurses · medical admin · allied health · practice managers",
+      status: "available", prereq: "foundation",
+      competencies: HEALTH_COMPETENCIES, capstoneId: "HEALTHCAP",
       rubricEmphasis: ["Safety", "Verification"],
     },
   ];
@@ -5955,6 +8284,106 @@ window.CONTENT = (function () {
         { key: "deployment", label: "Deployment & monitoring", hint: "Live metric, drift, retraining trigger, fallback, kill switch.", minWords: 12 },
       ],
       rubricDims: ["Verification", "Evidence", "Reasoning", "Structure", "Safety"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "LEGCAP",
+      pathway: "legal",
+      title: "Work Capstone — review a real contract with AI as the first pass, responsibly",
+      after: ["L1", "L2", "L3", "L4", "L5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real contract (or a realistic one) you'd review. Scope the review, run an AI first pass with every claim grounded in the document, draft or redline one clause with a checked meaning, handle confidentiality properly, and show clearly where the qualified-human line is.",
+      whatGood:
+        "The review has a named purpose and a checklist that separates deal-specific risk from standard clauses and names deal-breakers; every AI claim about the contract is verified against the clause text, with absence claims independently checked; a drafted / redlined clause is checked for meaning (direction, caps, timing), cross-references and defined terms; the confidentiality approach checks the tool's data policy and redacts identifiers; and the judgement calls that require a qualified human are explicitly named, with the AI's role logged as an input.",
+      fields: [
+        { key: "scope", label: "The review scope", hint: "Purpose + checklist (deal-specific / standard / deal-breakers).", minWords: 12 },
+        { key: "grounding", label: "The grounded AI first pass", hint: "Claims → clause citations; how absence was checked; what was off.", minWords: 12 },
+        { key: "drafting", label: "One drafted or redlined clause, checked", hint: "Meaning, cross-refs, defined terms, sign-off.", minWords: 10 },
+        { key: "confidentiality", label: "The confidentiality approach", hint: "Tool data policy, what stays out, redaction, enforcement.", minWords: 10 },
+        { key: "humanline", label: "Where the qualified-human line is", hint: "AI's role vs the judgement calls; how it's logged.", minWords: 10 },
+      ],
+      rubricDims: ["Verification", "Safety", "Reasoning", "Clarity", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "SALESCAP",
+      pathway: "sales",
+      title: "Work Capstone — run a real deal cycle with AI, honestly",
+      after: ["SL1", "SL2", "SL3", "SL4", "SL5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real (or realistic) opportunity. Do the account research with traceable facts, draft outreach that's honest at volume, prep a call with fact-checked material, produce a checked recap + CRM update, and show how you keep the proof and the pressure honest.",
+      whatGood:
+        "Research facts are each traced to a source and the account identity is confirmed; outreach has a sourced reason, a true backable claim and one ask; call prep is fact-checked before the call and live AI is confirm-or-defer for facts; the recap and CRM update are checked against actual notes with hedges kept as hedges; and proof points are real and sourced, capability claims are true-today, and there's no manufactured urgency.",
+      fields: [
+        { key: "research", label: "The account research", hint: "Facts → sources; entity confirmation; confidence tiers.", minWords: 10 },
+        { key: "outreach", label: "The outreach", hint: "Sourced reason + true claim + one ask.", minWords: 8 },
+        { key: "callprep", label: "The call prep + live rule", hint: "What's fact-checked before; the confirm-or-defer rule.", minWords: 8 },
+        { key: "recap", label: "The checked recap + CRM update", hint: "Hedges kept; stage/date/amount real; no invented promises.", minWords: 8 },
+        { key: "honesty", label: "Keeping proof and pressure honest", hint: "Real sourced proof; true-today claims; no fake urgency.", minWords: 8 },
+      ],
+      rubricDims: ["Reasoning", "Safety", "Verification", "Clarity", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "FINCAP",
+      pathway: "finance",
+      title: "Work Capstone — run a real finance task with AI, checked and auditable",
+      after: ["FN1", "FN2", "FN3", "FN4", "FN5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real finance task (an analysis, a model, a report, or a close process). Do the arithmetic yourself or with a tool, use AI for structure and narrative, check every number, source every explanation, and show the controls and audit trail.",
+      whatGood:
+        "All arithmetic is done in a spreadsheet or tool, not by the AI, and every number in the AI output is re-derived or traced; any categorisation / reconciliation has a confidence threshold, a review queue and a source-document sample; any model is logic-traced, hardcode-hunted and known-input tested; narrative numbers match the statements and every explanation is human-sourced; and segregation of duties, workpapers, the no-posting boundary and an audit trail of AI use are all in place.",
+      fields: [
+        { key: "arithmetic", label: "What you calculated (not the AI), and how", hint: "The spreadsheet / tool work.", minWords: 8 },
+        { key: "aiwork", label: "What AI did", hint: "Structure, categorisation, commentary, explanation.", minWords: 8 },
+        { key: "numbercheck", label: "How every number in the output was verified", hint: "Re-derived or traced; model tests if relevant.", minWords: 10 },
+        { key: "explanations", label: "How every 'why' was sourced", hint: "Human-supplied; unexplained → flagged.", minWords: 8 },
+        { key: "controls", label: "Segregation, workpapers, no-posting, audit trail", hint: "The controls around the AI step.", minWords: 10 },
+      ],
+      rubricDims: ["Verification", "Evidence", "Safety", "Structure", "Reasoning"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "HRCAP",
+      pathway: "hr",
+      title: "Work Capstone — run a real people process with AI, fairly and privately",
+      after: ["HR1", "HR2", "HR3", "HR4", "HR5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real people process (hiring, promotion, performance, or people analytics). Draft the specs / criteria and de-bias them, use AI to apply an explicit rubric with human review, handle employee data properly, write the communications accurately, and keep the decision human and explainable.",
+      whatGood:
+        "Job specs and criteria are stripped of coded language and non-job-related filters; AI scores against explicit job-related criteria (not a learned pattern) with human review of rejections and a bias check across groups; employee data goes only into an approved tool on a lawful, minimised basis with special-category data handled specifically; communications have every person-specific fact verified and no implied promises; and the actual decision (hire / promote / pay / act) is made by a named human who can explain it in job-related terms, with the AI's role logged and limited.",
+      fields: [
+        { key: "criteria", label: "The de-biased spec + rubric", hint: "Coded language out; credentials challenged; criteria map to real work.", minWords: 10 },
+        { key: "screening", label: "AI-assisted screening + review + bias check", hint: "Scores against explicit criteria; human review; group pass-rate check.", minWords: 10 },
+        { key: "dataprivacy", label: "The employee-data handling", hint: "Approved tool, lawful basis, minimisation, outputs.", minWords: 10 },
+        { key: "comms", label: "The communications, checked", hint: "Facts verified; meaning held; no implied promises; no leaks.", minWords: 8 },
+        { key: "decision", label: "How the decision stays human", hint: "AI's limited role; the named decision-maker; the explanation.", minWords: 10 },
+      ],
+      rubricDims: ["Safety", "Reasoning", "Verification", "Clarity", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "HEALTHCAP",
+      pathway: "health",
+      title: "Capstone — put a real clinical AI use inside proper governance",
+      after: ["HC1", "HC2", "HC3", "HC4", "HC5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real or planned AI use in a clinical setting. Map what it can and can't touch, design the documentation / summarisation / patient-info checks, and build the governance: safety case, clinical owner, incident route, monitoring and kill switch.",
+      whatGood:
+        "The use is clearly on the safe side of the line (admin / drafting / summarising-for-verification, not diagnosis / triage / decision-informing) or is routed through formal clinical governance as a regulated device; every AI output that touches care is verified by the responsible clinician, with safety-critical items always checked against source; patient-facing information is clinician-approved line by line; and there's a safety case, a named clinical owner, a working incident / near-miss route, post-update monitoring, and a kill switch to the manual process.",
+      fields: [
+        { key: "scope", label: "What the AI does and doesn't touch", hint: "Safe uses + the check on each; what's ruled out + why.", minWords: 12 },
+        { key: "clinicalchecks", label: "The verification on outputs that touch care", hint: "Clinician review; safety-critical items vs source.", minWords: 10 },
+        { key: "patientinfo", label: "Patient-facing information handling", hint: "Clinician approval; dosing / warnings / safety-netting; accessibility.", minWords: 8 },
+        { key: "governance", label: "The safety case + owner + incident route", hint: "Named accountability; how a bad output is reported and actioned.", minWords: 10 },
+        { key: "stopmonitor", label: "Monitoring + the kill switch", hint: "Post-update checks; the fallback to manual.", minWords: 8 },
+      ],
+      rubricDims: ["Safety", "Verification", "Reasoning", "Structure", "Evidence"],
       raisesTo: "advanced",
     },
   ];

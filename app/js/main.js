@@ -772,10 +772,12 @@
           6-step lesson — story → idea → played worked example → the moves → quick-check MCQs → guided
           attempt — then 2–3 rubric-assessed challenges on your own task</li>
         <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
-        <li><strong>Pathways</strong> — after the foundation, go deep. 11 built, each with a capstone:
+        <li><strong>Pathways</strong> — after the foundation, go deep. 16 built, each with a capstone:
           <em>Using AI at work</em> (Software, Content, Operations &amp; Admin, Customer Support,
-          Research &amp; Analysis, Education &amp; Training) and <em>building AI</em> (AI Engineering,
-          Technical Foundations, ML Practitioner, Agentic Systems, AI Safety)</li>
+          Research &amp; Analysis, Education &amp; Training, Legal &amp; Contracts, Sales,
+          Finance &amp; Accounting, HR &amp; People, Healthcare &amp; Clinical Support) and
+          <em>building AI</em> (AI Engineering, Technical Foundations, ML Practitioner,
+          Agentic Systems, AI Safety)</li>
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
