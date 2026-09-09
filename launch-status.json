@@ -4,6 +4,12 @@
   "domain": "aifaculty.org",
   "domain_cost_per_year_usd": 12,
   "registrar": "Cloudflare Registrar",
+  "urls": {
+    "pages_preview": "https://aifaculty.pages.dev",
+    "landing": "https://aifaculty.pages.dev/",
+    "app": "https://aifaculty.pages.dev/app/",
+    "signup_worker": "https://aifaculty-signup.lecheyne24.workers.dev/signup"
+  },
   "steps": [
     {
       "id": "code",
@@ -11,13 +17,6 @@
       "status": "done",
       "cost": 0,
       "notes": "landing/ + workers/signup/, 7/7 tests passing, committed & pushed"
-    },
-    {
-      "id": "pages_free",
-      "label": "Cloudflare Pages (free, *.pages.dev URL)",
-      "status": "todo",
-      "cost": 0,
-      "notes": "Needs your ONE browser login. Serves only landing/, keeps prototype private."
     },
     {
       "id": "worker_free",
@@ -31,28 +30,49 @@
       "label": "Verify Worker end-to-end",
       "status": "done",
       "cost": 0,
-      "notes": "Tested: valid signup -> 201, dupe -> 200 already, bad email -> 400, non-route -> 404. Key confirmed in KV then test key removed."
+      "notes": "Tested: valid signup -> 201, dupe -> 200 already, bad email -> 400, non-route -> 404."
     },
     {
       "id": "domain",
       "label": "Register aifaculty.org ($12/yr)",
-      "status": "todo",
+      "status": "done",
       "cost": 12,
-      "notes": "The ONLY required cost. Register at dash.cloudflare.com"
+      "notes": "Registered via Cloudflare Registrar 2026-09-09, expires 2027-09-09. Zone 53034bfea4de24f2a0fdd6b6f7327fa1, active, Cloudflare nameservers. domain_cost_per_year_usd is the estimate - update with the real charge from Billing History if different."
     },
     {
-      "id": "attach_domain",
-      "label": "Attach domain to Pages + route Worker",
+      "id": "pages_free",
+      "label": "Cloudflare Pages project + deploy (landing at /, app at /app/)",
+      "status": "done",
+      "cost": 0,
+      "notes": "Project 'aifaculty', production branch master, DIRECT UPLOAD (not git-connected). Publish dir built by ./build.sh -> dist/ (landing at /, app/ copied to dist/app/, combined _headers with an /app/* CSP override for inline styles + noindex, robots.txt disallowing /app/). Live at https://aifaculty.pages.dev . Redeploy with: ./build.sh && npx wrangler pages deploy dist --project-name aifaculty --branch master"
+    },
+    {
+      "id": "worker_route",
+      "label": "Route signup Worker at aifaculty.org/signup",
+      "status": "done",
+      "cost": 0,
+      "notes": "routes added to workers/signup/wrangler.toml and deployed; route aifaculty.org/signup -> aifaculty-signup confirmed on the zone. Receives traffic once the apex DNS record exists."
+    },
+    {
+      "id": "attach_domain_dns",
+      "label": "Point aifaculty.org at the Pages project (DNS record)",
       "status": "todo",
       "cost": 0,
-      "notes": "Custom domain on Pages; then `npx wrangler routes` for aifaculty.org/signup -> aifaculty-signup. Until the domain exists the landing form posts cross-origin to the workers.dev URL (CSP + CORS already allow it)."
+      "notes": "Custom domain aifaculty.org already added to the Pages project via API (status 'pending'), but the wrangler OAuth token cannot write DNS records. FOUNDER: Cloudflare dash -> aifaculty.org -> DNS -> Records -> Add: CNAME, name '@', target 'aifaculty.pages.dev', Proxied ON. Pages then validates and issues the cert (a few minutes). Optional: CNAME 'www' -> 'aifaculty.pages.dev' proxied too."
+    },
+    {
+      "id": "verify_live",
+      "label": "Verify aifaculty.org end-to-end",
+      "status": "todo",
+      "cost": 0,
+      "notes": "After DNS: https://aifaculty.org loads the landing page, https://aifaculty.org/app/ loads the prototype, and a signup on the landing form writes to KV via the same-origin /signup route."
     },
     {
       "id": "go_live",
-      "label": "Point / Update countdown + announce",
+      "label": "Announce / update countdown copy",
       "status": "todo",
       "cost": 0,
-      "notes": "HTTPS via Cloudflare; update copy if desired"
+      "notes": "HTTPS is automatic via Cloudflare. Update landing copy if desired before announcing."
     }
   ]
 }

@@ -153,6 +153,31 @@ Rule: **never overwrite — version forward.** Every meaningful change is record
   project (repo `ai-faculty`, output dir `landing`), then attach the custom domain and route
   the Worker at `aifaculty.org/signup`.
 
+## v0.13 — 2026-09-09 — Deployed to Cloudflare Pages; app served at /app/
+
+- `aifaculty.org` registered via Cloudflare Registrar (2026-09-09, zone
+  `53034bfea4de24f2a0fdd6b6f7327fa1`, active).
+- **Decision:** serve the landing page at `/` and the working prototype at `/app/` on the same
+  domain, open (no auth), `/app/` marked `noindex` + disallowed in `robots.txt`. This
+  supersedes the earlier "keep `app/` private" note — the founder wants to run and test the
+  real app on the domain.
+- Added `build.sh` — no-toolchain assembly of `dist/`: `landing/*` at root, `app/` copied to
+  `dist/app/`, a combined `_headers` (site-wide strict CSP, then an `/app/*` block that
+  `!`-unsets and replaces CSP with `style-src 'self' 'unsafe-inline'` because the app injects
+  ~79 inline `style=` attributes), and a `robots.txt`. `dist/` and `.wrangler/` gitignored.
+- Cloudflare **Pages project `aifaculty`** created (production branch `master`, **direct
+  upload**, not git-connected). Deployed `dist/`. Live at `https://aifaculty.pages.dev` —
+  landing at `/`, app at `/app/`. Verified both render correctly via headless Chrome
+  (progress view, diagnostic CTA, pathways route, countdown + signup form).
+- Signup **Worker route** `aifaculty.org/signup` → `aifaculty-signup` added to
+  `workers/signup/wrangler.toml` and deployed; confirmed on the zone.
+- Custom domain `aifaculty.org` added to the Pages project via API (status `pending`).
+- **Blocked on the founder (one step):** the wrangler OAuth token can't write DNS. Add in the
+  Cloudflare dash → `aifaculty.org` → DNS: `CNAME @ -> aifaculty.pages.dev`, Proxied. Pages
+  then validates + issues the cert automatically. After that: verify `aifaculty.org`,
+  `aifaculty.org/app/`, and a real signup end-to-end.
+- Redeploy the site anytime: `./build.sh && npx wrangler pages deploy dist --project-name aifaculty --branch master`
+
 ## Open threads
 - **Author the 4 outlined pathways** — the "Using AI at work" set (Ops, Support, Education) +
   ML Practitioner.

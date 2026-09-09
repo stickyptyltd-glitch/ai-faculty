@@ -1,70 +1,90 @@
 # Deploying AI Faculty to the web
 
 Everything runs on **Cloudflare** (free tier): domain, DNS, static hosting (Pages), and the
-signup backend (Workers). This doc walks the full launch flow for `aifaculty.org`.
+signup backend (Workers). Site layout: **landing page at `/`, the working prototype at `/app/`**
+on `aifaculty.org`.
 
 **Launch target:** Dec 1, 2026 · **Early subscribers get free access.**
 
-## 1. Register the domain
+Current state (2026-09-09): domain registered, Pages project live at `aifaculty.pages.dev`,
+Worker deployed + routed. **One manual step left** — the apex DNS record (§3).
 
-1. Go to https://dash.cloudflare.com → **Register Domain** → search `aifaculty.org`.
-2. Add to cart, configure DNS (defaults are fine), pay (~$12/yr). DNS will point to
-   Cloudflare automatically.
+## 1. Register the domain  ·  ✅ done
 
-## 2. Deploy the landing page (Cloudflare Pages)
+`aifaculty.org` registered via Cloudflare Registrar (2026-09-09, expires 2027-09-09). Zone
+`53034bfea4de24f2a0fdd6b6f7327fa1`, active, on Cloudflare nameservers.
 
-The public site is just the `landing/` folder — the prototype (`app/`) stays private.
+## 2. Build + deploy to Cloudflare Pages  ·  ✅ done
 
-1. In Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** → connect to GitHub.
-2. Connect the `ai-faculty` repo, branch `master`.
-3. Build settings:
-   - **Build command:** *(none / leave blank)*
-   - **Build output directory:** `landing`
-4. **Save and Deploy.** You get a `*.pages.dev` URL.
+Project **`aifaculty`**, production branch `master`, **direct upload** (not git-connected).
 
-> The `_headers` file inside `landing/` ships security headers (CSP, HSTS, frame denial).
+`build.sh` assembles the publish dir with no toolchain:
 
-## 3. Attach the domain to Pages
+| URL | Source |
+|---|---|
+| `/` | `landing/` (countdown + email signup) |
+| `/app/` | `app/` (the hash-routed static prototype) |
 
-In the Pages project → **Custom domains** → add `aifaculty.org`. Cloudflare sets up the route
-automatically.
-
-## 4. Deploy the signup Worker  ·  ✅ done (2026-09-07)
-
-Deployed on `lecheyne24@gmail.com`:
-
-- Worker: **`aifaculty-signup`** → `https://aifaculty-signup.lecheyne24.workers.dev/signup`
-- KV namespace: **`SIGNUPS`** = `1764d7ac08d14438aa1179e4a748cbce` (id is in `workers/signup/wrangler.toml`)
-- Verified: valid signup → `201`, duplicate → `200 {already:true}`, bad email → `400`, other routes → `404`.
-
-Until `aifaculty.org` exists, `landing/app.js` posts **cross-origin** to the `workers.dev` URL
-(the Worker sends `Access-Control-Allow-Origin: *` and the landing `_headers` CSP allows that
-origin in `connect-src`). Once the domain is attached, add the same-origin route so the form
-posts to `/signup`:
+It also writes a combined `dist/_headers` — the site-wide strict CSP from `landing/_headers`,
+then an `/app/*` block that `!`-unsets and replaces the CSP with `style-src 'self'
+'unsafe-inline'` (the app injects inline `style=` attributes) and adds `X-Robots-Tag: noindex` —
+plus a `robots.txt` disallowing `/app/`.
 
 ```bash
-cd workers/signup
-npx wrangler deploy            # re-deploy if index.js changes
-npx wrangler triggers deploy   # or add a route: aifaculty.org/signup -> aifaculty-signup
+./build.sh
+npx wrangler pages deploy dist --project-name aifaculty --branch master
 ```
 
-`app.js` already switches to the relative `/signup` path automatically when the host is
-`aifaculty.org`.
+Live: **https://aifaculty.pages.dev** (`/` landing, `/app/` prototype).
 
-Optional: `npx wrangler secret put RESEND_API_KEY` (free Resend account) to email a
-confirmation on signup — leave unset and signups are just stored in KV.
+`dist/` and `.wrangler/` are gitignored — rebuild from source each deploy.
 
-## 5. Verify
+## 3. Point the domain at Pages  ·  ⬜ TODO (founder — the one manual step)
 
-- Open `https://aifaculty.org` — countdown + form should render.
-- Submit the form → message "You're on the list!".
-- Check KV for the subscriber:
+The custom domain `aifaculty.org` is already attached to the Pages project (via API, status
+`pending`), but it needs an apex DNS record and the wrangler OAuth token can't write DNS.
+
+In the Cloudflare dashboard → **`aifaculty.org`** → **DNS** → **Records** → **Add record**:
+
+| Field | Value |
+|---|---|
+| Type | `CNAME` |
+| Name | `@` |
+| Target | `aifaculty.pages.dev` |
+| Proxy status | **Proxied** (orange cloud) |
+| TTL | Auto |
+
+Save. Pages validates the domain and issues the TLS cert automatically within a few minutes.
+(Optional: add `CNAME  www  ->  aifaculty.pages.dev` proxied for `www.aifaculty.org`.)
+
+## 4. Signup Worker  ·  ✅ done
+
+- Worker **`aifaculty-signup`** → `https://aifaculty-signup.lecheyne24.workers.dev/signup`
+- KV namespace **`SIGNUPS`** = `1764d7ac08d14438aa1179e4a748cbce`
+- Route **`aifaculty.org/signup` → `aifaculty-signup`** added to `workers/signup/wrangler.toml`
+  and deployed (confirmed on the zone). Starts receiving traffic once §3 is done.
+- `landing/app.js` posts to same-origin `/signup` on `*.aifaculty.org`, and cross-origin to the
+  `workers.dev` URL everywhere else (e.g. the `pages.dev` preview) — the Worker sends
+  `Access-Control-Allow-Origin: *` and the landing CSP allows that origin.
+
+Redeploy the Worker after an `index.js` change: `cd workers/signup && npx wrangler deploy`.
+
+Optional: `npx wrangler secret put RESEND_API_KEY` (free Resend account) to email a confirmation
+on signup — unset means signups are just stored in KV.
+
+## 5. Verify (after §3)
+
+- `https://aifaculty.org` — countdown + signup form.
+- `https://aifaculty.org/app/` — the prototype loads (progress view → "Start the diagnostic").
+- Submit the signup form → "You're on the list!", then:
   ```bash
-  npx wrangler kv:key list --namespace-id <SIGNUPS_ID>
+  npx wrangler kv key list --namespace-id 1764d7ac08d14438aa1179e4a748cbce
   ```
 
 ## Optional hardening
 
-- Add Cloudflare **Rate Limiting** rules (dashboard) and a **WAF** managed rule for the domain.
-- Turn on **Always Use HTTPS** under SSL/TLS (default with Cloudflare DNS).
-- Set up email forwarding (`you@aifaculty.org`) via Cloudflare **Email Routing** (free).
+- Cloudflare **Rate Limiting** + **WAF** managed rules on the zone.
+- **Always Use HTTPS** under SSL/TLS (default with Cloudflare DNS).
+- **Email Routing** (free) for `you@aifaculty.org`.
+- **Cloudflare Access** on `/app/*` if you later want the prototype gated (email one-time PIN,
+  free up to 50 users).

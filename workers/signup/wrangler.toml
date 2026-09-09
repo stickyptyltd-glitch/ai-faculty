@@ -1,6 +1,14 @@
 name = "aifaculty-signup"
 main = "index.js"
 compatibility_date = "2024-11-01"
+workers_dev = true
+
+# Same-origin signup endpoint once aifaculty.org is live. landing/app.js posts
+# to /signup when the host matches *.aifaculty.org, and cross-origin to the
+# workers.dev URL everywhere else (e.g. the *.pages.dev preview).
+routes = [
+  { pattern = "aifaculty.org/signup", zone_name = "aifaculty.org" }
+]
 
 [[kv_namespaces]]
 binding = "SIGNUPS"
