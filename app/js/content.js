@@ -1211,6 +1211,254 @@ window.CONTENT = (function () {
         { label: "Delay the report until you can find an answer", ok: false, why: "Sometimes there isn't one; the decision-maker still needs to know that." },
       ]},
     ],
+
+    // ---- Operations & Admin pathway ----
+    O1: [
+      { q: "Before automating a process with AI, the first thing to do is:", options: [
+        { label: "Pick the AI tool", ok: false, why: "The tool is the last decision, not the first." },
+        { label: "Map the real process — steps, owners, decision points, and where it already fails", ok: true, why: "You can't automate what you can't see; the hidden checks are what break." },
+        { label: "Write the prompt", ok: false, why: "A prompt against an unmapped process just encodes its blind spots." },
+      ]},
+      { q: "Why is an undocumented process risky to automate?", options: [
+        { label: "AI can't read documentation anyway", ok: false, why: "Not the issue." },
+        { label: "Its hidden checks and assumptions get skipped — the AI automates the happy path and drops what only lived in someone's head", ok: true, why: "The 'obvious' unwritten controls are exactly the ones lost." },
+        { label: "It isn't — AI works the process out itself", ok: false, why: "It works out a plausible process, not necessarily yours, controls included." },
+      ]},
+    ],
+    O2: [
+      { q: "The cheapest check that catches the most silent data-flow failures:", options: [
+        { label: "A second AI reviewing the first", ok: false, why: "Expensive and still misses systematic drops." },
+        { label: "Count in = count out, plus key fields present and valid, on every hop", ok: true, why: "It would have caught the truncated-email and dropped-record failures on day one." },
+        { label: "Reading every row by hand", ok: false, why: "Defeats the automation." },
+      ]},
+      { q: "The AI hits a record it can't categorise. It should:", options: [
+        { label: "Pick the closest category", ok: false, why: "A wrong value hidden in the data is worse than a gap you can see." },
+        { label: "Send it to a review queue, flagged — not guessed, not skipped", ok: true, why: "Surface what it can't do; don't paper over it." },
+        { label: "Skip it silently", ok: false, why: "Now your counts don't match and nobody knows why." },
+      ]},
+    ],
+    O3: [
+      { q: "Which inbox/calendar actions are safe to let AI do without a human click?", options: [
+        { label: "Sending routine replies", ok: false, why: "Sending is the action that leaves your control." },
+        { label: "Reading, categorising, summarising, and drafting", ok: true, why: "All reversible, all internal — the bulk of the work, none of the risk." },
+        { label: "Accepting meetings that don't clash", ok: false, why: "Accepting is a commitment; it needs a click." },
+      ]},
+      { q: "You tell the AI assistant \"never agree to anything on my behalf.\" Is that enough?", options: [
+        { label: "Yes, a clear instruction covers it", ok: false, why: "Instructions aren't enforcement; a differently-phrased request slips through." },
+        { label: "No — enforce it by not giving the tool send access, so it can't agree even if it 'decides' to", ok: true, why: "Move the guarantee to a permission it doesn't have." },
+        { label: "Yes, if you also review sent mail daily", ok: false, why: "By the time you review, the commitment is made." },
+      ]},
+    ],
+    O4: [
+      { q: "When you turn an SOP into an AI workflow, the thing you must not lose is:", options: [
+        { label: "The exact wording", ok: false, why: "Wording can change." },
+        { label: "Its controls — the checks, limits, approvals and records", ok: true, why: "The controls are the SOP's whole value." },
+        { label: "The step order", ok: false, why: "Order can change; the controls can't be dropped." },
+      ]},
+      { q: "An SOP's most dangerous controls to port are:", options: [
+        { label: "The ones written in bold", ok: false, why: "Those you'll remember." },
+        { label: "The \"obvious\" ones that were never written down — found by walking the SOP with its owner", ok: true, why: "Unwritten controls are the ones that silently disappear." },
+        { label: "The ones at the end", ok: false, why: "Position doesn't determine risk." },
+      ]},
+    ],
+    O5: [
+      { q: "A good audit trail logs, for each AI decision:", options: [
+        { label: "Just the outcome (approved / rejected)", ok: false, why: "That can't be checked or explained later." },
+        { label: "The facts the decision used — the numbers compared, the records checked — not only the outcome", ok: true, why: "Reconstructable facts are what answer 'why'." },
+        { label: "The full raw model prompt and response", ok: false, why: "Often more than you should keep, and unreadable by whoever handles the query." },
+      ]},
+      { q: "Why append-only?", options: [
+        { label: "It saves storage", ok: false, why: "It doesn't, particularly." },
+        { label: "So the trail can be trusted as evidence — nobody quietly edited it after the fact", ok: true, why: "An editable log isn't proof of anything." },
+        { label: "It's faster to write", ok: false, why: "Not the reason." },
+      ]},
+    ],
+
+    // ---- Customer Support pathway ----
+    SU1: [
+      { q: "Good triage computes priority (urgency / anger / risk):", options: [
+        { label: "As one of the topic categories", ok: false, why: "Then an angry billing question and a calm one route the same way." },
+        { label: "Separately from the topic category, on every message", ok: true, why: "Priority and topic are different questions; routing needs both." },
+        { label: "Only for messages that contain the word 'urgent'", ok: false, why: "Most urgent messages don't say 'urgent'." },
+      ]},
+      { q: "The classifier isn't confident which queue a message belongs in. It should:", options: [
+        { label: "Pick the most likely queue", ok: false, why: "A confident wrong route is the failure mode — it goes unnoticed." },
+        { label: "Send it to a human with its best guess attached, flagged for routing", ok: true, why: "\"Not sure\" handled by a person beats a quiet misroute." },
+        { label: "Ask the customer to choose a category", ok: false, why: "Pushes the work — and the misroute risk — onto the customer." },
+      ]},
+    ],
+    SU2: [
+      { q: "A customer asks something the knowledge base doesn't cover. A grounded bot:", options: [
+        { label: "Answers from the model's general knowledge", ok: false, why: "That's how support answers become false promises." },
+        { label: "Says it's not documented and routes to a human", ok: true, why: "A decline is a correct answer; an invented one isn't." },
+        { label: "Guesses and adds 'please verify'", ok: false, why: "The customer won't verify; they'll act on it." },
+      ]},
+      { q: "Why must every grounded answer cite its source article?", options: [
+        { label: "It looks more professional", ok: false, why: "Not the reason." },
+        { label: "So the customer and the team can check the answer against the source", ok: true, why: "A citation makes the answer auditable." },
+        { label: "The model needs the citation to answer", ok: false, why: "It doesn't; the citation is for the reader." },
+      ]},
+    ],
+    SU3: [
+      { q: "A customer describes a bug that cost them a client. The reply should open with:", options: [
+        { label: "\"Thanks for reaching out! 😊\"", ok: false, why: "Reads as 'we didn't read this'." },
+        { label: "Acknowledgement of the specific impact, then concrete next steps", ok: true, why: "Name what it cost them before anything else." },
+        { label: "\"Have you tried restarting?\"", ok: false, why: "Puts the work back on an already-frustrated customer." },
+      ]},
+      { q: "\"Just restart the app\" to a furious customer reads as:", options: [
+        { label: "Helpful and efficient", ok: false, why: "Not to someone who's angry." },
+        { label: "Dismissive — 'simply' / 'just' minimises the problem and implies it's their fault", ok: true, why: "Those words shrink a real problem." },
+        { label: "Neutral", ok: false, why: "Tone isn't neutral when the customer is upset." },
+      ]},
+    ],
+    SU4: [
+      { q: "A message says \"your product injured me\". The AI should:", options: [
+        { label: "Give first-aid advice with a disclaimer", ok: false, why: "A harm report is not for the AI to handle, disclaimer or not." },
+        { label: "Recognise it as a safety trigger, not attempt to resolve, and hand off to the safety team with a receipt to the customer", ok: true, why: "Recognise → route → receipt. Nothing else." },
+        { label: "Ask for photos and more detail", ok: false, why: "Still the AI handling a harm report; it should hand off immediately." },
+      ]},
+      { q: "For anything on the never-resolve-alone list, the AI's job is:", options: [
+        { label: "Resolve it carefully", ok: false, why: "The point is it doesn't resolve these at all." },
+        { label: "Recognise it, hand off with full context and any deadline, confirm a human owns it", ok: true, why: "Recognition is the skill; handling is not." },
+        { label: "Reply with the relevant policy", ok: false, why: "That's still an attempt to resolve." },
+      ]},
+    ],
+    SU5: [
+      { q: "A 94% \"resolution rate\" tells you:", options: [
+        { label: "94% of answers were correct", ok: false, why: "It says nothing about correctness." },
+        { label: "94% of customers stopped replying — not whether the answers were right", ok: true, why: "Deflection measures giving up, not accuracy." },
+        { label: "The knowledge base is 94% complete", ok: false, why: "Unrelated." },
+      ]},
+      { q: "In a quality review, you should sample:", options: [
+        { label: "The tickets customers complained about", ok: false, why: "Those failures are already known; you'd miss the accepted-but-wrong ones." },
+        { label: "A random sample across all categories, including 'resolved' ones", ok: true, why: "The wrong answers customers didn't challenge are the ones you need to find." },
+        { label: "The longest conversations", ok: false, why: "Length isn't a quality signal." },
+      ]},
+    ],
+
+    // ---- Education & Training pathway ----
+    ED1: [
+      { q: "Which is a usable learning outcome?", options: [
+        { label: "\"Learners will understand supply and demand.\"", ok: false, why: "'Understand' isn't observable or assessable." },
+        { label: "\"Given a scenario, learners predict the price effect of a described shock and justify it in two sentences.\"", ok: true, why: "An assessable verb, a condition, and a standard." },
+        { label: "\"Learners will be exposed to key economic concepts.\"", ok: false, why: "Exposure isn't a capability." },
+      ]},
+      { q: "When do you write the assessment task?", options: [
+        { label: "After the material, to match what was covered", ok: false, why: "Then the material wanders and the assessment just follows it." },
+        { label: "Before the material, so the material builds toward something checkable", ok: true, why: "The assessment is the target the material aims at." },
+        { label: "It's optional if the outcome is clear", ok: false, why: "The outcome and the assessment are two halves of the same thing." },
+      ]},
+    ],
+    ED2: [
+      { q: "AI is most reliable for generating:", options: [
+        { label: "Historical dates and statistics", ok: false, why: "Exactly where it's least reliable." },
+        { label: "The structure — worked examples, graded exercises, question sets", ok: true, why: "Structure is its strength; specific facts are its weakness." },
+        { label: "Authoritative clinical or legal content", ok: false, why: "High-stakes facts need a verified source, not a model." },
+      ]},
+      { q: "A factual claim in AI-generated material can't be verified against a source. You:", options: [
+        { label: "Keep it but add 'approximately'", ok: false, why: "A hedge doesn't make an unverified claim safe to teach." },
+        { label: "Cut it, or mark it clearly as illustrative — don't present it as fact", ok: true, why: "Unverified ≠ fact." },
+        { label: "Trust it if it sounds right", ok: false, why: "Plausible is exactly how a wrong fact gets through." },
+      ]},
+    ],
+    ED3: [
+      { q: "The one thing AI must not do in assessment:", options: [
+        { label: "Draft feedback comments", ok: false, why: "That's a fine assisted use, spot-checked." },
+        { label: "Assign the final grade", ok: true, why: "The grade is the human's accountable judgement." },
+        { label: "Suggest rubric wording", ok: false, why: "Fine — the teacher edits and owns it." },
+      ]},
+      { q: "For AI to 'assist' rather than replace the teacher's marking judgement:", options: [
+        { label: "The teacher reviews grades that students appeal", ok: false, why: "Then most work is never read by a human." },
+        { label: "The teacher reads the work themselves and uses the AI draft as an input", ok: true, why: "The reading is the judgement; the AI just speeds up the writing-up." },
+        { label: "The AI explains its reasoning for each grade", ok: false, why: "An explanation of a possibly-wrong grade isn't a check." },
+      ]},
+    ],
+    ED4: [
+      { q: "Legitimate adaptation to a struggling learner changes:", options: [
+        { label: "The required outcome and standard, to meet them where they are", ok: false, why: "That hides the problem behind the word 'progress'." },
+        { label: "The route — scaffolding, examples, pace, filling prerequisite gaps — while the destination stays fixed", ok: true, why: "Different path, same bar." },
+        { label: "The report, to show progress", ok: false, why: "That's the failure, not the adaptation." },
+      ]},
+      { q: "An AI tutor keeps making the problems easier and the student is 'succeeding'. The missing safeguard is:", options: [
+        { label: "A friendlier tone", ok: false, why: "Not the issue." },
+        { label: "A fixed target outcome / standard and a periodic unaided check against it", ok: true, why: "A destination the adaptation can't move below." },
+        { label: "More problems", ok: false, why: "More easy problems doesn't fix a moved bar." },
+      ]},
+    ],
+    ED5: [
+      { q: "An unenforceable \"no AI\" rule on a take-home task mainly:", options: [
+        { label: "Stops AI use", ok: false, why: "It doesn't — it just can't be seen." },
+        { label: "Makes the assessment unfair and stops it measuring what you think", ok: true, why: "The honest students are penalised and the scores mean less." },
+        { label: "Improves academic honesty", ok: false, why: "It rewards the confident rule-breakers." },
+      ]},
+      { q: "To assess a capability directly when AI could do it for the student:", options: [
+        { label: "Use an AI-detection tool", ok: false, why: "Unreliable; false positives punish honest students." },
+        { label: "Add a component AI can't do for them — in-class work, oral defence, process artefacts", ok: true, why: "Move the graded part to ground AI can't cover." },
+        { label: "Make the task harder", ok: false, why: "A harder task AI can still do isn't more secure." },
+      ]},
+    ],
+
+    // ---- Machine Learning Practitioner pathway ----
+    ML1: [
+      { q: "The first question about a proposed ML project is:", options: [
+        { label: "Which algorithm to use", ok: false, why: "Far too early." },
+        { label: "Is this even an ML problem, and will anyone act on the output", ok: true, why: "Both can kill the project before any code." },
+        { label: "How much data do we have", ok: false, why: "Matters — but after 'should this exist'." },
+      ]},
+      { q: "You have a very accurate model and no team or process that uses its predictions. The value is:", options: [
+        { label: "High — accuracy is what matters", ok: false, why: "Accuracy with no decision attached is worth nothing." },
+        { label: "Roughly zero — a prediction nobody acts on changes nothing", ok: true, why: "The output has to feed a decision." },
+        { label: "Realised once you add a dashboard", ok: false, why: "A dashboard isn't a decision either." },
+      ]},
+    ],
+    ML2: [
+      { q: "A model scores 98% on test and 61% in production. The most likely cause:", options: [
+        { label: "The production data is just harder", ok: false, why: "Possible, but the classic cause is a leaky or non-independent split." },
+        { label: "Leakage or a non-independent split — the test score was measuring memorisation", ok: true, why: "A huge test-to-production drop is a data-split smell." },
+        { label: "The model needs more parameters", ok: false, why: "More capacity would make memorisation worse, not better." },
+      ]},
+      { q: "A feature that's only populated after the outcome you're predicting is:", options: [
+        { label: "A strong predictor to keep", ok: false, why: "That's exactly the trap — it looks predictive because it's downstream of the target." },
+        { label: "Leakage — it won't exist at prediction time and inflates the score", ok: true, why: "If you won't have it when you predict, you can't train on it." },
+        { label: "Fine if you fill missing values", ok: false, why: "The problem is the information, not the missingness." },
+      ]},
+    ],
+    ML3: [
+      { q: "Before training any real model, you build:", options: [
+        { label: "The most powerful model available", ok: false, why: "Then you never learn a simple one would have done." },
+        { label: "A dumb baseline (majority class / one rule / last year's number) to set the bar", ok: true, why: "It sets the bar and catches problems early." },
+        { label: "An ensemble", ok: false, why: "Complexity first is the mistake." },
+      ]},
+      { q: "A complex model beats a simple one by 1% on accuracy. Whether to ship it depends on:", options: [
+        { label: "Nothing — higher accuracy wins", ok: false, why: "1% may be noise, and complexity has an ongoing cost." },
+        { label: "Whether that 1% is real (holds on the test set, outside noise) and worth the interpretability, cost and maintenance you give up", ok: true, why: "Price the gain against what it costs you." },
+        { label: "How long it took to train", ok: false, why: "Training time is a minor factor next to serving cost and interpretability." },
+      ]},
+    ],
+    ML4: [
+      { q: "Your classes are 95% / 5% and the model is 95% accurate. That means:", options: [
+        { label: "The model is excellent", ok: false, why: "Predicting the majority every time also scores 95%." },
+        { label: "Possibly nothing — you need precision / recall to know if it learned anything", ok: true, why: "Accuracy on imbalanced data hides a do-nothing model." },
+        { label: "The data is balanced", ok: false, why: "It's the opposite of balanced." },
+      ]},
+      { q: "You tuned your model by repeatedly checking it against the test set. Now the test score:", options: [
+        { label: "Is a reliable estimate of real performance", ok: false, why: "You optimised against it — it's contaminated." },
+        { label: "Is no longer honest — the test set became a second validation set", ok: true, why: "The test set only estimates real performance if used once." },
+        { label: "Is fine if you only checked a few times", ok: false, why: "Each check leaks information; a few is still too many." },
+      ]},
+    ],
+    ML5: [
+      { q: "After a model is deployed, its accuracy:", options: [
+        { label: "Stays what it was at training", ok: false, why: "Only if the world stops changing — it doesn't." },
+        { label: "Can drift as the world changes — it has to be monitored on live data", ok: true, why: "Training-time accuracy is a starting point, not a guarantee." },
+        { label: "Only matters if users complain", ok: false, why: "By the time users complain it's been wrong for a while." },
+      ]},
+      { q: "A retraining trigger should be:", options: [
+        { label: "Whenever someone feels the model is stale", ok: false, why: "A vibe isn't a trigger." },
+        { label: "A specific metric threshold decided in advance (e.g. live recall below X for two weeks)", ok: true, why: "Decide the rule before the incident, not during it." },
+        { label: "Never — retrain on a fixed calendar only", ok: false, why: "A schedule ignores actual performance — it over- or under-retrains." },
+      ]},
+    ],
   };
 
   // =================================================================
@@ -3816,6 +4064,1570 @@ window.CONTENT = (function () {
     },
   ];
 
+  // ---- Operations & Admin pathway ----
+  const OPS_COMPETENCIES = [
+    {
+      id: "O1", name: "Map before you automate",
+      canDo: "Draw the real process — steps, owners, decision points and their rules, failure points — before adding AI to any of it.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A founder \"automated invoicing with AI\". It emailed the biggest client a duplicate invoice — twice — because the real process had a manual dedupe check that only lived in one person's head. The AI automated the happy path and dropped the check nobody had written down.",
+          point: "Automating a process you haven't drawn just encodes its hidden assumptions and skips its invisible checks.",
+        },
+        explain: {
+          paras: [
+            "You can't automate a process you can't see. A usable map names: every **step** in order; the **owner** of each; the **decision points** — where a human judges something — and the **rule** they use; each step's **inputs and outputs**; and the **failure points** — where it already goes wrong and what currently catches it.",
+            "Only then do you decide which steps AI touches. The dangerous parts are the checks and judgements that are \"obvious\" to whoever runs the process today, so they were never documented.",
+            "The test: could a new person run this process from your map? If not, it's not mapped enough to automate.",
+          ],
+          keyIdea: "Map the real process first — steps, owners, decision points and their rules, inputs/outputs, and where it already fails — then decide what AI touches. Never automate a process that only exists in someone's head.",
+        },
+        demonstrate: {
+          task: "Process: onboarding a new client.",
+          steps: [
+            { move: "Walk it with the person who does it", think: "Real steps, in order.", result: "Sales hands over a signed contract → ops creates the project in the tool → ops sets up billing → PM schedules kickoff." },
+            { move: "Mark the owner of each step", think: "Who is accountable.", result: "sales / ops / ops / PM." },
+            { move: "Find the decision points + rules", think: "Where judgement happens.", result: "Ops checks the contract terms match the quote (rule: flag if >5% off). Billing frequency depends on the contract type." },
+            { move: "Find the failure points", think: "Where it breaks now.", result: "Sometimes the contract PDF is missing a signed page — caught late, at billing, when the client disputes." },
+            { move: "Decide AI's role per step", think: "Mechanical vs judgement vs money.", result: "AI drafts the project setup and the kickoff agenda; the contract-terms check and the billing setup stay human; add an explicit signed-page check." },
+          ],
+          full: "A 4-step process with 2 decision points and one known failure (missing signature page). AI drafts the mechanical parts; the two judgement calls and the money step stay with a person; the missing-signature failure gets an explicit check added, not automated over.",
+        },
+        deconstruct: [
+          "The missing-signature failure would have been silently automated over without the map.",
+          "Each decision point is where you write down the rule — \"flag if >5% off\" — so a human or a check can apply it.",
+          "\"Who owns this step\" is the question that surfaces the steps nobody documents.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You want to \"use AI to handle expense reports\". Map the current process first.",
+          fields: [
+            { key: "steps", label: "The real steps, in order, with owners", hint: "Who does what.", minWords: 10 },
+            { key: "decisions", label: "The judgement calls and their rules", hint: "Where a human decides, and how.", minWords: 8 },
+            { key: "failures", label: "Where it goes wrong now, and what catches it", hint: "The known failure modes.", minWords: 6 },
+            { key: "airole", label: "Which steps AI touches, which stay human", hint: "Mechanical vs judgement vs money.", minWords: 8 },
+          ],
+          model: {
+            steps: "Employee submits a report with receipts (employee). Manager reviews and approves (manager). Finance checks it against policy and the receipts (finance). Finance schedules the reimbursement (finance).",
+            decisions: "Manager: is this a legitimate business expense? (rule: matches a real project, under the per-item limit). Finance: does every line have a valid receipt and fall under policy? (rule: reject missing receipts over £25; query anything over the category cap).",
+            failures: "Missing or unreadable receipts — finance catches it, bounces it back, payment is delayed. Personal expenses slipped in — sometimes caught, sometimes not.",
+            airole: "AI can: read amounts and categories off receipts, flag lines missing a receipt or over a cap, draft the query email. Humans keep: the 'is this legitimate' judgement, the final approval, and scheduling the payment.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("O1.1", "Reproduce", "Map a real process",
+          "Take a process you'd like to automate. Map it fully — before automating anything.",
+          "Strong answer: every step has an owner; every decision point has a written rule; failure points are named with what currently catches them; and a new person could run the process from the map.",
+          [
+            { key: "process", label: "The process", hint: "One line.", minWords: 3 },
+            { key: "steps", label: "Steps, in order, with owners", hint: "Who does each.", minWords: 10 },
+            { key: "decisions", label: "Decision points and their rules", hint: "Where judgement happens.", minWords: 8 },
+            { key: "failures", label: "Failure points and their current catch", hint: "Where it breaks now.", minWords: 6 },
+          ],
+          [
+            { label: "Every step has an owner" },
+            { label: "Every decision point has a written rule" },
+            { label: "Failure points named with what catches them" },
+          ],
+          "independent"),
+        critiqueChallenge("O1.2", "Adapt", "Spot what the automation would break",
+          "Here is an automation plan. Using the mapping discipline from the lesson, find every problem before it ships.",
+          "\"We're going to have AI handle all incoming supplier invoices: it reads the invoice, matches it to the purchase order, and schedules payment. Fully automated — no one has to touch it.\"",
+          [
+            { label: "No map of the current process — the existing checks and their owners aren't known", signals: ["no map", "map the process", "current process", "existing checks", "what are the checks", "how is it done now", "walk it"] },
+            { label: "PO matching is a judgement call (partial deliveries, price changes, substitutions), not a lookup", signals: ["judgement", "partial", "price change", "substitut", "not a lookup", "not exact", "discrepanc", "match isn't simple"] },
+            { label: "\"Schedules payment\" is an irreversible money step with no human gate", signals: ["payment", "money", "irreversible", "human gate", "approval", "no one checks", "no sign-off", "hard to undo"] },
+            { label: "No handling for invoices that don't match any PO or don't match cleanly", signals: ["no match", "doesn't match", "exception", "what happens when", "no PO", "review queue", "fallback"] },
+            { label: "No audit trail / record of what the AI decided", signals: ["audit", "trail", "record", "log", "reconstruct", "what it decided", "no record"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "O2", name: "Document & data workflows",
+      canDo: "Move information between forms, sheets and systems with AI — with a verification step on every hop.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "You set up an AI flow to copy new sign-ups from a form into the CRM and the mailing list. Three weeks in you found it had been truncating any email with a \"+\" in it — silently, since day one. 400 contacts, wrong addresses, no error anywhere.",
+          point: "Every place data moves is a place it can be dropped, mangled or duplicated. Unverified hops fail silently.",
+        },
+        explain: {
+          paras: [
+            "A data workflow is a chain of hops — extract, transform, load. Each hop needs three things: a **check that the data arrived intact** (count in = count out; key fields present and well-formed); a **rule for bad rows** (send them to a review queue — never silently skip or guess); and **idempotency** — running it twice doesn't create duplicates.",
+            "AI is good at the transform — parsing, reformatting, categorising — and bad at noticing when it's quietly wrong. The verification is not overhead; it's the part that makes the automation trustworthy.",
+          ],
+          keyIdea: "Every hop gets a check (count in = count out, key fields valid), a bad-row rule (to a queue, never a silent skip or guess), and idempotency (re-running makes no duplicates).",
+        },
+        demonstrate: {
+          task: "Flow: weekly export of orders from the shop → a finance spreadsheet, categorised by product line.",
+          steps: [
+            { move: "Extract", think: "And record the size.", result: "Pull the week's orders; log the row count — say 213." },
+            { move: "Transform", think: "Flag what you can't do.", result: "AI assigns each order a product line from the SKU; an unknown SKU → 'REVIEW', not a guess." },
+            { move: "Check", think: "Did it survive the hop?", result: "Count out must be 213; every row has a non-empty amount and date; REVIEW rows listed for a human." },
+            { move: "Load", think: "Safe to re-run.", result: "Append to the sheet keyed by order ID; an order ID already present is skipped, not re-added." },
+          ],
+          full: "213 in, 213 out, with any unclassifiable order parked in REVIEW rather than guessed. The load is keyed by order ID so a re-run is safe. A human clears the REVIEW queue weekly.",
+        },
+        deconstruct: [
+          "\"Count in = count out\" is the cheapest check and catches the largest class of silent failures.",
+          "\"Unknown SKU → REVIEW, not a guess\" — the AI's job is to flag what it can't do, not paper over it.",
+          "Keying the load by order ID is what makes the whole thing safe to re-run when something breaks mid-way.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're building a flow that takes CVs from an inbox, pulls out name / email / years of experience, and adds them to a hiring tracker.",
+          fields: [
+            { key: "checks", label: "The check on each hop", hint: "How you know the data arrived intact.", minWords: 8 },
+            { key: "badrows", label: "The rule for a CV it can't parse", hint: "Not a guess, not a silent skip.", minWords: 6 },
+            { key: "idempotent", label: "How re-running the flow stays safe", hint: "No duplicate rows.", minWords: 5 },
+          ],
+          model: {
+            checks: "Emails-in count = rows-added + rows-to-review count. Every added row has a name and a valid-format email. Spot-check 5 rows a week against the original CV.",
+            badrows: "A CV where the email or name can't be extracted with confidence goes to a 'needs manual entry' list with a link to the original — not added with blanks or a guessed value.",
+            idempotent: "Key the tracker by email address (or a hash of the file). Re-processing the same inbox doesn't add a second row for someone already there.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("O2.1", "Reproduce", "Design the checks for a real data flow",
+          "Take a data flow you run (or would build). Design the verification: the check on each hop, the bad-row rule, and how re-runs stay safe.",
+          "Strong answer: each hop has an intactness check (count and key fields); bad rows go to a queue, not a guess or a silent skip; and re-running the flow creates no duplicates.",
+          [
+            { key: "flow", label: "The flow", hint: "From → to, one line.", minWords: 4 },
+            { key: "hopchecks", label: "The check on each hop", hint: "Count, key fields, format.", minWords: 8 },
+            { key: "badrow", label: "The bad-row rule", hint: "Where a row it can't handle goes.", minWords: 5 },
+            { key: "idempotent", label: "How re-runs stay safe", hint: "The key that prevents duplicates.", minWords: 4 },
+          ],
+          [
+            { label: "Each hop has an intactness check" },
+            { label: "Bad rows go to a queue, not a guess or silent skip" },
+            { label: "Re-running the flow is safe (keyed, no duplicates)" },
+          ],
+          "independent"),
+        scenarioChallenge("O2.2", "Create", "The flow has been silently wrong for a month",
+          "An AI flow that syncs contacts between two systems has been dropping every record whose company name contains an ampersand. Nobody noticed for a month.",
+          "What was missing, and what do you add?",
+          [
+            { id: "a", label: "A smarter AI model that handles ampersands", ok: false, why: "The fix is structural, not a better parser — the next unusual character breaks it again." },
+            { id: "b", label: "A per-run reconciliation (count + key-field check on both sides) that raises an alert on a mismatch, and the dropped records go to a review queue", ok: true, why: "A check that would have caught 'count in ≠ count out' on day one, plus somewhere for the failures to land visibly." },
+            { id: "c", label: "Manual review of every synced record", ok: false, why: "That defeats the automation. The check should be automatic; the review is only for flagged rows." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "O3", name: "Inbox & scheduling with guardrails",
+      canDo: "Let AI triage, draft and propose across your inbox and calendar — while sending, commitments and money stay human.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "Your \"AI assistant\" had calendar access to \"save you time\". It accepted a meeting invite that clashed with a client call, moved the client call without asking, and the client showed up to an empty room.",
+          point: "Read-and-draft is safe. Act-and-commit is not — a wrong commitment is expensive and hard to unwind.",
+        },
+        explain: {
+          paras: [
+            "Split every inbox and calendar capability into three tiers. **Free**: read, categorise, summarise, draft a reply, suggest times. **Needs approval**: send a reply, accept / decline / move a meeting, set a reminder someone else sees. **Never**: agree to anything that costs money or makes a promise, reply to anyone outside a known safe list, delete.",
+            "Enforce the tiers in how you set the tool up — the risky actions are literally not connected, or they stop for a click — not in a polite instruction the AI might not follow.",
+            "The value is real: triage and drafting are most of the work. The line is where an action leaves your control.",
+          ],
+          keyIdea: "Three tiers — free (read / categorise / draft / suggest), needs-approval (send / accept / move), never (commit money, promise, reply to strangers, delete). Enforce in the setup, not the prompt.",
+        },
+        demonstrate: {
+          task: "Setting up AI help for a busy inbox.",
+          steps: [
+            { move: "Free", think: "Read and draft.", result: "AI sorts mail into needs-me / FYI / newsletter; drafts replies for the routine ones; each morning a 5-line summary of what came in." },
+            { move: "Needs approval", think: "One click before it leaves.", result: "Drafted replies sit in Drafts — you send. Proposed meeting times go in an email you review before it goes out." },
+            { move: "Never", think: "Out of bounds.", result: "No auto-accepting invites; no replies to senders not in your contacts; no 'yes we can do that' on anything." },
+            { move: "Enforce", think: "Not a prompt — a permission.", result: "The integration has no send scope and no calendar-write scope; it can only read and draft." },
+          ],
+          full: "AI does the sorting, summarising and first-draft work — the bulk of inbox time. Every outbound action is a human click. The tool is configured without send or calendar-write permission, so a confused or jailbroken AI still can't act.",
+        },
+        deconstruct: [
+          "\"Sits in Drafts, you send\" — one click, and it's the click that keeps you in control.",
+          "Removing the send scope entirely means no prompt trick can restore it.",
+          "The morning summary is where AI saves the most time and risks the least.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You want AI to help manage meeting requests: people email asking to meet, and you want it to handle scheduling.",
+          fields: [
+            { key: "tiers", label: "Each action assigned a tier", hint: "Free / needs-approval / never.", minWords: 8 },
+            { key: "enforce", label: "How you'd enforce it technically", hint: "Permissions, not instructions.", minWords: 6 },
+            { key: "human", label: "What you must see to approve a proposed time", hint: "To approve well.", minWords: 5 },
+          ],
+          model: {
+            tiers: "Free: read the request, check the calendar for free slots, draft a reply proposing 2–3 times. Needs approval: sending that reply; putting a hold on the calendar. Never: confirming a meeting, moving an existing meeting, replying to someone not already a contact.",
+            enforce: "Give the tool calendar read-only and no send permission. Proposed replies land in Drafts. A separate manual step confirms and books once the other person picks a time.",
+            human: "Who it is and why they want to meet, which slots it's proposing and what each would sit next to (back-to-back with what?), and whether it required moving anything — it shouldn't.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("O3.1", "Reproduce", "Authority tiers for your own inbox/calendar",
+          "For the inbox and calendar help you'd actually want, write the authority table.",
+          "Strong answer: tiers track reversibility and cost; enforcement is in the tool's permissions, not its instructions; and nothing customer-facing or money-related sits in the 'free' tier.",
+          [
+            { key: "actions", label: "The actions you'd want AI help with", hint: "List them.", minWords: 6 },
+            { key: "tiers", label: "Each one assigned free / needs-approval / never", hint: "By reversibility and cost.", minWords: 8 },
+            { key: "enforce", label: "How each tier is enforced", hint: "Technically — scopes, drafts, manual steps.", minWords: 6 },
+          ],
+          [
+            { label: "Tiers track reversibility and cost" },
+            { label: "Enforcement is in permissions, not instructions" },
+            { label: "Nothing customer-facing or money-related is 'free'" },
+          ],
+          "independent"),
+        scenarioChallenge("O3.2", "Create", "The assistant sent something on its own",
+          "Your AI email assistant replied to a client \"Yes, we can have that done by Friday\" — a commitment you can't meet — because the client's email was a yes/no question and the assistant had send access.",
+          "Root cause and fix?",
+          [
+            { id: "a", label: "Tell the assistant in its instructions never to make commitments", ok: false, why: "Instructions aren't enforcement — a differently-phrased email slips through next time." },
+            { id: "b", label: "The assistant should never have had send access; remove it so every reply is a human click and commitments are impossible for it to make", ok: true, why: "Move the guarantee from a prompt the model may not follow to a permission it doesn't have." },
+            { id: "c", label: "Review the assistant's sent mail each evening", ok: false, why: "The commitment is already made by evening. The gate has to be before sending, not after." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "O4", name: "SOP → checked workflow",
+      canDo: "Turn a standard operating procedure into an AI-assisted workflow that keeps every control the SOP had.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The SOP for issuing refunds had four checks: order exists, within the window, not already refunded, amount matches. The \"AI refund assistant\" kept two. The other two were \"obvious\" to whoever wrote the SOP, so they never made it into the prompt. Duplicate refunds started going out.",
+          point: "An SOP's value is its controls. Re-implement it with AI and you have to port every control — especially the ones that are \"obvious\".",
+        },
+        explain: {
+          paras: [
+            "An SOP is a process **plus its controls**: the checks, the limits, the required approvals, the records. To turn it into an AI workflow: **list every control explicitly** — walk it with the person who owns it, because the unwritten ones are the dangerous ones.",
+            "Decide for each control whether AI **applies it**, **flags it for a human**, or a **human keeps it**. Keep the SOP's **approval gates** as human steps that the workflow blocks on. Keep its **record-keeping**.",
+            "The workflow should be at least as safe as the SOP. Faster but missing a control is not an upgrade.",
+          ],
+          keyIdea: "An SOP = process + controls. Port every control (walk it with the owner to catch the unwritten ones), decide AI-applies / AI-flags / human-keeps for each, and keep the approval gates and records as they were.",
+        },
+        demonstrate: {
+          task: "SOP: approve a customer discount over 15%.",
+          steps: [
+            { move: "List the controls", think: "Including the unwritten ones.", result: "1: account in good standing. 2: deal size justifies it (>£10k). 3: margin stays above 20% after the discount. 4: a manager signs off. 5: it's logged in the deal record." },
+            { move: "Assign each", think: "Apply / flag / keep human.", result: "1: AI checks (a lookup). 2: AI checks. 3: AI computes and flags. 4: stays human. 5: AI writes the log entry." },
+            { move: "Keep the gate", think: "A gate that auto-passes isn't a gate.", result: "The workflow stops at step 4 and waits for a real manager click; it does not proceed on a timeout." },
+            { move: "Keep the record", think: "Reviewable later.", result: "Every run logs the four check results, the manager who approved, and the timestamp." },
+          ],
+          full: "Four of five controls port to AI checks or computations; the manager sign-off stays a hard human gate the workflow blocks on; the log is written automatically. Faster, and no weaker than the SOP.",
+        },
+        deconstruct: [
+          "Walking the SOP with its owner is what surfaces control #3 (the margin check) that a quick read might skip.",
+          "\"Does not proceed on a timeout\" — a gate that auto-passes when ignored isn't a gate.",
+          "The log entry is a control too — \"reviewable later\" is something the SOP guaranteed.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Your SOP for publishing a blog post: legal reviews any product claims, a second person proofreads, links are checked, and it's scheduled — not published immediately. You want AI to speed this up.",
+          fields: [
+            { key: "controls", label: "Every control, including any unwritten ones you'd ask about", hint: "The checks, approvals, records.", minWords: 8 },
+            { key: "assign", label: "AI-applies / AI-flags / human-keeps for each", hint: "Per control.", minWords: 8 },
+            { key: "gates", label: "Which stay as human approval steps", hint: "The blocking sign-offs.", minWords: 5 },
+          ],
+          model: {
+            controls: "Product claims get legal review. A second human proofreads. All links resolve. Images are licensed (probably unwritten — worth asking). Publish is scheduled, not immediate. Someone owns the 'go' decision.",
+            assign: "Claims: AI flags sentences that look like product claims → legal still reviews those. Proofread: AI does a first pass (grammar, consistency) → a human still reads it. Links: AI checks they resolve → done. Image licensing: AI can't verify → human keeps. Scheduling: AI drafts the schedule → human confirms.",
+            gates: "Legal review of flagged claims, the human proofread, and the final 'publish' click all stay as human steps. AI speeds up the prep for each; it doesn't replace the sign-off.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("O4.1", "Reproduce", "Port a real SOP",
+          "Take an SOP from your work. Port it to an AI-assisted workflow that keeps every control.",
+          "Strong answer: the control list includes likely-unwritten ones (found by asking the owner); each control has an explicit assignment; approval gates are kept as blocking human steps; and record-keeping is kept.",
+          [
+            { key: "sop", label: "The SOP", hint: "One line.", minWords: 3 },
+            { key: "controls", label: "Every control, incl. ones you'd confirm with the owner", hint: "Checks, limits, approvals, records.", minWords: 8 },
+            { key: "assignment", label: "AI-applies / AI-flags / human-keeps for each", hint: "Per control.", minWords: 8 },
+            { key: "gates", label: "The human approval steps kept", hint: "What the workflow blocks on.", minWords: 5 },
+          ],
+          [
+            { label: "Control list includes likely-unwritten ones" },
+            { label: "Each control has an explicit assignment" },
+            { label: "Approval gates kept as blocking human steps; records kept" },
+          ],
+          "independent"),
+        critiqueChallenge("O4.2", "Adapt", "Find the dropped control",
+          "Here is an old SOP and its proposed AI replacement. Find every control that was lost or weakened.",
+          "OLD SOP for vetting a new vendor: check they're a registered company, check for past complaints, get two references, finance-director approval for anything over £5k/year, save the file.\n\nNEW AI WORKFLOW: the AI checks company registration and searches for complaints, then adds the vendor to the system.",
+          [
+            { label: "The 'two references' control is gone entirely", signals: ["references", "two references", "missing", "dropped", "gone", "no reference"] },
+            { label: "The finance-director approval gate for >£5k/year is gone", signals: ["finance-director", "finance director", "approval", "£5k", "5k", "sign-off", "gate", "over 5000", "spend approval"] },
+            { label: "\"Save the file\" — the record-keeping control isn't mentioned", signals: ["save the file", "record", "record-keeping", "file", "documentation", "no record", "audit"] },
+            { label: "\"Adds the vendor to the system\" — the AI now completes the process with no human sign-off at all", signals: ["completes", "no human", "no sign-off", "auto", "adds the vendor", "no approval", "finishes the process"] },
+            { label: "The complaint search is a judgement call (what counts as disqualifying?) treated as automatic", signals: ["judgement", "what counts", "disqualifying", "complaint", "interpret", "how bad", "threshold"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "O5", name: "Audit trails",
+      canDo: "Log what ran, what the AI decided, and what a human approved — so any run can be reconstructed and reviewed.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A customer disputed a charge. You went to check what happened and found nothing — the AI workflow had processed it, but there was no record of what it saw, what it decided, or why. You couldn't defend the charge or explain it. You refunded it and hoped.",
+          point: "An automated process without a trail isn't faster — it's just faster at producing outcomes you can't account for.",
+        },
+        explain: {
+          paras: [
+            "A usable audit trail records, per run: **what triggered it** and the input; **what the AI did** — each step, the decision, and the key facts it acted on; **what a human approved** — who, when, what they were shown; **the outcome**; and enough to **reconstruct** the run months later.",
+            "Log the **inputs** to decisions, not just the decisions. Keep it **append-only** — entries aren't edited or deleted. Keep it **readable by a non-engineer** — the person handling a dispute isn't reading raw JSON.",
+            "This is what lets you answer \"what happened here?\", spot a pattern of bad decisions, and prove the process was followed.",
+          ],
+          keyIdea: "Per run: trigger + input, each AI step with the facts it acted on, the human approval (who / when / what-shown), the outcome — append-only, and readable by whoever will have to explain it.",
+        },
+        demonstrate: {
+          task: "Audit trail for the discount-approval workflow from O4.",
+          steps: [
+            { move: "Trigger + input", think: "What kicked it off.", result: "2026-05-12 14:03 — discount request: customer #4471, 22% off, deal £14k, rep J. Smith." },
+            { move: "AI steps + the facts", think: "Not just 'pass'.", result: "Account status: good (checked CRM). Deal size £14k > £10k: pass. Post-discount margin 21.4% > 20%: pass. → routed to manager." },
+            { move: "Human approval", think: "Who, when, what shown.", result: "2026-05-12 14:19 — approved by M. Lee, who saw all three check results + the deal record." },
+            { move: "Outcome", think: "The result.", result: "Discount applied; deal record updated; confirmation sent to the rep." },
+          ],
+          full: "One dispute-proof record: the request, the three automated checks with the numbers behind them, the named manager who approved and what they were shown, the timestamp, and the result. A non-engineer can read it and explain exactly what happened.",
+        },
+        deconstruct: [
+          "Logging \"margin 21.4%\" not just \"margin check: pass\" is what lets you catch a miscalibrated threshold later.",
+          "\"M. Lee, who saw [X]\" — recording what the approver was shown matters if the approval is ever questioned.",
+          "Append-only means the trail can be trusted as evidence — nobody quietly fixed it afterwards.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Design the audit trail for an AI workflow that screens job applications against role requirements and either advances them or sends a rejection.",
+          fields: [
+            { key: "perrun", label: "What each run records", hint: "Trigger, input, steps, outcome.", minWords: 8 },
+            { key: "decisions", label: "What you log about each AI decision", hint: "Inputs, not just outputs.", minWords: 6 },
+            { key: "human", label: "What human involvement you record", hint: "Who reviewed what, when.", minWords: 5 },
+            { key: "retention", label: "How long it's kept and how it's protected", hint: "Legal window; access; append-only.", minWords: 5 },
+          ],
+          model: {
+            perrun: "Application ID and timestamp; the role and the requirements version used; the AI's assessment per requirement with the evidence it cited from the application; the decision (advance / reject); who reviewed it and when; the message sent.",
+            decisions: "For each requirement: met / not met / unclear, and the specific line(s) from the application the AI based that on — so a 'not met' can be checked against what the candidate actually wrote.",
+            human: "Rejections are reviewed by a person before sending — log who, when, and that they saw the per-requirement reasoning. Advances can be auto if that's the policy, but are still recorded.",
+            retention: "Kept for the period employment law requires (often 1–2 years); append-only; access limited to hiring and HR; a candidate can be told the basis for a decision from it.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("O5.1", "Reproduce", "Design an audit trail for a real workflow",
+          "Take an AI workflow you run (or plan to). Design its audit trail.",
+          "Strong answer: it logs the inputs and facts behind each decision, not just the outcome; it records who approved what and what they were shown; it's append-only; and a non-engineer could read a run and explain it.",
+          [
+            { key: "workflow", label: "The workflow", hint: "One line.", minWords: 4 },
+            { key: "record", label: "What each run records", hint: "Trigger to outcome.", minWords: 8 },
+            { key: "decisioninputs", label: "What you log about each AI decision", hint: "The facts it used, not just the result.", minWords: 6 },
+            { key: "human", label: "The human approvals recorded", hint: "Who, when, what they saw.", minWords: 5 },
+          ],
+          [
+            { label: "Logs the facts behind each decision, not just the outcome" },
+            { label: "Records who approved what and what they saw" },
+            { label: "Append-only and readable by a non-engineer" },
+          ],
+          "independent"),
+        scenarioChallenge("O5.2", "Create", "You can't explain what the workflow did",
+          "Six weeks after launch, someone asks why the AI workflow rejected a particular supplier invoice. The log says \"invoice #8843: rejected\". Nothing else.",
+          "What was missing, and what's the minimum you add?",
+          [
+            { id: "a", label: "A note field where the AI writes a sentence explaining each decision", ok: false, why: "An AI-written explanation can be vague or wrong. Log the actual facts the decision used, not a post-hoc sentence." },
+            { id: "b", label: "Per decision: which checks ran, each result, and the specific data each check compared (PO number, amounts, dates) — plus any human review", ok: true, why: "The reconstructable facts, in plain terms, are what answers 'why' and what a non-engineer can read." },
+            { id: "c", label: "Keep the raw model input and output for every run", ok: false, why: "Useful for debugging, but often more than you should retain and not readable by whoever handles the supplier query. Log the decision facts plainly." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // ---- Customer Support pathway ----
+  const SUPPORT_COMPETENCIES = [
+    {
+      id: "SU1", name: "Triage & routing",
+      canDo: "Classify and route incoming messages accurately, with a priority signal and a defined 'unsure → human' path.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "Your AI triage bot routed a \"my account was charged twice and I need this fixed today, I'm furious\" message to the general FAQ queue as \"billing question\". It sat for two days. The customer went to social media.",
+          point: "Triage that's confident when it should be unsure sends the urgent, the angry and the unusual to the wrong place — quietly.",
+        },
+        explain: {
+          paras: [
+            "Triage is three things: **classify** into categories that map to real queues (not vague buckets); compute a **priority signal** — urgency, anger, churn risk, legal/safety words — **separately from category**; and provide an explicit **low-confidence path**.",
+            "When the AI isn't sure, or the message spans categories, or it hits a red-flag phrase, it goes to a human with its best guess attached — not a confident wrong route.",
+            "Measure it: sample routed messages weekly and check where they actually went.",
+          ],
+          keyIdea: "Triage = category (mapped to a real queue) + priority (urgency / anger / risk words, computed separately) + an explicit low-confidence → human path. A confident wrong route is worse than \"I'm not sure\".",
+        },
+        demonstrate: {
+          task: "Setting up triage for a support inbox.",
+          steps: [
+            { move: "Categories → queues", think: "Real teams, not buckets.", result: "billing / technical / account-access / cancellation / complaint / other — each maps to a specific team." },
+            { move: "Priority signal", think: "Separate axis.", result: "Flag urgent if: 'today' / 'deadline' / 'production down', anger markers, 'cancel' / 'refund', or legal / safety words." },
+            { move: "Low-confidence path", think: "Don't guess on the hard ones.", result: "Confidence below threshold, or two categories fit, or a red-flag phrase → a senior human, with the AI's guess attached." },
+            { move: "Measure", think: "Check it's routing right.", result: "Sample 30 routed tickets a week; log the miss rate per category; fix the prompt on the misses." },
+          ],
+          full: "Six categories mapped to real teams, a priority flag computed independently, and anything ambiguous or high-stakes sent straight to a person. Weekly sampling keeps the routing honest.",
+        },
+        deconstruct: [
+          "Priority separate from category means an angry billing question and a routine one don't land in the same place.",
+          "The red-flag phrase list ('legal', 'lawyer', 'unsafe', 'injury') routes past the AI entirely.",
+          "\"Sample 30 a week\" is how you find out it's been misrouting a category before the customer tells you.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're setting up AI triage for a SaaS product's support email.",
+          fields: [
+            { key: "categories", label: "Categories, each mapped to a queue", hint: "Real teams.", minWords: 6 },
+            { key: "priority", label: "How you compute priority, separately from category", hint: "The signals.", minWords: 6 },
+            { key: "unsure", label: "The low-confidence / red-flag path", hint: "What happens when it's not sure.", minWords: 5 },
+          ],
+          model: {
+            categories: "Bug report → engineering triage. How-do-I → support. Billing / invoice → finance-support. Downgrade / cancel → retention. Data / privacy request → the privacy owner. Feedback → product. Anything else → a human sorts it.",
+            priority: "High if: mentions a deadline or 'production down'; strong negative sentiment; an enterprise account; or the words 'cancel', 'refund', 'legal', 'GDPR', 'breach'. Computed on every message regardless of category.",
+            unsure: "If classifier confidence is below 0.8, two categories score close, or a red-flag word is present → send to a senior agent with the AI's best guess attached, flagged 'needs human routing'.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SU1.1", "Reproduce", "Design triage for a real inbox",
+          "Take a support channel you know. Design its triage.",
+          "Strong answer: categories map to real queues; priority is computed separately from category; there's an explicit low-confidence → human path; and there's a plan to measure where messages actually get routed.",
+          [
+            { key: "categories", label: "Categories → queues", hint: "Real teams.", minWords: 6 },
+            { key: "priority", label: "How priority is computed, separately", hint: "The signals.", minWords: 6 },
+            { key: "unsure", label: "The path when it's not confident", hint: "Not a guess.", minWords: 5 },
+            { key: "measure", label: "How you'll check it routes right", hint: "Sampling.", minWords: 5 },
+          ],
+          [
+            { label: "Categories map to real queues" },
+            { label: "Priority computed separately from category" },
+            { label: "Explicit low-confidence → human path; a measurement plan" },
+          ],
+          "independent"),
+        scenarioChallenge("SU1.2", "Create", "The bot keeps sending angry customers to the FAQ",
+          "Your triage AI classifies by topic only. Angry, urgent billing messages get the same 'billing → self-serve FAQ' treatment as calm ones, and complaints are escalating.",
+          "What's the fix?",
+          [
+            { id: "a", label: "Add an 'angry billing' category", ok: false, why: "Categories multiply forever. Anger is a priority axis, not a topic." },
+            { id: "b", label: "Compute a priority / sentiment signal separately from topic, and route high-priority messages to a human regardless of category", ok: true, why: "Priority and category are different questions; the routing has to use both." },
+            { id: "c", label: "Have the FAQ bot apologise more", ok: false, why: "The routing is wrong, not the tone." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SU2", name: "Grounded replies",
+      canDo: "Draft answers only from the knowledge base, with citations, and say \"I don't know\" when it isn't covered.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A customer asked if the plan included SSO. The AI confidently said yes, with setup steps. It doesn't. The customer signed up, couldn't find it, and filed a complaint quoting the AI's message back.",
+          point: "An ungrounded support bot doesn't say \"I don't know\" — it invents a plausible answer, and support answers become promises.",
+        },
+        explain: {
+          paras: [
+            "A grounded reply is built **only from retrieved knowledge-base content**, **cites which article** it came from, and returns **\"this isn't covered — here's how to reach a human\"** when retrieval finds nothing relevant.",
+            "The failure mode is the confident answer to a question the KB doesn't address. Guardrail: retrieve first, answer only from what came back, include the source link, never let the model fill a gap from its general training.",
+            "Test it with questions you know aren't in the KB — it should decline every one.",
+          ],
+          keyIdea: "Retrieve → answer only from what came back → cite the article → \"not covered, here's a human\" when nothing relevant is found. The model must not fill KB gaps from general knowledge.",
+        },
+        demonstrate: {
+          task: "A \"does the product do X\" question.",
+          steps: [
+            { move: "Retrieve", think: "Search first.", result: "Search the KB for the question; get the top 3 articles with relevance scores." },
+            { move: "Check relevance", think: "Is there a real source?", result: "Top score below threshold → the KB doesn't cover this → 'I don't have a documented answer; connecting you to an agent.'" },
+            { move: "Answer from source", think: "Only from what came back.", result: "Score is good → answer using only that article's content, quoting the relevant part." },
+            { move: "Cite", think: "Checkable.", result: "'Per our [Plans & Features] article: ...' with the link." },
+          ],
+          full: "The bot answers 'yes, on Business and above, see [link]' when the KB says so, and 'I don't have that documented — here's an agent' when it doesn't. It never constructs an answer from outside the retrieved articles.",
+        },
+        deconstruct: [
+          "The relevance-score threshold is what converts 'no good source' into 'I don't know' instead of a guess.",
+          "Citing the article lets the customer (and you) check the answer against the source.",
+          "Testing with known-absent questions is the only way to confirm it actually declines.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're building a support bot on your help centre. A customer asks: \"Can I export my data as CSV?\"",
+          fields: [
+            { key: "grounded", label: "How you ensure the answer comes only from the KB", hint: "The retrieve-then-answer setup.", minWords: 6 },
+            { key: "nothere", label: "What happens when the KB doesn't cover it", hint: "The decline behaviour.", minWords: 5 },
+            { key: "cite", label: "What the citation looks like", hint: "Format.", minWords: 4 },
+            { key: "test", label: "How you'd test it declines properly", hint: "Known-absent questions.", minWords: 5 },
+          ],
+          model: {
+            grounded: "Retrieve the top KB articles for the query. Pass only those to the model with an instruction to answer strictly from them. If the answer isn't in the retrieved text, it isn't given.",
+            nothere: "If no article scores above the relevance threshold: 'I don't have documentation on CSV export — connecting you with someone who can confirm.' Route to a human with the question attached.",
+            cite: "'Yes — you can export to CSV from Settings → Data. (Source: Exporting your data)' with a link to that article.",
+            test: "Ask it 10 questions you know aren't documented (obscure edge cases, features that don't exist). It should decline all 10. Any confident answer is a failure.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SU2.1", "Reproduce", "Ground a support bot",
+          "Design the grounded-reply setup for a support bot on your (or a familiar) help centre.",
+          "Strong answer: answers are built only from retrieved KB content; there's an explicit decline-and-route when nothing relevant is found; every answer cites its source; and a test with known-absent questions is described.",
+          [
+            { key: "bot", label: "What it answers", hint: "One line.", minWords: 3 },
+            { key: "grounding", label: "How answers stay inside the KB", hint: "Retrieve-then-answer.", minWords: 6 },
+            { key: "decline", label: "The 'not covered' behaviour", hint: "Decline + route.", minWords: 5 },
+            { key: "citation", label: "The citation format", hint: "What the source link looks like.", minWords: 3 },
+          ],
+          [
+            { label: "Answers built only from retrieved KB content" },
+            { label: "Explicit decline-and-route when nothing relevant" },
+            { label: "Every answer cites its source; a known-absent test described" },
+          ],
+          "independent"),
+        critiqueChallenge("SU2.2", "Adapt", "Review a bot reply",
+          "Here is a bot reply and a note about the knowledge base. Find every problem.",
+          "Customer: \"Is there a limit on API calls?\"\nBot: \"Yes, the standard limit is 10,000 requests per hour, which resets on the hour. Enterprise plans can request higher limits by contacting sales.\"\n\n(The knowledge base has no article on API rate limits.)",
+          [
+            { label: "The bot answered a question the KB doesn't cover — the numbers are invented", signals: ["not in the kb", "no article", "invented", "made up", "fabricat", "not documented", "no source for", "hallucinat"] },
+            { label: "No citation / source is given", signals: ["no citation", "no source", "doesn't cite", "unsourced", "no link", "where did"] },
+            { label: "Specific figures (10,000/hour, resets on the hour) will be quoted back as a promise", signals: ["quoted back", "promise", "commitment", "held to", "specific number", "10,000", "10000", "the figure"] },
+            { label: "It should have declined and routed to a human", signals: ["should decline", "should have said", "i don't know", "route to a human", "escalate", "connect", "not covered"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SU3", name: "Tone control",
+      canDo: "Match the reply's tone to the customer's state — especially frustrated, anxious or angry — without sounding scripted or dismissive.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A customer wrote three paragraphs about how a bug had cost them a client. The AI reply opened with \"Thanks for reaching out! 😊 We appreciate your feedback.\" They escalated to the CEO.",
+          point: "A cheerful, templated tone in front of a real problem reads as \"we're not taking this seriously\".",
+        },
+        explain: {
+          paras: [
+            "Tone is a deliberate choice per reply, driven by the customer's state. **Frustrated / angry** → acknowledge the specific problem and its impact first, drop the exclamation marks and emoji, be concrete about the fix. **Anxious** (data loss, billing, security) → lead with reassurance and a clear next step. **Neutral** → efficient and friendly is fine.",
+            "Never: minimise (\"just\", \"simply\"), over-apologise without action, or use a canned opener on a serious message.",
+            "The content can be identical to a neutral reply; the framing is what changes.",
+          ],
+          keyIdea: "Pick the tone from the customer's state — acknowledge impact first for the angry, reassure first for the anxious, stay efficient for the neutral. Cut \"just\" / \"simply\", canned openers, and emoji on serious messages.",
+        },
+        demonstrate: {
+          task: "Replying to the \"bug cost me a client\" message.",
+          steps: [
+            { move: "Read the state", think: "Angry, with a concrete cost.", result: "This is not a 'thanks for the feedback' situation." },
+            { move: "Open with acknowledgement", think: "Name the impact.", result: "'Losing a client over this is a serious outcome and I'm sorry it happened.' — not a generic apology." },
+            { move: "Be concrete", think: "Not reassurance theatre.", result: "'Here's what went wrong, what we've already done, and what I can offer.'" },
+            { move: "Check the framing", think: "Strip the tells.", result: "No 'just', no 'simply', no emoji, no 'we appreciate your patience'." },
+          ],
+          full: "Same facts a neutral reply would carry, but it opens by naming the real impact, stays concrete about the fix, and strips every phrase that would read as dismissive.",
+        },
+        deconstruct: [
+          "Naming the specific impact ('losing a client') does more than three generic apologies.",
+          "'Simply restart the app' to someone who's furious reads as 'this is your fault and it's easy'.",
+          "The canned opener is the single biggest tell that a reply wasn't really read.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "A customer messages: \"I've been charged £240 and I have no idea why. I need this sorted now.\" (You can see it was an accidental double-charge on an annual plan.)",
+          fields: [
+            { key: "state", label: "Read their state", hint: "What are they feeling, and what do they need?", minWords: 5 },
+            { key: "open", label: "How you'd open the reply", hint: "The first sentence.", minWords: 6 },
+            { key: "avoid", label: "Phrases to avoid here", hint: "The tells.", minWords: 4 },
+            { key: "body", label: "What the reply needs to contain", hint: "The substance.", minWords: 6 },
+          ],
+          model: {
+            state: "Anxious and angry — unexpected money gone, and 'now' signals they feel out of control. Reassurance and speed matter more than politeness.",
+            open: "'I can see exactly what happened and I can fix it today. You were charged twice for your annual plan by mistake — the second £240 is being refunded now.' Lead with the answer and the action.",
+            avoid: "'Thanks for reaching out', 'I understand your frustration' (generic), 'just', 'please note', anything that delays getting to 'you're getting your money back'.",
+            body: "What happened (double charge), what's done (refund initiated), when they'll see it (3–5 days), and a direct contact if it's not there by then.",
+          },
+        },
+      },
+      challenges: [
+        critiqueChallenge("SU3.1", "Reproduce", "Fix a tone-deaf reply",
+          "Here is a customer message and a draft reply. Find everything wrong with the tone and framing, and say how you'd fix each.",
+          "Customer: \"This is the third time this week the app has logged me out mid-call with a customer. It's embarrassing and it's making me look unprofessional.\"\n\nDraft reply: \"Hi there! Thanks so much for letting us know! 😊 Have you tried clearing your cache and cookies? That usually does the trick! Let us know if you have any other questions!\"",
+          [
+            { label: "Cheerful opener and emoji on a message about professional embarrassment", signals: ["cheerful", "emoji", "opener", "thanks so much", "😊", "upbeat", "tone-deaf", "not read"] },
+            { label: "'That usually does the trick' minimises a recurring problem", signals: ["minimis", "minimiz", "usually does the trick", "dismissive", "downplay", "recurring", "third time"] },
+            { label: "No acknowledgement of the impact — looking unprofessional in front of customers", signals: ["impact", "acknowledge", "embarrass", "unprofessional", "in front of", "consequence", "no empathy"] },
+            { label: "'Have you tried' puts the work back on the customer for the third time", signals: ["have you tried", "puts the work", "customer's job", "already tried", "third time", "onus"] },
+            { label: "No ownership, no escalation, no 'we'll find out why this keeps happening'", signals: ["ownership", "escalat", "investigate", "why it keeps", "root cause", "own it", "no follow-up"] },
+          ],
+          "transferable"),
+        fieldsChallenge("SU3.2", "Transfer", "Tone guide for your hardest cases",
+          "For the customer situations you (or a team you know) find hardest, write the tone rules.",
+          "Strong answer: tone rules are keyed to the customer's state, not the topic; each says what to lead with; and the avoid-list catches minimising and canned language.",
+          [
+            { key: "cases", label: "2–3 of the hardest customer states you handle", hint: "The states, not the topics.", minWords: 6 },
+            { key: "tone", label: "The tone rule for each", hint: "What to lead with.", minWords: 8 },
+            { key: "phrases", label: "Phrases to always avoid", hint: "Minimising, canned.", minWords: 4 },
+          ],
+          [
+            { label: "Tone rules keyed to the customer's state, not the topic" },
+            { label: "Each says what to lead with" },
+            { label: "Avoid-list catches minimising and canned language" },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SU4", name: "Escalation rules",
+      canDo: "Define what the AI must never resolve alone, and make the handoff to a human clean.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI support agent \"resolved\" a GDPR data-deletion request by replying with instructions and closing the ticket. The request had legal deadlines and required identity verification. Nobody human ever saw it.",
+          point: "Some requests aren't support questions — they're legal, financial or safety events. The AI closing them is the failure.",
+        },
+        explain: {
+          paras: [
+            "Write an explicit **never-resolve-alone list**: refunds and credits above a threshold, cancellations, complaints, anything legal (GDPR / CCPA, disputes, \"lawyer\"), safety or harm, security incidents, accessibility complaints, press.",
+            "For each, the AI's job is **recognise → hand off with context → confirm a human has it** — not attempt a resolution. The handoff carries the full conversation, the detected category, and any deadline.",
+            "The AI can still send the customer a receipt (\"passed to the right team, they'll contact you within X\"). It just can't be the one who closes it.",
+          ],
+          keyIdea: "An explicit never-resolve-alone list (refunds over X, cancellations, complaints, legal, safety, security, press). For those: recognise → hand off with full context → confirm human ownership. The AI never closes them.",
+        },
+        demonstrate: {
+          task: "The AI hits: \"I want to delete all my data and I'm considering legal action about how it was used.\"",
+          steps: [
+            { move: "Recognise", think: "Which triggers.", result: "Two — a data-deletion request AND legal-action language. Both on the never-resolve list." },
+            { move: "Don't attempt", think: "No resolution.", result: "No instructions, no 'here's how', no closing the ticket." },
+            { move: "Hand off with context", think: "The right owners + the clock.", result: "Route to the privacy owner and a senior manager; attach the full thread; flag 'GDPR + potential legal'; note the timestamp." },
+            { move: "Acknowledge to the customer", think: "Receipt, not answer.", result: "'I've passed this to the team who handles data requests — they'll contact you within [X].'" },
+          ],
+          full: "The AI recognises both triggers, makes no attempt to resolve, routes to the two right owners with the deadline noted, and sends the customer a receipt — not an answer.",
+        },
+        deconstruct: [
+          "Recognising the trigger is the whole skill — the AI doesn't need to handle it, just to know it can't.",
+          "Attaching the timestamp matters because legal and regulatory requests have clocks.",
+          "A receipt to the customer is fine; a resolution is not.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Write the escalation rules for an AI agent on an e-commerce support line.",
+          fields: [
+            { key: "never", label: "The never-resolve-alone list for this context", hint: "What the AI must not close.", minWords: 8 },
+            { key: "recognise", label: "How the AI detects each", hint: "Keywords, intent, sentiment.", minWords: 6 },
+            { key: "handoff", label: "What the handoff includes", hint: "Context + deadline.", minWords: 5 },
+            { key: "customer", label: "What the AI says to the customer meanwhile", hint: "A receipt.", minWords: 4 },
+          ],
+          model: {
+            never: "Refunds over £50; any chargeback or payment dispute; 'cancel my account'; complaints about staff or service; anything mentioning injury, illness, or a dangerous fault; legal or regulator mentions; requests to delete personal data.",
+            recognise: "Keyword and intent detection — 'refund', 'cancel', 'lawyer', 'unsafe', 'injured', 'ombudsman', 'delete my data' — plus a severity check for complaints that don't use obvious words.",
+            handoff: "Full conversation, the trigger(s) detected, the order / account, the customer's stated urgency, and a timestamp. Routed to the specific owner (returns / safety / legal / privacy).",
+            customer: "'I've escalated this to the right team — they'll be in touch within [timeframe]. Your reference is [X].' No attempt to resolve, no instructions.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SU4.1", "Reproduce", "Escalation rules for your support context",
+          "Take a support context you know. Write its escalation rules.",
+          "Strong answer: the list covers money over a threshold, cancellations, complaints, legal, safety and privacy; detection is concrete; the handoff carries full context plus any deadline; and the AI acknowledges receipt but does not resolve.",
+          [
+            { key: "never", label: "The never-resolve-alone list", hint: "What the AI must not close.", minWords: 8 },
+            { key: "detect", label: "How each is recognised", hint: "Concrete signals.", minWords: 6 },
+            { key: "handoff", label: "What the handoff carries", hint: "Context + deadline + owner.", minWords: 5 },
+            { key: "ack", label: "What the customer is told", hint: "Receipt only.", minWords: 4 },
+          ],
+          [
+            { label: "List covers money-over-threshold, cancellation, complaint, legal, safety, privacy" },
+            { label: "Detection is concrete; handoff carries full context + any deadline" },
+            { label: "AI acknowledges receipt but does not resolve" },
+          ],
+          "independent"),
+        scenarioChallenge("SU4.2", "Create", "The AI closed a ticket it shouldn't have",
+          "Your AI agent replied to \"your product gave my daughter a rash\" with skincare tips and marked the ticket resolved.",
+          "What should have happened?",
+          [
+            { id: "a", label: "The AI should have given a medical disclaimer with the tips", ok: false, why: "A possible-harm report is not something the AI resolves at all — disclaimer or not." },
+            { id: "b", label: "Recognise 'product caused harm' as a safety trigger, make no attempt to advise, hand off to the safety / product team with the full message and a receipt to the customer", ok: true, why: "The AI's only job here is to recognise it can't handle this and route it, fast." },
+            { id: "c", label: "The AI should have asked for photos first", ok: false, why: "Still the AI handling a harm report. It should hand off immediately." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "SU5", name: "Quality review",
+      canDo: "Sample and score AI-assisted replies against a rubric, and feed the misses back into the prompt and the knowledge base.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI support tool's dashboard showed 94% \"resolved\". A manual review of 50 tickets found a third had subtly wrong answers the customer hadn't bothered to challenge. \"Resolved\" meant \"customer stopped replying\", not \"answered correctly\".",
+          point: "Deflection metrics measure whether the customer gave up, not whether the answer was right. Only a human sample tells you that.",
+        },
+        explain: {
+          paras: [
+            "Run a weekly **quality review**: pull a **random** sample of AI-handled tickets (not just the flagged ones), score each against a short rubric — **correct?** (matches the KB / reality), **grounded?** (cited, no invention), **appropriate tone?**, **right escalation call?** — and log the failure type.",
+            "Then close the loop: wrong answers from a KB gap → **fix the KB**; from misretrieval → **fix retrieval**; tone misses → **fix the prompt**; missed escalations → **fix the trigger list**.",
+            "Track the miss rate over time. Vanity metrics ('deflection rate', 'CSAT') are context, not the quality measure.",
+          ],
+          keyIdea: "Weekly: score a random sample against correct / grounded / tone / escalation, log the failure type, and route each failure to its fix (KB, retrieval, prompt, triggers). Deflection ≠ correct.",
+        },
+        demonstrate: {
+          task: "Setting up the review loop.",
+          steps: [
+            { move: "Sample", think: "Random, not complaints.", result: "20 random AI-handled tickets a week, drawn from all categories — not the ones customers complained about." },
+            { move: "Score", think: "Four dimensions.", result: "Each against: correct / grounded / tone / escalation — pass or fail per dimension, with a note." },
+            { move: "Categorise the misses", think: "By cause.", result: "KB gap / wrong article retrieved / prompt-or-tone / missed escalation trigger." },
+            { move: "Route the fix", think: "To the specific thing.", result: "KB gaps → content team; retrieval misses → tune search; tone → prompt update; escalation → add the trigger. Re-check next week." },
+          ],
+          full: "20 tickets scored on 4 dimensions weekly, each failure tagged by cause and sent to the specific thing that fixes it. The miss rate is tracked as the real quality number, not deflection.",
+        },
+        deconstruct: [
+          "Sampling randomly (not the complaints) is what surfaces the wrong answers customers accepted.",
+          "Tagging the failure cause is what makes the fix targeted instead of 'improve the bot'.",
+          "Tracking the miss rate over weeks tells you if the loop is actually working.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Design the quality-review process for an AI support bot that's been live for a month.",
+          fields: [
+            { key: "sample", label: "What you sample and how much", hint: "Random, across categories.", minWords: 6 },
+            { key: "rubric", label: "The dimensions you score", hint: "Correctness, grounding, tone, escalation.", minWords: 6 },
+            { key: "loop", label: "How each failure type gets fixed", hint: "Failure → the thing that fixes it.", minWords: 8 },
+            { key: "metric", label: "The number you track instead of deflection", hint: "The real quality measure.", minWords: 4 },
+          ],
+          model: {
+            sample: "25 randomly selected AI-resolved conversations per week, stratified across categories so none is under-checked. Include ones marked 'resolved' — those are the risky ones.",
+            rubric: "Per conversation: Correct (matches KB / reality) · Grounded (cited, nothing invented) · Tone (matched the customer's state) · Escalation (right call on human handoff) — pass / fail each, with a one-line reason on any fail.",
+            loop: "Correct-fail from a KB gap → write the article. From wrong retrieval → adjust search / tags. Grounded-fail → tighten the 'answer only from sources' instruction. Tone-fail → update tone guidance. Escalation-fail → add or fix the trigger. Log the change; re-sample that category next week.",
+            metric: "Weekly answer-accuracy rate from the sample (correct + grounded, both passing). Track the trend. Deflection and CSAT are context, not the quality measure.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("SU5.1", "Reproduce", "Design a quality-review loop",
+          "For an AI support bot (yours or a familiar one), design the quality-review loop.",
+          "Strong answer: the sample is random across categories, not just complaints; the rubric covers correctness, grounding, tone and escalation; each failure type routes to a specific fix; and the tracked metric is answer quality, not deflection.",
+          [
+            { key: "sample", label: "What you sample, how much, how selected", hint: "Random, stratified.", minWords: 6 },
+            { key: "rubric", label: "The scoring dimensions", hint: "Four of them.", minWords: 5 },
+            { key: "fixes", label: "Failure type → where it gets fixed", hint: "KB / retrieval / prompt / triggers.", minWords: 8 },
+            { key: "metric", label: "The real quality number", hint: "Not deflection.", minWords: 4 },
+          ],
+          [
+            { label: "Sample is random across categories, not just complaints" },
+            { label: "Rubric covers correctness, grounding, tone, escalation" },
+            { label: "Each failure routes to a specific fix; metric is answer quality" },
+          ],
+          "independent"),
+        scenarioChallenge("SU5.2", "Create", "The dashboard says 94% resolved",
+          "Leadership is happy: the AI support bot has a 94% resolution rate. A colleague suspects the answers aren't actually good.",
+          "How do you find out?",
+          [
+            { id: "a", label: "Check the CSAT score alongside resolution rate", ok: false, why: "CSAT is also gameable and sparse; neither number measures correctness." },
+            { id: "b", label: "Pull a random sample of 'resolved' tickets and score the answers against the KB and reality", ok: true, why: "Resolution rate only means the customer stopped replying. A human sample is the only way to see correctness." },
+            { id: "c", label: "Ask the bot to rate its own confidence on each answer", ok: false, why: "Self-rated confidence isn't accuracy." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // ---- Education & Training pathway ----
+  const EDUCATION_COMPETENCIES = [
+    {
+      id: "ED1", name: "Design a learning outcome",
+      canDo: "Define what a learner should be able to do, and how you'd know they can, before generating any material.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "You asked AI for \"a lesson on fractions\" and got 12 polished slides. Halfway through teaching it you realised it never built to anything a student could *do* — it explained fractions four different ways and assessed none of them. You'd generated content, not a lesson.",
+          point: "Without an outcome, AI produces material that looks like teaching but doesn't lead anywhere you can check.",
+        },
+        explain: {
+          paras: [
+            "This is Goal Definition (C1) for teaching. A usable learning outcome names four things: the **observable capability** — what the learner can *do* afterwards, in a verb you can assess (\"solve\", \"explain the trade-off\", \"identify errors in\"), not \"understand\" or \"know about\"; the **conditions** (with what, under what constraints); the **standard** (how well — how many, how accurate, unaided?); and **the task that would demonstrate it**.",
+            "Write the assessment *before* the material, so the material builds toward something checkable rather than just \"covering\" the topic.",
+          ],
+          keyIdea: "A learning outcome names an observable capability (an assessable verb), its conditions, its standard, and the task that would demonstrate it — written before any material.",
+        },
+        demonstrate: {
+          task: "Turning \"teach students about persuasive writing\" into an outcome.",
+          steps: [
+            { move: "Observable capability", think: "An assessable verb.", result: "Not 'understand persuasion' — 'write a paragraph that uses at least two named persuasive techniques for a stated audience'." },
+            { move: "Conditions", think: "With what, how long.", result: "Given a topic and an audience; 20 minutes; may use a techniques checklist." },
+            { move: "Standard", think: "How well.", result: "Two techniques used correctly and identifiable; the paragraph addresses the specified audience." },
+            { move: "The assessment", think: "Written first.", result: "'Here's a topic and an audience — write the paragraph, then label the techniques you used.'" },
+          ],
+          full: "The outcome is a specific writing task with a clear bar. The assessment is written first — now any material generated has to build toward producing that paragraph, not just 'cover' persuasion.",
+        },
+        deconstruct: [
+          "\"Write a paragraph using two techniques\" is assessable; \"understand persuasion\" is not.",
+          "Writing the assessment first is what stops the material from wandering.",
+          "The standard ('identifiable', 'addresses the audience') tells both the AI and the learner what 'good' means.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You want to teach new hires \"how to give feedback\". Turn it into a learning outcome.",
+          fields: [
+            { key: "capability", label: "The observable capability", hint: "An assessable verb, not 'understand'.", minWords: 6 },
+            { key: "conditions", label: "The conditions", hint: "With what, constraints.", minWords: 5 },
+            { key: "standard", label: "The standard", hint: "How well is good enough.", minWords: 5 },
+            { key: "assessment", label: "The task that shows it", hint: "The actual assessment.", minWords: 5 },
+          ],
+          model: {
+            capability: "Given a realistic scenario, write feedback that is specific (names the behaviour and its effect), actionable (says what to do differently), and balanced (not only negative).",
+            conditions: "A one-paragraph scenario describing an employee's behaviour; 10 minutes; may use the Situation-Behaviour-Impact template.",
+            standard: "The feedback names a specific behaviour (not a trait), states its impact, and gives one concrete next step. A reviewer can tell what the employee is being asked to change.",
+            assessment: "Read this scenario. Write the feedback you'd give. Then a peer checks it against the three criteria.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ED1.1", "Reproduce", "Write a learning outcome for a real topic",
+          "Take something you need to teach. Write the outcome and the assessment — before any material.",
+          "Strong answer: the verb is assessable (not 'understand' / 'know'); conditions and a standard are specified; and the assessment task is concrete and written as if before the material.",
+          [
+            { key: "topic", label: "The topic", hint: "One line.", minWords: 3 },
+            { key: "capability", label: "The observable capability", hint: "Assessable verb.", minWords: 6 },
+            { key: "standard", label: "The standard", hint: "The bar.", minWords: 4 },
+            { key: "assessment", label: "The assessment task", hint: "What would demonstrate it.", minWords: 5 },
+          ],
+          [
+            { label: "The verb is assessable, not 'understand' / 'know'" },
+            { label: "Conditions and a standard are specified" },
+            { label: "The assessment task is concrete, written before the material" },
+          ],
+          "independent"),
+        critiqueChallenge("ED1.2", "Adapt", "Fix a vague outcome",
+          "Here is a stated outcome. Using the four-part test from the lesson, find every problem and rewrite it.",
+          "\"By the end of this module, learners will understand machine learning and be aware of its applications and be familiar with key concepts.\"",
+          [
+            { label: "'understand' / 'be aware of' / 'be familiar with' are not observable or assessable", signals: ["understand", "be aware", "be familiar", "not observable", "not assessable", "can't measure", "vague verb", "what would they do"] },
+            { label: "No conditions — with what, unaided, how long", signals: ["conditions", "with what", "unaided", "how long", "constraints", "under what"] },
+            { label: "No standard — how well, how much", signals: ["standard", "how well", "how much", "bar", "criteria", "good enough"] },
+            { label: "No assessment task is implied", signals: ["assessment", "no task", "how would you assess", "what would demonstrate", "how do you check"] },
+            { label: "Three vague goals stacked with 'and' — nothing single to build toward", signals: ["three goals", "stacked", "and", "one thing", "build toward", "too many", "unfocused"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ED2", name: "Material generation with accuracy checks",
+      canDo: "Produce explanations, examples and exercises with AI — fact-checked against sources before they reach a learner.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI-generated history worksheet had a confident, detailed account of a battle — wrong date, wrong outcome, a general who wasn't there. Thirty students learned it. Two years later one of them cited it in an exam.",
+          point: "A wrong fact in teaching material doesn't just fail one check — it gets taught, believed, and repeated.",
+        },
+        explain: {
+          paras: [
+            "AI is good at *structuring* material — worked examples, graded exercises, analogies, question sets — and unreliable on *facts*: dates, names, quotes, statistics, anything domain-specific.",
+            "Workflow: generate the structure with AI; **verify every factual claim against a real source** (textbook, primary source, subject expert) before it's used; for anything you can't verify, cut it or mark it clearly as illustrative.",
+            "Higher stakes (exam prep, professional training, health, law) = tighter checking. The AI drafts; a knowledgeable human signs off.",
+          ],
+          keyIdea: "AI structures the material; a human verifies every fact against a source before a learner sees it. Unverifiable claims are cut or marked illustrative. Stakes set the checking bar.",
+        },
+        demonstrate: {
+          task: "Generating a worked-examples sheet for a chemistry topic.",
+          steps: [
+            { move: "Generate the structure", think: "The tedious part.", result: "AI produces 6 worked examples of increasing difficulty, with steps shown." },
+            { move: "Check the chemistry", think: "Someone who'd catch an error.", result: "A chemistry teacher works each example — are the equations balanced? the values right? the method standard?" },
+            { move: "Fix or cut", think: "Don't ship the errors.", result: "Example 4 had a wrong molar mass; example 6 used a non-standard method — corrected and replaced." },
+            { move: "Sign off", think: "Someone is accountable.", result: "The teacher confirms the sheet is correct before it goes to students." },
+          ],
+          full: "The AI did the tedious part — six graded examples with worked steps. A subject expert checked every number and method, fixed two errors, and signed off. Students never saw an unverified version.",
+        },
+        deconstruct: [
+          "The AI's structure (six graded examples) was fine; two of its facts weren't.",
+          "\"A chemistry teacher works each example\" — the check has to be done by someone who'd catch the error.",
+          "Sign-off is a step, not an assumption — someone is accountable for the sheet being right.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're using AI to make a study guide for a first-aid course.",
+          fields: [
+            { key: "aidoes", label: "What you let AI generate", hint: "Structure vs authoritative content.", minWords: 5 },
+            { key: "verify", label: "What gets checked, against what, by whom", hint: "The verification step.", minWords: 6 },
+            { key: "stakes", label: "Why the bar is where it is here", hint: "What's at stake.", minWords: 5 },
+            { key: "unverifiable", label: "What happens to claims you can't confirm", hint: "Cut or mark.", minWords: 4 },
+          ],
+          model: {
+            aidoes: "The structure and wording: scenario descriptions, step-by-step response sequences, practice questions, a glossary. Not the clinical content as authoritative.",
+            verify: "Every response sequence, ratio and 'when to call emergency services' line is checked against the current official first-aid guidelines by a qualified instructor. Nothing goes out unchecked.",
+            stakes: "Someone may act on this in a real emergency. A wrong compression rate or a missed 'call 999 first' isn't a bad grade — it's a safety failure. Highest checking bar.",
+            unverifiable: "Any technique or figure not matching current official guidance is removed, not softened. Plausible-but-not-in-the-guidelines content is cut.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ED2.1", "Reproduce", "A generate-then-verify plan for real material",
+          "Take material you'd make with AI. Design the generate-then-verify workflow.",
+          "Strong answer: AI is used for structure, not authoritative facts; every factual claim has a named source and a checker who'd catch an error; unverifiable claims are cut or marked; and the checking bar matches the stakes.",
+          [
+            { key: "material", label: "The material", hint: "One line.", minWords: 3 },
+            { key: "aidoes", label: "What AI generates", hint: "Structure vs facts.", minWords: 5 },
+            { key: "checks", label: "What's verified, against what, by whom", hint: "The check.", minWords: 6 },
+            { key: "stakes", label: "Why the bar is where it is", hint: "The stakes.", minWords: 4 },
+          ],
+          [
+            { label: "AI used for structure, not authoritative facts" },
+            { label: "Every factual claim has a named source and checker" },
+            { label: "Unverifiable claims cut or marked; bar matches stakes" },
+          ],
+          "independent"),
+        scenarioChallenge("ED2.2", "Create", "A student caught an error in the AI-made notes",
+          "A student points out that the AI-generated revision notes state a formula that's wrong. It's been used by three classes.",
+          "What's the fix — for this and for next time?",
+          [
+            { id: "a", label: "Correct this formula and remind the AI to be more careful", ok: false, why: "'Remind the AI' isn't a control. The process had no verification step." },
+            { id: "b", label: "Correct it, tell the affected classes, and add a subject-expert sign-off step before any AI-generated material reaches students", ok: true, why: "Fix the instance, fix the people affected, fix the process." },
+            { id: "c", label: "Stop using AI for material generation", ok: false, why: "The fix is a verification step, not abandoning a useful tool." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ED3", name: "Feedback & assessment support",
+      canDo: "Use AI to give formative feedback and draft assessments — while a human reads the work and owns the grade.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The AI marking assistant gave a student 4/10 and a paragraph of feedback. The teacher, trusting it, entered the grade. The student appealed: the AI had misread the question, marked a correct answer wrong, and its feedback told the student to change a right answer. The teacher hadn't actually read the work.",
+          point: "AI feedback that isn't checked doesn't assist the teacher — it replaces the teacher's judgement with an unaccountable one.",
+        },
+        explain: {
+          paras: [
+            "Two safe uses. **Formative feedback** (not graded): AI drafts specific, actionable comments on a draft — the learner uses them to improve, a teacher spot-checks. **Assessment drafting**: AI proposes questions, rubrics, model answers — a teacher edits and owns them.",
+            "The line: **AI never assigns the final grade**, and its feedback is **reviewed before the learner acts on it** for anything high-stakes.",
+            "Watch for: AI marking to a rubric it's misread, penalising correct-but-unusual answers, and generic feedback (\"add more detail\") rather than specific. The teacher reads the work; the AI speeds up the writing-up.",
+          ],
+          keyIdea: "AI drafts formative feedback and assessment components; a human reads the work, owns the grade, and reviews AI feedback before it's acted on. AI never assigns the final mark.",
+        },
+        demonstrate: {
+          task: "Using AI to help mark a set of short essays.",
+          steps: [
+            { move: "AI first pass", think: "Draft, not decide.", result: "AI reads each essay against the rubric and drafts feedback + a suggested band." },
+            { move: "Teacher reads the work", think: "Not just the AI's summary.", result: "The teacher reads each essay themselves." },
+            { move: "Compare and decide", think: "Disagreements are the real work.", result: "Where teacher and AI agree, the feedback stands (lightly edited); where they differ, the teacher investigates and decides." },
+            { move: "Teacher owns the grade", think: "AI's band is an input.", result: "The final band is the teacher's." },
+          ],
+          full: "AI drafts feedback for 30 essays, saving the write-up time. The teacher still reads all 30, uses the AI draft as a starting point, resolves every disagreement themselves, and assigns every grade.",
+        },
+        deconstruct: [
+          "\"The teacher reads the work\" is the non-negotiable — the AI's summary is not a substitute.",
+          "Disagreements between teacher and AI are where the real marking judgement happens.",
+          "The AI saved time on writing feedback, not on the judgement.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You want to use AI to give students feedback on essay drafts before they submit final versions.",
+          fields: [
+            { key: "airole", label: "What the AI does", hint: "The drafting scope.", minWords: 5 },
+            { key: "humancheck", label: "What the teacher checks and when", hint: "Spot-checks, flags.", minWords: 5 },
+            { key: "grade", label: "Who owns the grade, and how that's protected", hint: "Keeping AI out of the grading path.", minWords: 5 },
+            { key: "risks", label: "What you watch for in the AI's feedback", hint: "The failure modes.", minWords: 5 },
+          ],
+          model: {
+            airole: "On each draft: AI comments on structure, clarity, whether the argument is supported, and where evidence is thin — specific, tied to sentences. It suggests, it doesn't rewrite.",
+            humancheck: "The teacher spot-checks ~1 in 4 sets of comments and any a student flags as confusing or unfair. All feedback is labelled 'draft feedback — check with me if unsure'.",
+            grade: "The final essay is read and graded by the teacher, with no AI band shown until after the teacher has formed their own view (to avoid anchoring). The AI is not in the grading path.",
+            risks: "Generic comments ('be more specific') with no example; penalising a valid unconventional structure; missing the actual strongest/weakest point; confident tone on a misread. The spot-check targets these.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ED3.1", "Reproduce", "Design AI feedback support that keeps the teacher in charge",
+          "For a real teaching context, design how AI supports feedback or assessment without taking over the judgement.",
+          "Strong answer: AI is limited to formative feedback and/or draft components; the teacher reads the work and owns the grade; AI feedback is reviewed before high-stakes use; and anchoring on the AI's band is avoided.",
+          [
+            { key: "use", label: "Formative feedback and/or assessment drafting — which", hint: "The use.", minWords: 4 },
+            { key: "aiscope", label: "What the AI drafts", hint: "Its scope.", minWords: 5 },
+            { key: "humanowns", label: "What stays with the human, incl. the grade", hint: "The non-negotiables.", minWords: 5 },
+            { key: "safeguards", label: "How you stop the AI's judgement replacing the teacher's", hint: "Reads the work; anti-anchoring.", minWords: 5 },
+          ],
+          [
+            { label: "AI limited to formative feedback and/or draft components" },
+            { label: "The teacher reads the work and owns the grade" },
+            { label: "AI feedback reviewed before high-stakes use; anchoring avoided" },
+          ],
+          "independent"),
+        critiqueChallenge("ED3.2", "Adapt", "Find the problem in the marking setup",
+          "Here is a proposed AI marking setup. Find every problem.",
+          "\"To speed up marking, the AI reads each submission, applies the rubric, assigns a final grade, and writes the feedback. The teacher reviews any grade the student appeals.\"",
+          [
+            { label: "The AI assigns the final grade — that's the human's job", signals: ["assigns the final grade", "final grade", "ai grades", "human's job", "shouldn't grade", "ai in the grading path", "owns the grade"] },
+            { label: "The teacher only reviews on appeal, so most work is never read by a human", signals: ["only on appeal", "never read", "most work", "no human reads", "unreviewed", "reads the work"] },
+            { label: "A student who doesn't appeal an unfair mark keeps it", signals: ["doesn't appeal", "keeps it", "unfair mark", "won't appeal", "no recourse", "accepts a wrong grade"] },
+            { label: "'Applies the rubric' assumes the AI reads the rubric and the work correctly, unchecked", signals: ["applies the rubric", "misread", "assumes", "unchecked", "reads correctly", "no check that"] },
+            { label: "No spot-checking of non-appealed work", signals: ["spot-check", "sample", "non-appealed", "random check", "no sampling"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ED4", name: "Adapting to the learner",
+      canDo: "Adjust level, pace, examples and explanation to the individual — without lowering the bar for what they must achieve.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The \"adaptive\" AI tutor noticed a student was struggling with algebra, so it made the problems easier. And easier. The student ended the term \"succeeding\" at problems two years below grade level, with a report that said \"good progress\". The bar had quietly moved.",
+          point: "Adapting *how* someone learns is the goal. Adapting *what they have to achieve* down to meet them is how you hide a problem.",
+        },
+        explain: {
+          paras: [
+            "Good adaptation changes the **route**, not the **destination**. Legitimate: more scaffolding then removed; different examples relevant to the learner's context; slower pace with more practice; alternative explanations; prerequisite gaps filled.",
+            "Not legitimate: permanently easier problems, dropping required content, a lower standard reported as the same.",
+            "Also: the AI's model of the learner can be **wrong** — a bored student looks like a lost one. Check its adaptation against what the learner actually needs, and keep a fixed record of the real target outcome.",
+          ],
+          keyIdea: "Adapt the route (scaffolding, examples, pace, explanations, filling prerequisite gaps), never the destination (the required outcome and standard). Watch for a wrong learner-model, and keep the target outcome fixed.",
+        },
+        demonstrate: {
+          task: "An AI tutor working with a student stuck on ratios.",
+          steps: [
+            { move: "Diagnose the actual gap", think: "Symptom vs cause.", result: "Not 'bad at ratios' — the student is fine with ratios but shaky on the multiplication underneath." },
+            { move: "Fill the prerequisite", think: "Targeted.", result: "Brief targeted practice on the multiplication, then back to ratios." },
+            { move: "Adapt the examples", think: "Context, not difficulty.", result: "Use ratios in cooking and in a game the student mentioned — same difficulty, relevant context." },
+            { move: "Hold the target", think: "Written down.", result: "The goal is still 'solve grade-level ratio problems unaided' — the route changed, the bar didn't." },
+          ],
+          full: "The tutor found the real gap (a prerequisite), fixed it, made the examples relevant, and kept the student aimed at the same grade-level outcome — reached by a different path, not a lower one.",
+        },
+        deconstruct: [
+          "The first adaptation was diagnostic — 'stuck on ratios' was the symptom, not the cause.",
+          "Relevant examples change engagement and access, not difficulty.",
+          "\"The goal is still [grade-level, unaided]\" — written down, so it can't quietly drift.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "An AI writing tutor is working with an adult learner who left school early and is anxious about writing, but needs to reach a workplace-report standard.",
+          fields: [
+            { key: "route", label: "What you'd adapt about how they learn", hint: "Scaffolding, examples, pace.", minWords: 6 },
+            { key: "destination", label: "What must NOT change", hint: "The fixed outcome + standard.", minWords: 5 },
+            { key: "wrongmodel", label: "How the AI's read of the learner could be wrong here", hint: "The mis-diagnosis risk.", minWords: 5 },
+            { key: "check", label: "How you'd catch the bar slipping", hint: "A fixed-standard check.", minWords: 5 },
+          ],
+          model: {
+            route: "Start with very short, structured tasks (fill-in-the-frame reports) and remove the frames over time. Use examples from the learner's own job. Slower pace, more drafts, explicit praise for specific improvements. Address the anxiety directly.",
+            destination: "The learner must end able to write a clear, correctly-structured workplace report unaided, to the standard their job requires. That outcome and standard don't move.",
+            wrongmodel: "The AI might read anxiety-driven hesitation as low ability and permanently simplify. Or read a confident but error-filled draft as 'ready' and stop scaffolding too soon.",
+            check: "Every few weeks, an unaided task at the real target standard, marked against the real rubric. If the learner can't yet do it unaided, the scaffolding isn't done — but the target hasn't changed.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ED4.1", "Reproduce", "Adapt for a real learner without moving the bar",
+          "Take a real learner (or a realistic one). Plan adaptation that changes the route, not the destination.",
+          "Strong answer: adaptations are to route, not destination; the target outcome and standard are stated and fixed; there's a periodic unaided check at the real standard; and the risk of a wrong learner-model is considered.",
+          [
+            { key: "learner", label: "The learner and their situation", hint: "One or two lines.", minWords: 5 },
+            { key: "route", label: "What you adapt about how they learn", hint: "Scaffolding, examples, pace.", minWords: 6 },
+            { key: "destination", label: "The fixed outcome + standard", hint: "What doesn't move.", minWords: 4 },
+            { key: "check", label: "How you confirm the bar held", hint: "An unaided check at the real standard.", minWords: 5 },
+          ],
+          [
+            { label: "Adaptations are to route, not destination" },
+            { label: "Target outcome and standard are stated and fixed" },
+            { label: "Periodic unaided check at the real standard; wrong-model risk considered" },
+          ],
+          "independent"),
+        scenarioChallenge("ED4.2", "Create", "The report says 'good progress' but the level dropped",
+          "An AI tutor's end-of-term report says a student made 'good progress'. Looking closer, the student is now fluent at material two grade levels below where they should be — the AI made everything progressively easier.",
+          "What went wrong, and what do you change?",
+          [
+            { id: "a", label: "The AI needs a better model of the student's ability", ok: false, why: "A better learner-model helps, but the missing piece is a fixed target the adaptation can't move below." },
+            { id: "b", label: "The AI adapted the destination, not just the route; lock the target outcome / standard and test against it unaided periodically, so 'progress' means progress toward the real bar", ok: true, why: "The fix is structural: a fixed destination and a real-standard check." },
+            { id: "c", label: "Stop using adaptive tutoring", ok: false, why: "Adaptation is valuable; it just needs a fixed destination." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ED5", name: "Academic-integrity boundaries",
+      canDo: "Set and teach clear rules for learner AI use, and design tasks that assess real capability rather than AI's.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The course banned AI. Half the class used it anyway on the take-home essays, undetectably. The honest students who didn't were disadvantaged. The assessment measured \"willingness to break a rule you can't enforce\", not learning.",
+          point: "An unenforceable ban doesn't stop AI use — it just makes the assessment unfair and stops measuring what you think it measures.",
+        },
+        explain: {
+          paras: [
+            "**The rules**: state clearly, per task, what AI use is allowed (none / brainstorming only / drafting with disclosure / freely) and *why*, so learners can follow them — and be realistic about what you can actually detect.",
+            "**The task design**: for capabilities you must assess directly, use methods AI can't do for the student — in-class work, oral defence of submitted work, process artefacts (drafts, notes), personalised prompts tied to class discussion, or assessing the *judgement* around AI use rather than the output.",
+            "Teach AI literacy as part of the subject, not just police it.",
+          ],
+          keyIdea: "Per task, state the allowed AI use and why (realistically). For capabilities you must assess directly, design tasks AI can't do for the student — in-class, oral defence, process artefacts, personalised prompts. Teach the judgement, don't just ban.",
+        },
+        demonstrate: {
+          task: "Redesigning a take-home essay assessment for an AI world.",
+          steps: [
+            { move: "Decide what's being assessed", think: "The real capability.", result: "'Construct and defend an argument from evidence' — that's what has to be real." },
+            { move: "Set the AI rule", think: "Clear and realistic.", result: "AI allowed for research and outline feedback; the drafting and the argument must be the student's; disclose what you used it for." },
+            { move: "Add an AI-proof check", think: "Can't be outsourced.", result: "A 10-minute oral: the student explains their argument and answers two questions on it." },
+            { move: "Assess the judgement too", think: "Integrity as a skill.", result: "Part of the mark is a short note on how they used AI and where they chose not to trust it." },
+          ],
+          full: "The essay still exists, but the graded capability (build and defend an argument) is verified by an oral the student can't outsource. AI use is allowed and disclosed, and the student's judgement about that use is itself assessed.",
+        },
+        deconstruct: [
+          "Naming the real capability ('build and defend an argument') is what tells you which part must be AI-proof.",
+          "The oral defence is cheap and nearly impossible to fake.",
+          "Assessing the AI-use note turns integrity from a rule into a skill.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You teach a coding course. Assignments are done at home and AI can write most of the code.",
+          fields: [
+            { key: "assessing", label: "The capability you actually need to assess", hint: "Not 'produces working code'.", minWords: 5 },
+            { key: "rules", label: "The AI-use rule for the assignments + why", hint: "Clear, justified, realistic.", minWords: 6 },
+            { key: "aiproof", label: "How you verify the capability directly", hint: "AI can't do it for them.", minWords: 6 },
+            { key: "literacy", label: "How AI use becomes part of what's taught", hint: "Not just policed.", minWords: 5 },
+          ],
+          model: {
+            assessing: "'Read a problem, design a solution, debug it, and explain why it works' — not 'produce code that passes tests', which AI does trivially.",
+            rules: "AI allowed as a pair-programmer for the assignments (it's realistic and useful), with a required note on what you used it for. The design decisions and the debugging log must be your own work.",
+            aiproof: "A short lab session each fortnight: modify your submitted code live to meet a new requirement, and explain a section of it. Plus a code-review exercise — find the bugs in a given (AI-written) snippet.",
+            literacy: "Teach: when to trust AI-generated code, how to test it, how to spot its typical mistakes, when writing it yourself is faster. Assessed in the code-review exercise.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ED5.1", "Reproduce", "Redesign an assessment for an AI world",
+          "Take an assessment AI could do for the student. Redesign it.",
+          "Strong answer: the real capability is named; the AI-use rule is clear, justified and realistic about enforcement; there's a direct check AI can't do for the student; and AI-use judgement is taught or assessed.",
+          [
+            { key: "task", label: "The assessment", hint: "One line.", minWords: 3 },
+            { key: "capability", label: "What it must actually measure", hint: "The real capability.", minWords: 5 },
+            { key: "rule", label: "The AI-use rule + why (realistic)", hint: "Enforceable, honest.", minWords: 6 },
+            { key: "aiproof", label: "How the capability is verified in a way AI can't fake", hint: "In-class / oral / artefacts.", minWords: 6 },
+          ],
+          [
+            { label: "The real capability is named" },
+            { label: "The AI-use rule is clear, justified and realistic about enforcement" },
+            { label: "A direct check AI can't fake; AI-use judgement taught or assessed" },
+          ],
+          "independent"),
+        scenarioChallenge("ED5.2", "Create", "Half the class used AI on a banned task",
+          "Your take-home assessment banned AI. You now believe about half the class used it, undetectably, and the honest half are disadvantaged.",
+          "What do you do for the next assessment?",
+          [
+            { id: "a", label: "Use an AI-detection tool and penalise flagged submissions", ok: false, why: "Detectors are unreliable, produce false positives, and punish honest students who get flagged." },
+            { id: "b", label: "Stop relying on an unenforceable ban; redesign so the graded capability is checked in a way AI can't do for the student (in-class element, oral defence, or process artefacts), with a realistic disclosed-use rule", ok: true, why: "Move the assessment to ground AI can't cover, and make the rule one you can actually stand behind." },
+            { id: "c", label: "Make the assessment worth less so it matters less", ok: false, why: "That shrinks the measurement problem, it doesn't fix it." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // ---- Machine Learning Practitioner pathway ----
+  const ML_COMPETENCIES = [
+    {
+      id: "ML1", name: "Frame the problem",
+      canDo: "Decide whether it's an ML task at all, and if so what kind, and what \"good\" means — before touching data.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "Six weeks into building a churn model, someone asked what the business would actually do with a churn prediction. Nobody had an answer. There was no retention offer, no team to act on it. A perfect model would have changed nothing.",
+          point: "The most expensive ML mistakes happen before any code — building a model for a decision nobody will make, or a problem that isn't ML.",
+        },
+        explain: {
+          paras: [
+            "**Is it ML?** ML fits when you have lots of examples, the pattern is hard to write as rules, and being right *on average* is useful. If a few clear rules would do, or you can't tolerate confident errors, or you have no labelled examples — it's not ML, or not yet.",
+            "**What kind?** classification, regression, ranking, clustering, forecasting — driven by the decision it feeds.",
+            "**What's \"good\"?** the metric that matches the decision's costs (a false negative and a false positive rarely cost the same), and the **baseline** to beat (often a simple rule or the current process).",
+            "**Who acts on the output, and how?** If nothing changes based on the prediction, don't build it.",
+          ],
+          keyIdea: "Before data: is this even ML (enough examples, pattern not rule-writable, average-case usefulness)? what kind? what metric matches the decision's real costs? and who will act on the output? No action → no model.",
+        },
+        demonstrate: {
+          task: "A request: \"build an AI to flag risky transactions.\"",
+          steps: [
+            { move: "Is it ML?", think: "Examples, rule-resistance, average usefulness.", result: "Thousands of labelled past transactions; fraud patterns shift and resist fixed rules; catching most fraud is valuable → yes, ML fits (alongside rules)." },
+            { move: "What kind?", think: "Driven by the decision.", result: "Binary classification — risky / not — feeding a review decision." },
+            { move: "What's good?", think: "Match the costs.", result: "A missed fraud costs £X; a false flag costs a customer 5 minutes. Target: catch 80% of fraud with under 2% of legit transactions flagged. Baseline: the current rules engine." },
+            { move: "Who acts?", think: "Capacity is part of the spec.", result: "The fraud review team gets a queue; a flag that can't be reviewed within an hour isn't useful." },
+          ],
+          full: "ML fits, it's binary classification feeding a review queue, the metric weights recall over precision (with a floor), the baseline is the existing rules, and the review team's capacity is a hard constraint on how many flags are useful.",
+        },
+        deconstruct: [
+          "\"Who acts on it\" surfaced the review-capacity constraint that changes the whole target.",
+          "The false-negative / false-positive cost asymmetry is what picks the metric — not \"accuracy\".",
+          "Naming the baseline (the rules engine) means \"the model is good\" has to mean \"better than what we have\".",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Someone asks you to \"use ML to predict which job applicants will be good hires.\"",
+          fields: [
+            { key: "isml", label: "Is this an ML problem — and should it be?", hint: "With reasons.", minWords: 6 },
+            { key: "kind", label: "What kind of ML task", hint: "If pursued at all.", minWords: 4 },
+            { key: "metric", label: "What 'good' means, given the costs", hint: "And the fairness angle.", minWords: 6 },
+            { key: "action", label: "Who acts on the output and how — and the risks", hint: "The downstream decision.", minWords: 6 },
+          ],
+          model: {
+            isml: "You could frame it as classification, but: 'good hire' is subjective and sparsely labelled, past hiring data encodes past bias, and a confident wrong prediction has serious fairness and legal consequences. ML is a poor and risky fit here — a structured human process with AI assisting specific steps is safer.",
+            kind: "If pursued: binary classification (advance / don't) or ranking. But see above.",
+            metric: "There's no clean metric — 'good hire' can't be measured well, and optimising a proxy (tenure, manager rating) imports its biases. Any metric needs a fairness analysis across protected groups.",
+            action: "It would filter real people's applications. The risks (bias, legal exposure, unfair outcomes, no recourse) likely outweigh the benefit. The honest recommendation is often 'don't build this as a predictive model.'",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ML1.1", "Reproduce", "Frame a real ML problem",
+          "Take an ML problem you're considering. Frame it before any data work.",
+          "Strong answer: the 'is it ML / should it be' question is answered with reasons, not assumed; the metric reflects the asymmetric costs of errors; a baseline to beat is named; and the downstream action and who takes it is specified.",
+          [
+            { key: "problem", label: "The problem", hint: "One line.", minWords: 3 },
+            { key: "isml", label: "Is it ML, and should it be — with reasons", hint: "Examples, rules, error tolerance.", minWords: 6 },
+            { key: "metric", label: "The metric that matches the costs + the baseline", hint: "Not 'accuracy' by default.", minWords: 6 },
+            { key: "action", label: "Who acts on the output and how", hint: "The decision it feeds.", minWords: 5 },
+          ],
+          [
+            { label: "'Is it ML / should it be' answered with reasons, not assumed" },
+            { label: "The metric reflects the asymmetric costs of errors; a baseline is named" },
+            { label: "The downstream action and who takes it is specified" },
+          ],
+          "independent"),
+        scenarioChallenge("ML1.2", "Create", "The model works but nothing uses it",
+          "Your team built an accurate model predicting which customers will file a support ticket next week. It's been running for two months. Support staffing, docs and outreach are all unchanged.",
+          "What went wrong in framing?",
+          [
+            { id: "a", label: "The model needs to be more accurate to be actionable", ok: false, why: "Accuracy isn't the problem — there's no decision attached to the output." },
+            { id: "b", label: "No decision was attached to the output — 'who acts on this, and how' was never answered, so a good model changes nothing", ok: true, why: "The framing skipped the step that makes a model worth building." },
+            { id: "c", label: "It should predict further ahead", ok: false, why: "A longer horizon still feeds no decision." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ML2", name: "Data",
+      canDo: "Get the data right: collection, labelling, leakage, and splits that don't lie to you.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The model hit 98% on the test set and 61% in production. The test set had been made by random-splitting rows — but the same customer appeared in both train and test, so the model had \"seen the answer\". The 98% was measuring memorisation.",
+          point: "Most ML failures are data failures wearing a modelling costume. A leak in the split makes a bad model look brilliant.",
+        },
+        explain: {
+          paras: [
+            "**Collection**: is the data representative of where the model will run? Data from one region, season, or user type won't generalise.",
+            "**Labelling**: are the labels correct and consistently defined? Ambiguous label guidelines produce noise the model learns.",
+            "**Leakage**: does any feature contain information you won't have at prediction time, or that encodes the target? (A 'days since last purchase' of 0 for every churned customer; a form field only filled in after the outcome.)",
+            "**Splits**: train / validation / test must be genuinely independent — split by entity (customer, patient) and by time when the task is predicting the future, never by random row.",
+          ],
+          keyIdea: "Representative collection; correct, consistent labels; no leakage (no feature you won't have at prediction time, none encoding the target); and splits that are truly independent — by entity and by time, not random rows.",
+        },
+        demonstrate: {
+          task: "Preparing data for a model predicting whether a loan will default.",
+          steps: [
+            { move: "Collection", think: "Coverage.", result: "Check the training loans cover the range the model will score — not just one product or one economic period." },
+            { move: "Labels", think: "Pin it down.", result: "'Default' defined precisely — 90+ days past due? written off? — and applied consistently across the history." },
+            { move: "Leakage hunt", think: "Known at prediction time?", result: "Drop 'collections_contact_count' — it's only non-zero after a loan goes bad; keep only features known at approval time." },
+            { move: "Split", think: "Predicting the future.", result: "Train on loans issued before 2024, validate on H1 2024, test on H2 2024 — split by time." },
+          ],
+          full: "The data is checked for coverage, the label is pinned down, a leaking feature is removed, and the split is temporal — so the test score estimates real forward performance, not memorisation.",
+        },
+        deconstruct: [
+          "The leaking feature ('collections contact count') looked predictive precisely because it was downstream of the outcome.",
+          "A temporal split is the only honest test when the job is to predict the future.",
+          "\"Define 'default' precisely\" — a fuzzy label caps how good any model can be.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're building a model to predict which patients are at risk of readmission within 30 days of discharge.",
+          fields: [
+            { key: "representative", label: "What to check about the data's coverage", hint: "Wards, ages, admission types, time.", minWords: 6 },
+            { key: "labels", label: "How you'd pin down the label", hint: "What counts as readmission.", minWords: 5 },
+            { key: "leakage", label: "Features you'd be suspicious of", hint: "Anything post-outcome.", minWords: 5 },
+            { key: "split", label: "How you'd split, and why", hint: "By entity and time.", minWords: 5 },
+          ],
+          model: {
+            representative: "Does the training data cover all the wards, age groups, and admission types the model will score? A model trained mostly on one department won't transfer. Check the time range too — practice changes.",
+            labels: "'Readmission within 30 days' — planned readmissions? transfers? deaths (a competing outcome)? Define exactly what counts, consistently across all records.",
+            leakage: "Anything recorded during or after a readmission; discharge notes written retrospectively; a 'follow-up scheduled' flag only set for sicker patients. Keep only what's known at the moment of discharge.",
+            split: "By patient (a patient must not appear in both train and test) and by time (train on earlier admissions, test on later) — the model predicts future readmissions for future patients.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ML2.1", "Reproduce", "Data plan for a real ML problem",
+          "Take an ML problem you know. Write its data plan.",
+          "Strong answer: coverage / representativeness is actually checked; the label is precisely defined; specific leakage risks are named with reasons; and the split is by entity and/or time as the task requires, not random.",
+          [
+            { key: "problem", label: "The problem", hint: "One line.", minWords: 3 },
+            { key: "representative", label: "Coverage checks", hint: "Does training data match where it'll run.", minWords: 5 },
+            { key: "labels", label: "Label definition + consistency", hint: "Exactly what counts.", minWords: 5 },
+            { key: "leakage", label: "Suspect features + why", hint: "Post-outcome, target-encoding.", minWords: 5 },
+            { key: "split", label: "How, and why that way", hint: "Entity / time.", minWords: 4 },
+          ],
+          [
+            { label: "Coverage / representativeness is actually checked" },
+            { label: "The label is precisely defined; leakage risks named with reasons" },
+            { label: "The split is by entity and/or time as the task requires, not random" },
+          ],
+          "independent"),
+        critiqueChallenge("ML2.2", "Adapt", "Find the data problems",
+          "Here is a data setup. Find every problem.",
+          "\"We're predicting employee attrition. We took all HR records, labelled anyone who left in the last 3 years as 'attrition', randomly split 80/20 into train/test, and included features like 'exit interview sentiment' and 'months since last promotion'.\"",
+          [
+            { label: "'exit interview sentiment' is leakage — it only exists for people who already left", signals: ["exit interview", "leakage", "only exists", "after they left", "post-outcome", "won't have", "downstream"] },
+            { label: "Random split doesn't respect time and can put related records across train/test", signals: ["random split", "time", "temporal", "not independent", "related records", "should split by time", "future"] },
+            { label: "'left in the last 3 years' as the label ignores when they left and censors people who might leave soon", signals: ["last 3 years", "when they left", "censor", "still employed", "might leave", "label ignores time", "arbitrary window"] },
+            { label: "No check that current employees (whom you'll score) resemble the historical leavers", signals: ["current employees", "resemble", "representative", "who you'll score", "distribution", "coverage", "generalise"] },
+            { label: "'months since last promotion' may be leakage depending on when it's measured", signals: ["months since last promotion", "when measured", "as of when", "snapshot", "point in time", "could be leakage"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ML3", name: "Training & model selection",
+      canDo: "Establish a baseline first, pick the simplest model that clears the bar, and know what you're trading off.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The team spent three weeks tuning a deep neural net to 84% accuracy. Someone then tried logistic regression: 83%, trained in four seconds, and you could explain every prediction. The three weeks bought one point of accuracy and lost all interpretability.",
+          point: "Reaching for the powerful model first means you never find out that a simple one would have done — and you carry the complexity forever.",
+        },
+        explain: {
+          paras: [
+            "Order of operations: (1) **Baseline** — the dumbest reasonable thing (predict the majority class, a single rule, last year's number). It sets the bar and catches problems.",
+            "(2) **A simple model** — linear / logistic regression, a shallow tree. Often close to the ceiling, and interpretable.",
+            "(3) **More complex models only if the simple one doesn't clear the bar**, and the extra accuracy is worth the cost. Every step up trades away **interpretability, training / serving cost, data hunger, and debuggability** for accuracy. Name the trade.",
+            "The model that wins on validation is a hypothesis; confirm it on the held-out test set once.",
+          ],
+          keyIdea: "Baseline → simplest model → complex only if needed and worth it. Each step trades interpretability, cost and debuggability for accuracy — name the trade. Validation picks the model; the test set confirms it, once.",
+        },
+        demonstrate: {
+          task: "Choosing a model for the loan-default task from ML2.",
+          steps: [
+            { move: "Baseline", think: "The dumbest thing.", result: "Predict 'no default' for everyone → 92% accuracy (defaults are rare). Now you know accuracy is the wrong metric." },
+            { move: "Simple model", think: "Interpretable first.", result: "Logistic regression on approval-time features → AUC 0.78, every coefficient inspectable for sense and fairness." },
+            { move: "Try more", think: "Is the gain worth it?", result: "Gradient-boosted trees → AUC 0.81. Three points. For a regulated lending decision, logistic regression's interpretability may be worth more than 0.03 AUC." },
+            { move: "Decide and confirm", think: "Test set, once.", result: "Pick logistic regression for explainability; confirm its AUC once on the untouched test set." },
+          ],
+          full: "The baseline exposed that 'accuracy' was a trap. Logistic regression got most of the way with full interpretability. Trees added a little; for a regulated lending decision that trade wasn't worth it. The choice is confirmed once on held-out data.",
+        },
+        deconstruct: [
+          "The majority-class baseline ('92% accuracy') is what stops you shipping a model that does nothing.",
+          "\"Three points of AUC vs full interpretability\" is the trade, stated — not assumed in favour of accuracy.",
+          "Confirming on the test set once (not tuning against it) keeps the final number honest.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You're building a model to estimate how long a support ticket will take to resolve, to set customer expectations.",
+          fields: [
+            { key: "baseline", label: "What your baseline is", hint: "The dumb thing to beat.", minWords: 4 },
+            { key: "simple", label: "The simple model you'd try first", hint: "Interpretable.", minWords: 4 },
+            { key: "tradeoff", label: "What a more complex model would cost you here", hint: "The trade.", minWords: 6 },
+            { key: "confirm", label: "How you keep the final number honest", hint: "Validation vs test.", minWords: 5 },
+          ],
+          model: {
+            baseline: "Predict the median resolution time for the ticket's category. Simple, probably not terrible — the bar any model has to clearly beat.",
+            simple: "Linear regression (or a shallow tree) on category, priority, customer plan, time of day, current queue length. Interpretable, fast, easy to debug when an estimate is wildly off.",
+            tradeoff: "A gradient-boosted model might cut the error more, but: harder to explain to a customer why the estimate is what it is, more infrastructure, and a mysterious bad estimate is harder to diagnose. Worth it only if the simple model's error is too big to be useful.",
+            confirm: "Choose the model on a validation set. Report the final error once on a test set of tickets from a later time period the model has never seen. Don't iterate against the test set.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ML3.1", "Reproduce", "Baseline-first plan for a real model",
+          "Take a model you'd build. Write the baseline-first selection plan.",
+          "Strong answer: a concrete baseline is named and its purpose stated; the first model tried is a simple / interpretable one; the accuracy-vs-cost trade of going more complex is named explicitly; and validation-vs-test discipline is described.",
+          [
+            { key: "task", label: "The task", hint: "One line.", minWords: 3 },
+            { key: "baseline", label: "The dumb baseline + what it tells you", hint: "Majority / rule / last year.", minWords: 5 },
+            { key: "simple", label: "The first real model", hint: "Simple, interpretable.", minWords: 4 },
+            { key: "tradeoff", label: "What stepping up in complexity would cost here", hint: "Interpretability, cost, debuggability.", minWords: 5 },
+            { key: "confirm", label: "How the final number stays honest", hint: "Validation picks; test confirms once.", minWords: 4 },
+          ],
+          [
+            { label: "A concrete baseline is named with its purpose" },
+            { label: "The first model tried is simple / interpretable" },
+            { label: "The accuracy-vs-cost trade is named; validation-vs-test discipline described" },
+          ],
+          "independent"),
+        scenarioChallenge("ML3.2", "Create", "The complex model won on validation",
+          "Your team tried five models. The most complex (a large ensemble) got the best validation score by 1%. The team wants to ship it.",
+          "What do you check before agreeing?",
+          [
+            { id: "a", label: "Nothing — best validation score wins", ok: false, why: "Validation performance is a hypothesis; 1% may be noise and the ensemble carries real costs." },
+            { id: "b", label: "Whether the 1% is within noise, whether it holds on the untouched test set, and whether the ensemble's serving cost, latency, interpretability loss and maintenance are worth 1%", ok: true, why: "Confirm the win is real, then price it against everything you give up for it." },
+            { id: "c", label: "Retune the simple models more", ok: false, why: "Maybe worthwhile, but the immediate question is whether the ensemble's win is real and worth its cost." },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ML4", name: "Evaluation & the overfitting trap",
+      canDo: "Choose metrics that match the goal, detect overfitting, and read a confusion matrix.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The model was \"validated\" at 91% accuracy and shipped. In production it flagged almost nothing correctly. The classes were 91% / 9%, so \"predict the majority every time\" also scores 91% — the model had learned nothing, and accuracy hid it.",
+          point: "The wrong metric can make a useless model look excellent. Overfitting can make a fragile model look excellent. Both are caught by looking at the right numbers.",
+        },
+        explain: {
+          paras: [
+            "**Metric matches goal**: for imbalanced classes, accuracy lies — use precision, recall, F1 or AUC, and pick based on which error is worse.",
+            "**Read the confusion matrix**: it shows *which* mistakes, not just how many — false positives and false negatives have different costs.",
+            "**Overfitting**: a big gap between training and validation performance = memorising, not learning. Detect it with a proper validation set (or cross-validation), a learning curve, and by checking performance on the most recent / most different data.",
+            "**The test set is used once** — every time you tune based on it, it becomes a second validation set and stops estimating real performance.",
+          ],
+          keyIdea: "Pick the metric by which error is worse (not accuracy on imbalanced data); read the confusion matrix for which mistakes; catch overfitting via the train-vs-validation gap; use the test set exactly once.",
+        },
+        demonstrate: {
+          task: "Evaluating the fraud classifier from ML1.",
+          steps: [
+            { move: "Reject accuracy", think: "0.5% positive.", result: "A model predicting 'never fraud' is 99.5% accurate and worthless." },
+            { move: "Pick the metric", think: "Which error is worse.", result: "Recall (what fraction of fraud do we catch?) with a precision floor, set by the review team's tolerance." },
+            { move: "Confusion matrix", think: "Which mistakes.", result: "Of 1,000 frauds we caught 780 (recall 78%); of 3,000 flags, 780 were real (precision 26%). Is a 74% false-flag rate acceptable to the review team?" },
+            { move: "Overfitting check", think: "Train vs validation.", result: "Training recall 95%, validation recall 78% — a 17-point gap. The model has partly memorised. Fix before shipping." },
+          ],
+          full: "Accuracy is discarded as meaningless here. Recall and precision are read off the confusion matrix and judged against the review team's capacity. The train-validation gap flags overfitting that needs fixing before launch.",
+        },
+        deconstruct: [
+          "The '99.5% accurate' do-nothing model is the clearest illustration of why the metric must match the goal.",
+          "The confusion matrix turns '78% recall' into '780 caught, 220 missed, 2,220 false flags' — numbers someone can decide on.",
+          "A 17-point train-validation gap is the overfitting signal; the fix is in the model / data, not the metric.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You built a model to identify which incoming emails are phishing. Classes are ~95% legitimate, 5% phishing.",
+          fields: [
+            { key: "metric", label: "The metric(s) that match the goal, and why not accuracy", hint: "Which error is worse.", minWords: 6 },
+            { key: "matrix", label: "What you'd read off the confusion matrix", hint: "Each cell and its cost.", minWords: 6 },
+            { key: "overfit", label: "How you'd check for overfitting", hint: "Train vs validation; recent data.", minWords: 5 },
+            { key: "testset", label: "How you'd use the test set", hint: "Once.", minWords: 4 },
+          ],
+          model: {
+            metric: "Not accuracy (95% by always saying 'legit'). Recall on phishing (catching attacks matters) with a precision constraint (too many false flags trains users to ignore the warning). Weight recall higher — a missed phishing email can be a breach.",
+            matrix: "True positives (phishing caught), false negatives (phishing missed — the dangerous cell), false positives (legit mail flagged — the annoying cell), true negatives. Judge the counts against their real costs.",
+            overfit: "Compare recall / precision on training vs a held-out validation set. Check performance specifically on the newest emails (attackers adapt). A big gap, or good validation but poor recent performance, means overfitting.",
+            testset: "One final evaluation on emails from a time period after all training and tuning. Report those numbers as the expected performance. Don't tune anything based on them.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ML4.1", "Reproduce", "Evaluation plan for a real model",
+          "Take a model you'd evaluate. Write the evaluation plan.",
+          "Strong answer: the metric is justified by the cost asymmetry, not defaulted to accuracy; each confusion-matrix cell is tied to a real-world cost; overfitting detection uses a train-vs-validation comparison; and the test set is used exactly once.",
+          [
+            { key: "task", label: "The task", hint: "One line.", minWords: 3 },
+            { key: "metric", label: "The metric, chosen for which-error-is-worse", hint: "Not accuracy by default.", minWords: 5 },
+            { key: "matrix", label: "What the confusion-matrix cells mean here + their costs", hint: "FP vs FN.", minWords: 6 },
+            { key: "overfit", label: "The overfitting checks", hint: "Train vs validation; recent data.", minWords: 4 },
+            { key: "testset", label: "How the test set is used", hint: "Once.", minWords: 3 },
+          ],
+          [
+            { label: "The metric is justified by the cost asymmetry, not defaulted to accuracy" },
+            { label: "Each confusion-matrix cell is tied to a real-world cost" },
+            { label: "Overfitting detection uses train-vs-validation; test set used exactly once" },
+          ],
+          "independent"),
+        critiqueChallenge("ML4.2", "Adapt", "Find the evaluation mistakes",
+          "Here is an evaluation summary. Find every mistake.",
+          "\"Our defect-detection model is 96% accurate. We know because we kept checking it against the test set while tuning, and picked the settings with the best test accuracy. Defects are about 3% of units. We're ready to ship.\"",
+          [
+            { label: "96% accuracy on 3%-positive data is barely above the 97% you'd get predicting 'no defect' every time", signals: ["96%", "97%", "majority", "predict no defect", "baseline", "barely above", "accuracy is meaningless", "imbalanced"] },
+            { label: "They tuned against the test set — it's no longer an honest estimate, it's a second validation set", signals: ["tuned against the test", "kept checking", "test set", "no longer honest", "second validation", "contaminated", "leaked"] },
+            { label: "No precision / recall reported — we don't know if it catches any defects", signals: ["precision", "recall", "not reported", "catches any", "misses", "no idea if it works"] },
+            { label: "No confusion matrix — no view of missed defects vs false alarms", signals: ["confusion matrix", "missed defects", "false alarms", "false negatives", "which mistakes", "breakdown"] },
+            { label: "No train-vs-validation gap check for overfitting", signals: ["overfitting", "train vs validation", "gap", "generalis", "memoris", "learning curve"] },
+          ],
+          "transferable"),
+      ],
+    },
+
+    {
+      id: "ML5", name: "Deployment & monitoring",
+      canDo: "Ship the model, watch for drift, decide when to retrain — and when to turn it off.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "The model performed well for four months, then slowly degraded as customer behaviour shifted after a competitor launched. Nobody was watching the live metrics — they'd only been measured once, at training time. By the time complaints surfaced, it had been making bad calls for weeks.",
+          point: "A model's accuracy is measured once, before launch, and then assumed forever. The world moves; the model doesn't.",
+        },
+        explain: {
+          paras: [
+            "Deployment is not the finish line. You need: **live performance monitoring** — track the real metric on production data as labels arrive (or a proxy until they do); **drift detection** — watch whether the input distribution or the input-output relationship is shifting from training.",
+            "A **retraining trigger** — a rule for when performance drops enough to retrain, not a vibe; a **fallback** — what the system does when the model is unavailable or low-confidence (a simple rule, a human, a safe default); and a **kill switch** — the ability to disable the model fast if it's causing harm.",
+            "Log predictions and outcomes so you can diagnose and so decisions are reviewable.",
+          ],
+          keyIdea: "After launch: monitor the live metric, detect input and relationship drift, set a numeric retraining trigger, define a fallback for low-confidence / outage, and keep a kill switch. Log predictions + outcomes.",
+        },
+        demonstrate: {
+          task: "Deploying the readmission-risk model from ML2.",
+          steps: [
+            { move: "Live metric", think: "As outcomes arrive.", result: "As 30-day outcomes arrive, compute recall / precision weekly on the real predictions — not just the training number." },
+            { move: "Drift", think: "Inputs and relationship.", result: "Monitor feature distributions (age mix, admission types) and the base readmission rate against training; alert on a significant shift." },
+            { move: "Retrain trigger", think: "A number, not a hunch.", result: "If weekly recall drops below [X] for two consecutive weeks, or drift crosses a threshold → retrain on recent data and re-validate." },
+            { move: "Fallback + kill switch", think: "Degrade safely.", result: "If the service is down or confidence is low → fall back to the existing clinical risk rule. One-click disable if the model is found to be biased or harmful." },
+          ],
+          full: "The model's real-world performance is tracked continuously, drift is watched, retraining is triggered by a number not a hunch, there's a safe fallback, and it can be switched off immediately. Every prediction and outcome is logged.",
+        },
+        deconstruct: [
+          "Measuring recall on live data as outcomes arrive is the difference between knowing and assuming.",
+          "The retraining trigger is a threshold decided in advance, so the decision isn't argued about mid-incident.",
+          "The fallback means \"model unavailable\" degrades to \"the old process\", not \"nothing\".",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "You've deployed a demand-forecasting model that a warehouse team uses to decide stock orders.",
+          fields: [
+            { key: "monitor", label: "What you monitor live", hint: "The real metric on production data.", minWords: 5 },
+            { key: "drift", label: "What drift you watch for here", hint: "Input and relationship drift.", minWords: 5 },
+            { key: "retrain", label: "The retraining trigger", hint: "A specific threshold.", minWords: 5 },
+            { key: "fallbackkill", label: "The fallback and the kill switch", hint: "Outage / low-confidence / harm.", minWords: 5 },
+          ],
+          model: {
+            monitor: "Forecast error (predicted vs actual demand) computed weekly per product category as real sales come in. Track the trend, not just the level.",
+            drift: "Input drift — are the products, seasonality, or promotion patterns shifting from the training period? Relationship drift — is the same input now producing different demand (a category that's grown or collapsed)?",
+            retrain: "If weekly error exceeds the baseline by more than [X]% for three weeks, or a major drift alert fires → retrain on the last N months and re-validate before switching over.",
+            fallbackkill: "If the model is unavailable or its forecast is far outside historical range → fall back to a simple moving-average forecast the team can sanity-check. Kill switch: revert all ordering to the manual / moving-average process with one setting, if the model's errors are causing over- or under-stocking.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("ML5.1", "Reproduce", "Deployment & monitoring plan for a real model",
+          "Take a model you'd deploy. Write the deployment and monitoring plan.",
+          "Strong answer: the live metric is monitored on production data, not assumed from training; both input drift and relationship drift are considered; the retraining trigger is a specific threshold, not a judgement call; and there's a defined fallback and a fast kill switch.",
+          [
+            { key: "task", label: "The task", hint: "One line.", minWords: 3 },
+            { key: "monitor", label: "The live metric + how labels / outcomes arrive", hint: "Real data, not training.", minWords: 5 },
+            { key: "drift", label: "Input and relationship drift you'd watch", hint: "Both kinds.", minWords: 5 },
+            { key: "retrain", label: "The numeric trigger", hint: "A threshold, not a vibe.", minWords: 4 },
+            { key: "fallbackkill", label: "Fallback for outage / low-confidence + the kill switch", hint: "Degrade safely.", minWords: 5 },
+          ],
+          [
+            { label: "Live metric monitored on production data, not assumed from training" },
+            { label: "Both input drift and relationship drift are considered" },
+            { label: "The retraining trigger is a specific threshold; a fallback and fast kill switch exist" },
+          ],
+          "independent"),
+        scenarioChallenge("ML5.2", "Create", "The model quietly degraded for weeks",
+          "A recommendation model's quality dropped gradually over two months after a market change. Nobody noticed until engagement metrics fell and a review traced it back. There was no live monitoring — performance was measured only at training.",
+          "What's the fix?",
+          [
+            { id: "a", label: "Retrain the model on fresh data", ok: false, why: "Necessary now, but it'll silently degrade again without monitoring." },
+            { id: "b", label: "Add live performance monitoring on production outcomes, drift detection, and a retraining trigger tied to a metric threshold — so the next degradation is caught in days", ok: true, why: "The gap was the absence of monitoring; that's what to build." },
+            { id: "c", label: "Retrain on a fixed monthly schedule", ok: false, why: "Better than nothing, but a schedule not tied to actual performance either retrains needlessly or misses a fast drift." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
   // outline = the planned curriculum for a pathway that isn't built yet (visible in its overview)
   const ol = (id, name, canDo) => ({ id, name, canDo });
 
@@ -3839,22 +5651,24 @@ window.CONTENT = (function () {
       competencies: CONTENT_COMPETENCIES, capstoneId: "CONTCAP",
       rubricEmphasis: ["Reasoning", "Safety"],
     },
-    { id: "ops", group: "work", title: "Operations & Admin", tagline: "Map a process, then automate it with human checkpoints and an audit trail.", forRoles: "ops · EAs · office managers · small-business owners", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Structure", "Safety"],
-      outline: [
-        ol("O1", "Map before you automate", "Draw the current process, its steps, owners and decision points, before adding AI to any of it."),
-        ol("O2", "Document & data workflows", "Move information between forms, sheets and systems with AI, with a verification step per hop."),
-        ol("O3", "Inbox & scheduling with guardrails", "Let AI triage and draft, but keep sending, commitments and money human."),
-        ol("O4", "SOP → checked workflow", "Turn a standard operating procedure into an AI-assisted workflow that keeps the SOP's controls."),
-        ol("O5", "Audit trails", "Log what ran, what the AI decided, what a human approved — so the process is reviewable."),
-      ] },
-    { id: "support", group: "work", title: "Customer Support", tagline: "Triage, draft, ground answers in the knowledge base, and handle the hard cases.", forRoles: "support · customer success", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Reasoning", "Safety"],
-      outline: [
-        ol("SU1", "Triage & routing", "Classify and route incoming messages with a defined 'unsure → human' path."),
-        ol("SU2", "Grounded replies", "Draft answers only from the knowledge base, with citations, and 'I don't know' when it's not covered."),
-        ol("SU3", "Tone control", "Match the reply's tone to the customer's state — especially frustrated and angry."),
-        ol("SU4", "Escalation rules", "Define what the AI must never resolve alone: refunds, complaints, legal, safety."),
-        ol("SU5", "Quality review", "Sample and score AI-assisted replies; feed the misses back into the prompt and KB."),
-      ] },
+    {
+      id: "ops", group: "work",
+      title: "Operations & Admin",
+      tagline: "Map a process, then automate it with human checkpoints and an audit trail.",
+      forRoles: "ops · EAs · office managers · small-business owners",
+      status: "available", prereq: "foundation",
+      competencies: OPS_COMPETENCIES, capstoneId: "OPSCAP",
+      rubricEmphasis: ["Structure", "Safety"],
+    },
+    {
+      id: "support", group: "work",
+      title: "Customer Support",
+      tagline: "Triage, draft, ground answers in the knowledge base, and handle the hard cases.",
+      forRoles: "support · customer success",
+      status: "available", prereq: "foundation",
+      competencies: SUPPORT_COMPETENCIES, capstoneId: "SUPCAP",
+      rubricEmphasis: ["Reasoning", "Safety"],
+    },
     {
       id: "research", group: "work",
       title: "Research & Analysis",
@@ -3864,14 +5678,15 @@ window.CONTENT = (function () {
       competencies: RESEARCH_COMPETENCIES, capstoneId: "RESCAP",
       rubricEmphasis: ["Verification", "Reasoning"],
     },
-    { id: "education", group: "work", title: "Education & Training", tagline: "Design outcomes, generate checked materials, support feedback and assessment.", forRoles: "teachers · trainers · L&D · course creators", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Clarity", "Safety"],
-      outline: [
-        ol("ED1", "Design a learning outcome", "Define what a learner should be able to do, and how you'd assess it — before generating materials."),
-        ol("ED2", "Material generation with accuracy checks", "Produce explanations, examples and exercises with AI, fact-checked against sources."),
-        ol("ED3", "Feedback & assessment support", "Use AI to give formative feedback and draft assessments, with the human owning the grade."),
-        ol("ED4", "Adapting to the learner", "Adjust level, pace and examples to the individual without lowering the bar."),
-        ol("ED5", "Academic-integrity boundaries", "Set and teach clear rules for learner AI use; design tasks that assess real capability."),
-      ] },
+    {
+      id: "education", group: "work",
+      title: "Education & Training",
+      tagline: "Design outcomes, generate checked materials, support feedback and assessment.",
+      forRoles: "teachers · trainers · L&D · course creators",
+      status: "available", prereq: "foundation",
+      competencies: EDUCATION_COMPETENCIES, capstoneId: "EDUCAP",
+      rubricEmphasis: ["Clarity", "Safety"],
+    },
 
     // ---- Building AI / technical ----
     {
@@ -3892,14 +5707,15 @@ window.CONTENT = (function () {
       competencies: FOUNDATIONS_COMPETENCIES, capstoneId: "FNDCAP",
       rubricEmphasis: ["Clarity", "Reasoning"],
     },
-    { id: "ml", group: "build", title: "Machine Learning Practitioner", tagline: "Frame it, get the data right, train, evaluate honestly, deploy and monitor.", forRoles: "data scientists · ML engineers · analysts moving into ML", status: "planned", prereq: "foundation", competencies: [], rubricEmphasis: ["Verification", "Evidence"],
-      outline: [
-        ol("ML1", "Frame the problem", "Decide whether it's an ML task at all, and if so, what kind — and what 'good' means."),
-        ol("ML2", "Data", "Collection, labelling, leakage, and train/validation/test splits that don't lie to you."),
-        ol("ML3", "Training & model selection", "Baselines first; pick the simplest model that clears the bar; know what you're trading off."),
-        ol("ML4", "Evaluation & the overfitting trap", "Choose metrics that match the goal; detect overfitting; read a confusion matrix."),
-        ol("ML5", "Deployment & monitoring", "Ship it, watch for drift, decide when to retrain — and when to turn it off."),
-      ] },
+    {
+      id: "ml", group: "build",
+      title: "Machine Learning Practitioner",
+      tagline: "Frame it, get the data right, train, evaluate honestly, deploy and monitor.",
+      forRoles: "data scientists · ML engineers · analysts moving into ML",
+      status: "available", prereq: "foundation",
+      competencies: ML_COMPETENCIES, capstoneId: "MLCAP",
+      rubricEmphasis: ["Verification", "Evidence"],
+    },
     {
       id: "agents", group: "build",
       title: "Agentic Systems",
@@ -4059,6 +5875,86 @@ window.CONTENT = (function () {
         { key: "brief", label: "The honest findings brief", hint: "Headline + calibrated confidence + gaps + what would change it + a separate recommendation.", minWords: 15 },
       ],
       rubricDims: ["Verification", "Reasoning", "Clarity", "Safety", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "OPSCAP",
+      pathway: "ops",
+      title: "Work Capstone — automate one real process, with its controls and a trail",
+      after: ["O1", "O2", "O3", "O4", "O5"],
+      stage: "Demonstration",
+      brief:
+        "Take one real process from your work. Map it, port its controls into an AI-assisted workflow with human gates, add per-hop verification and an audit trail, and show a run.",
+      whatGood:
+        "The map names steps, owners, decision rules and failure points; every control from the original is accounted for (applied by AI, flagged, or kept human); money / commitment / irreversible steps stay behind a blocking human gate; each data hop has an intactness check and a bad-row rule; and the audit trail records the facts behind each decision and who approved what.",
+      fields: [
+        { key: "map", label: "The process map", hint: "Steps, owners, decision points + rules, failure points.", minWords: 15 },
+        { key: "controls", label: "Every control, and where it went", hint: "Applied by AI / flagged / kept human.", minWords: 12 },
+        { key: "aihuman", label: "The AI/human split + the gates", hint: "What AI does; what blocks on a human.", minWords: 12 },
+        { key: "verification", label: "Per-hop checks + bad-row rule", hint: "How you catch silent failures.", minWords: 10 },
+        { key: "trail", label: "The audit trail", hint: "What each run records; who approved what.", minWords: 10 },
+      ],
+      rubricDims: ["Structure", "Safety", "Verification", "Reasoning", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "SUPCAP",
+      pathway: "support",
+      title: "Work Capstone — stand up a real AI-assisted support flow, safely",
+      after: ["SU1", "SU2", "SU3", "SU4", "SU5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real support channel. Design the triage, the grounded-reply setup, the tone guidance, the escalation rules, and the quality-review loop — and show it handling a sample of real messages.",
+      whatGood:
+        "Triage routes to real queues with a low-confidence → human path and a separate priority signal; replies are grounded in the KB with citations and decline when uncovered; tone is keyed to customer state; the never-resolve-alone list covers money / cancellation / complaint / legal / safety / privacy; and there's a random-sample quality review that feeds misses back to KB / retrieval / prompt / triggers.",
+      fields: [
+        { key: "triage", label: "The triage design", hint: "Categories→queues, priority signal, low-confidence path.", minWords: 12 },
+        { key: "grounding", label: "The grounded-reply setup", hint: "Retrieve-then-answer, citations, decline behaviour.", minWords: 10 },
+        { key: "tone", label: "The tone guidance", hint: "Keyed to customer state; the avoid-list.", minWords: 8 },
+        { key: "escalation", label: "The never-resolve-alone list + handoff", hint: "What the AI must not close.", minWords: 10 },
+        { key: "review", label: "The quality-review loop", hint: "Sample, rubric, fix routing, the metric.", minWords: 10 },
+      ],
+      rubricDims: ["Reasoning", "Safety", "Verification", "Clarity", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "EDUCAP",
+      pathway: "education",
+      title: "Work Capstone — design a real unit of learning, taught and assessed with AI, honestly",
+      after: ["ED1", "ED2", "ED3", "ED4", "ED5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real thing you need to teach. Write the outcome and assessment first, generate the material with a verification step, plan AI-supported feedback that keeps you in charge of the grade, adapt for a specific learner without moving the bar, and set the integrity rules.",
+      whatGood:
+        "The outcome names an assessable capability with a standard, and the assessment is written before the material; every generated fact is verified against a source by someone who'd catch an error; AI feedback is drafted but the human reads the work and owns the grade; adaptation changes the route not the destination, with a fixed-standard check; and the integrity rules are clear, realistic and paired with an AI-proof check of the real capability.",
+      fields: [
+        { key: "outcome", label: "The learning outcome + assessment", hint: "Assessable capability, standard, the task — written first.", minWords: 12 },
+        { key: "material", label: "The material + its verification", hint: "What AI generates; what's checked, against what, by whom.", minWords: 10 },
+        { key: "feedback", label: "The AI-supported feedback plan", hint: "What AI drafts; what the human reads and owns.", minWords: 10 },
+        { key: "adapt", label: "Adaptation for a specific learner", hint: "Route changes; the fixed destination + check.", minWords: 8 },
+        { key: "integrity", label: "The integrity rules + AI-proof check", hint: "Allowed use + why; how the real capability is verified.", minWords: 10 },
+      ],
+      rubricDims: ["Clarity", "Safety", "Verification", "Reasoning", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "MLCAP",
+      pathway: "ml",
+      title: "Capstone — take a real ML problem from framing to a monitored deployment plan",
+      after: ["ML1", "ML2", "ML3", "ML4", "ML5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real or realistic ML problem. Frame it (is it ML, what kind, what metric, who acts), plan the data (representativeness, labels, leakage, splits), choose a model baseline-first, design the evaluation, and write the deployment + monitoring plan.",
+      whatGood:
+        "The framing answers 'is this ML and should it be', names a cost-matched metric and baseline, and specifies the downstream decision; the data plan checks representativeness, pins the label, names specific leakage risks, and splits by entity / time; model selection starts from a baseline and a simple model with the accuracy-vs-cost trade named; evaluation uses a metric matched to the error costs, reads the confusion matrix, checks the train-validation gap, and uses the test set once; and the deployment plan has live monitoring, drift detection, a numeric retraining trigger, a fallback and a kill switch.",
+      fields: [
+        { key: "framing", label: "The problem framing", hint: "Is it ML / should it be, kind, metric + baseline, who acts.", minWords: 15 },
+        { key: "data", label: "The data plan", hint: "Representativeness, label definition, leakage risks, split strategy.", minWords: 15 },
+        { key: "model", label: "Model selection", hint: "Baseline, simple model, the accuracy-vs-cost trade.", minWords: 10 },
+        { key: "evaluation", label: "The evaluation plan", hint: "Cost-matched metric, confusion matrix, overfitting check, test-set discipline.", minWords: 12 },
+        { key: "deployment", label: "Deployment & monitoring", hint: "Live metric, drift, retraining trigger, fallback, kill switch.", minWords: 12 },
+      ],
+      rubricDims: ["Verification", "Evidence", "Reasoning", "Structure", "Safety"],
       raisesTo: "advanced",
     },
   ];

@@ -217,9 +217,28 @@ Pages project `aifaculty`.
 content; prereq enforcement for non-founder learners; LLM/Control-Plane integration; review
 landing copy before any public announcement; act on findings from founder testing of `/app/`.
 
+## v0.15 — 2026-09-09 — The 4 outlined pathways built; initial catalogue complete
+
+- Built **Operations & Admin** (O1 map before you automate · O2 document & data workflows ·
+  O3 inbox & scheduling with guardrails · O4 SOP → checked workflow · O5 audit trails),
+  **Customer Support** (SU1 triage & routing · SU2 grounded replies · SU3 tone control ·
+  SU4 escalation rules · SU5 quality review), **Education & Training** (ED1 design a learning
+  outcome · ED2 material generation with accuracy checks · ED3 feedback & assessment support ·
+  ED4 adapting to the learner · ED5 academic-integrity boundaries), and **Machine Learning
+  Practitioner** (ML1 frame the problem · ML2 data · ML3 training & model selection · ML4
+  evaluation & the overfitting trap · ML5 deployment & monitoring) — each: full 6-step lessons +
+  2 challenges + quick-checks per competency, plus a capstone (OPSCAP / SUPCAP / EDUCAP / MLCAP).
+- **All 11 pathways of the initial catalogue are now `available`.** 61 competencies total
+  (7 foundation + 54 pathway), 11 pathway capstones. `docs/09` prototype table and the app's
+  About text updated.
+- Validated (node syntax + vm load + structural checks + headless render of overviews and
+  lessons) and deployed to `aifaculty.org/app/`.
+- Next: **broader-scope pathways** — new domains beyond the initial catalogue (professional
+  services, healthcare & sciences, commercial roles, and further).
+
 ## Open threads
-- **Author the 4 outlined pathways** — the "Using AI at work" set (Ops, Support, Education) +
-  ML Practitioner.
+- **Broader-scope pathways** — new domains: professional services (legal, accounting,
+  consulting), healthcare & sciences, commercial roles (sales, HR, account management), and more.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
 - **Enforce pathway prerequisites** for real (non-founder) learners — currently advisory only.
