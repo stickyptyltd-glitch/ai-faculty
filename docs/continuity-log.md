@@ -338,6 +338,34 @@ standing prompt to keep expanding pathway content. Two deliverables:
   deliberate scope cut (see Context in the platform plan); progress sync is a later, separate
   phase if it's ever needed.
 
+## v0.19 — 2026-09-12 — Close the taught-vs-tested gap in the lesson/challenge scaffolding
+
+Founder feedback: challenge/practice content asked for things the demonstrations hadn't
+actually taught, and the system wasn't graphical/practical/smart enough to be "the best
+training platform available." Investigated concretely rather than guessing: the **guided**
+step (labelled "Your turn — *with support*") had zero reference to the lesson's worked example
+or its "moves" while attempting a deliberately-different practice scenario (near-transfer by
+design — same pattern, new surface task) — the model answer only appeared *after* submitting.
+Challenges already had a worked-example reference, but collapsed by default even on the first,
+most-supported one; checkpoints (capstones) had no reference back to the competencies they draw
+on at all. This is a systemic rendering gap, not a per-competency content problem, so the fix
+applies to all 93 competencies (7 foundation + 86 pathway) and both checkpoint types at once:
+- **`viewLearn` guided step** (`main.js`): added an open-by-default "Reference — how the lesson
+  did it" panel (the demonstrate step's worked example) and an open "The moves, again" checklist
+  (the deconstruct bullets), both right above the practice form.
+- **`viewChallenge`**: the existing worked-example `<details>` now opens by default on a
+  competency's *first* challenge (still close support) and stays collapsed on later ones
+  (meant to test more independent recall) — using the existing ladder position, no new content.
+- **`viewCheckpoint`**: added a collapsed "Reference — the capabilities this draws on" panel
+  listing each prerequisite competency's name/canDo with a direct link back to its lesson,
+  built from the checkpoint's existing `after` array (works for CHECKPOINTS and
+  PATHWAY_CHECKPOINTS alike, zero new authored content).
+- Verified live via headless-Chrome screenshots of a guided step (C1) and a first challenge
+  (C1.1) — both now show the reference material inline, open, above the form.
+- **Not done in this pass** (flagged, not silently dropped): richer graphical content —
+  diagrams/illustrations per lesson, an interactive task type beyond free-text fields — would
+  need per-competency authoring across all 93 competencies and is a larger, separate effort.
+
 ## Open threads
 - **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
   leaderboard) — plan approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.

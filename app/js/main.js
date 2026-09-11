@@ -463,11 +463,26 @@
       <div class="field"><label>${esc(f.label)}</label>
         <div class="hint">${esc(f.hint || "")}</div>
         <textarea name="${f.key}"></textarea></div>`).join("");
+    // This is deliberately a DIFFERENT scenario from the demonstrate step (near-transfer
+    // practice, not a copy exercise) — which is exactly why it needs the worked example
+    // visible here, not two screens back in memory. "With support" should mean support.
+    const referencePanel = L.demonstrate ? `
+      <div class="card next" style="margin-bottom:14px">
+        <div class="card__label">Reference — how the lesson did it</div>
+        <p class="hint" style="margin:0 0 6px">${esc(L.demonstrate.task)}</p>
+        <p style="margin:0">${esc(L.demonstrate.full)}</p>
+      </div>` : "";
+    const movesPanel = (L.deconstruct && L.deconstruct.length) ? `
+      <details class="card card--tight" style="margin-bottom:14px" open>
+        <summary style="cursor:pointer;font-weight:600">The moves, again</summary>
+        <ul style="margin:8px 0 0">${L.deconstruct.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      </details>` : "";
     return `${header}
       <h1>Your turn — with support</h1>
       <p class="lead">${esc(g.intro)}</p>
       <div class="card"><div class="card__label">Practice task (not graded)</div>
         <p style="margin:0">${esc(g.task)}</p></div>
+      ${referencePanel}${movesPanel}
       <form data-form="guided" data-cap="${capId}">
         ${fields}
         <button class="btn" type="submit">Check against the model answer</button>
@@ -528,8 +543,11 @@
     if (!ch) return `<div class="notice">Unknown challenge.</div>`;
     const idx = c.challenges.findIndex(x => x.id === chId);
 
+    // Open by default on the first challenge (still close support) — the later,
+    // higher-ladder challenges in the same competency stay collapsed since they're
+    // meant to test more independent recall.
     const workedExample = c.lesson && c.lesson.demonstrate
-      ? `<details class="card card--tight" style="margin-bottom:14px">
+      ? `<details class="card card--tight" style="margin-bottom:14px"${idx === 0 ? " open" : ""}>
            <summary style="cursor:pointer;font-weight:600">Show the worked example from the lesson</summary>
            <p style="margin:8px 0 0">${esc(c.lesson.demonstrate.full)}</p>
          </details>` : "";
@@ -598,6 +616,17 @@
         <div class="hint">${esc(f.hint || "")}</div>
         <textarea name="${f.key}" required></textarea></div>`).join("");
     const dims = cp.rubricDims.map(d => `<li>${esc(d)}</li>`).join("");
+    const refItems = (cp.after || []).map(id => {
+      const comp = C.competency(id);
+      if (!comp) return "";
+      return `<li><strong>${esc(comp.id)} ${esc(comp.name)}</strong> — ${esc(comp.canDo)}
+        <a data-nav href="#/learn/${comp.id}/0" style="margin-left:6px">revisit the lesson →</a></li>`;
+    }).join("");
+    const referencePanel = refItems ? `
+      <details class="card card--tight" style="margin-bottom:14px">
+        <summary style="cursor:pointer;font-weight:600">Reference — the capabilities this draws on</summary>
+        <ul style="margin:8px 0 0">${refItems}</ul>
+      </details>` : "";
 
     return `
       <div class="stepline"><span class="done">Learn</span><span class="done">Challenges</span>
@@ -608,6 +637,7 @@
         <p style="margin:0">${esc(cp.whatGood || "")}</p></div>
       <div class="card"><div class="card__label">Assessed against the mastery rubric</div>
         <ul style="margin:0">${dims}</ul></div>
+      ${referencePanel}
       ${done ? `<div class="notice" style="margin-bottom:12px">You've already passed this. Resubmitting will record a new evidence version.</div>` : ""}
       <form data-form="checkpoint" data-cp="${cpId}">
         ${fields}
