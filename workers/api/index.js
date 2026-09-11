@@ -50,11 +50,13 @@ function getCookie(request, name) {
   return null;
 }
 
+// Scoped to /api — the only place that reads it — so it isn't sent to the landing page,
+// /app/, or the signup Worker as more paths get added under aifaculty.org.
 function sessionCookie(token, maxAgeSeconds) {
-  return `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAgeSeconds}`;
+  return `${SESSION_COOKIE}=${token}; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=${maxAgeSeconds}`;
 }
 function clearCookie() {
-  return `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0`;
+  return `${SESSION_COOKIE}=; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=0`;
 }
 
 function ipKey(request) {
@@ -76,14 +78,14 @@ async function rateLimited(request, env, bucketPrefix) {
   const now = Date.now();
   const bucket = `${bucketPrefix}:${ip}`;
   const raw = await KV.get(bucket, "text");
-  if (raw) {
-    const rl = JSON.parse(raw);
-    if (rl.count >= max && now < rl.reset) return true;
-    rl.count += 1;
-    await KV.put(bucket, JSON.stringify(rl), { expirationTtl: Math.ceil(window) });
-    return false;
-  }
-  await KV.put(bucket, JSON.stringify({ count: 1, reset: now + window * 1000 }), { expirationTtl: Math.ceil(window) });
+  let rl = raw ? JSON.parse(raw) : null;
+  // Fresh bucket, or the window has rolled over — start counting again rather than
+  // incrementing forever (the old version kept sliding expirationTtl forward on every hit,
+  // so a sustained stream of requests never actually got blocked once the window "expired").
+  if (!rl || now >= rl.reset) rl = { count: 0, reset: now + window * 1000 };
+  if (rl.count >= max) return true;
+  rl.count += 1;
+  await KV.put(bucket, JSON.stringify(rl), { expirationTtl: Math.ceil(window) });
   return false;
 }
 
@@ -98,9 +100,14 @@ async function handleRequestLink(request, env, headers) {
   const email = String(body.email || "").trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return json(400, { ok: false, error: "invalid_email" }, headers);
 
+  const now = new Date();
+  // Bound both tables here rather than only ever checking expiry — this endpoint is the one
+  // an attacker would hammer, so it's also the cheapest place to sweep what that would pile up.
+  await env.DB.prepare("DELETE FROM magic_links WHERE expires_at < ?").bind(now.toISOString()).run();
+  await env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now.toISOString()).run();
+
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
-  const now = new Date();
   const expires = new Date(now.getTime() + LINK_TTL_MS);
   await env.DB.prepare(
     "INSERT INTO magic_links (token_hash, email, created_at, expires_at) VALUES (?, ?, ?, ?)"
@@ -121,9 +128,13 @@ async function handleRequestLink(request, env, headers) {
     });
     return json(200, { ok: true, sent: true }, headers);
   }
-  // Dev mode — no RESEND_API_KEY set yet. Hand the link back directly so the flow is
-  // testable end to end before real email is wired up. Stops the moment the key is set.
-  return json(200, { ok: true, sent: false, dev_link: verifyUrl }, headers);
+  // Dev mode requires BOTH no Resend key AND an explicit DEV_LINKS=true — setting the Resend
+  // key alone isn't what closes this, so it can't be closed by accident. With neither set,
+  // sign-in is simply unavailable rather than handing out a working link for any email typed in.
+  if (env.DEV_LINKS === "true") {
+    return json(200, { ok: true, sent: false, dev_link: verifyUrl }, headers);
+  }
+  return json(503, { ok: false, error: "signin_unavailable" }, headers);
 }
 
 async function handleVerify(request, env) {

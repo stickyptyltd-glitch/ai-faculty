@@ -24,10 +24,13 @@ id = "1764d7ac08d14438aa1179e4a748cbce"
 [vars]
 APP_ORIGIN = "https://aifaculty.org"
 RESEND_FROM = "AI Faculty <accounts@aifaculty.org>"
-# Leave empty to run in dev mode: request-link responses include the sign-in link directly
-# instead of emailing it, so the flow is testable before Resend is configured. Set this and
-# real email takes over automatically — no code change needed.
+# Dev mode requires BOTH of these: RESEND_API_KEY empty AND DEV_LINKS "true" — deliberately two
+# switches, not one, so setting the Resend key alone can't be the only thing standing between
+# this endpoint and "hand out a session for any email typed in". Before real users touch
+# accounts: set RESEND_API_KEY to a real key (real email takes over automatically) AND flip
+# DEV_LINKS to "false" (or delete it). With neither set, sign-in returns 503 rather than a link.
 RESEND_API_KEY = ""
+DEV_LINKS = "true"
 
 [vars.rate_limit]
 window_seconds = 3600

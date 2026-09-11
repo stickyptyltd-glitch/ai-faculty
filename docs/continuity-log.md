@@ -323,6 +323,20 @@ standing prompt to keep expanding pathway content. Two deliverables:
 - **Needs from founder before Phase 2 (money)**: a Resend API key (or stay in dev-link mode
   longer), and which Stripe account to connect (via the Stripe MCP connector already available
   in-session).
+- **Hardening pass same day**, post-review: fixed a rate-limit bug where the per-IP counter kept
+  sliding its KV TTL forward on every hit instead of resetting when the window rolled over,
+  silently disabling the limit under sustained load; added a sweep of expired `magic_links`/
+  `sessions` rows (+ `0002_expiry_indexes.sql`) so both tables stay bounded instead of growing
+  forever; split the dev-mode bypass into two explicit switches — empty `RESEND_API_KEY` **and**
+  `DEV_LINKS = "true"` are both required, so setting the Resend key isn't the only thing that
+  closes "hand out a session for any email typed in" (with neither set, sign-in now 503s rather
+  than issuing a link); scoped the session cookie to `Path=/api` instead of the whole apex
+  domain. Re-verified live (round trip, rate-limit now actually triggers).
+- **Known limitation, not a bug**: progress lives in the browser (`localStorage`), not the
+  account — two people signed into the same browser share one learner record, and the same
+  person signed in on a second device starts with an empty app there. Expected from the
+  deliberate scope cut (see Context in the platform plan); progress sync is a later, separate
+  phase if it's ever needed.
 
 ## Open threads
 - **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
