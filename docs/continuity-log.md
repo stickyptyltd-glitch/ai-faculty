@@ -365,6 +365,13 @@ applies to all 93 competencies (7 foundation + 86 pathway) and both checkpoint t
 - **Not done in this pass** (flagged, not silently dropped): richer graphical content —
   diagrams/illustrations per lesson, an interactive task type beyond free-text fields — would
   need per-competency authoring across all 93 competencies and is a larger, separate effort.
+- Post-fix checks: verified every checkpoint's `after[]` ids resolve via `C.competency()` (18/18
+  clean — the reference panel can't silently render empty), and screenshotted a pathway guided
+  step (Sales SL1, not just foundation C1, since founders can skip straight to pathways) — the
+  reference panel renders there too, though as prose rather than C1's scannable four-part
+  template. That's a **content-quality variance to track**, not a broken mechanism: some
+  competencies' worked examples and field hints are more concrete/templated than others across
+  the 93. Worth a consistency pass at some point, separate from this scaffolding fix.
 
 ## Open threads
 - **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
