@@ -8,9 +8,10 @@
 
   // ---- routing --------------------------------------------------------
   function parseHash() {
-    const h = (location.hash || "#/").replace(/^#/, "");
-    const parts = h.split("/").filter(s => s !== "");   // keep "0"
-    return { path: "/" + parts.join("/"), parts };
+    const raw = (location.hash || "#/").replace(/^#/, "");
+    const [pathPart, queryPart] = raw.split("?");
+    const parts = pathPart.split("/").filter(s => s !== "");   // keep "0"
+    return { path: "/" + parts.join("/"), parts, query: new URLSearchParams(queryPart || "") };
   }
 
   const routes = [
@@ -25,6 +26,8 @@
     { test: p => p === "/projects", view: viewProjects },
     { test: p => p === "/pathways", view: viewPathwayCatalogue },
     { test: p => p.startsWith("/pathway/"), view: viewPathwayOverview },
+    { test: p => p === "/login", view: viewLogin },
+    { test: p => p === "/account", view: viewAccount },
   ];
 
   function stripMeta(data) {
@@ -48,10 +51,10 @@
   }
 
   function router() {
-    const { path, parts } = parseHash();
+    const { path, parts, query } = parseHash();
     const route = routes.find(r => r.test(path)) || routes[0];
     const learner = window.STORE.get();
-    app.innerHTML = route.view(learner, parts) || "";
+    app.innerHTML = route.view(learner, parts, query) || "";
     window.scrollTo(0, 0);
     syncNav(path);
     wire();
@@ -125,6 +128,11 @@
       return;
     }
 
+    if (el.dataset.action === "logout") {
+      window.AUTH.logout().then(() => { renderAuthNav(); location.hash = "#/"; });
+      return;
+    }
+
     if (el.dataset.action === "skip-foundation") {
       if (confirm("Skip the foundation module and go straight to work pathways? (Founder option — foundation stays available.)")) {
         window.STORE.update(l => { l.foundationSkipped = true; });
@@ -163,6 +171,27 @@
       window.STORE.update(l => { l.pathway = pid; l.module = pid; });
       window.STORE.log("pathway", pid);
       location.hash = "#/";
+      return;
+    }
+
+    if (kind === "login-request") {
+      const email = (data.email || "").trim();
+      const box = document.getElementById("loginResult");
+      if (box) box.innerHTML = `<p class="hint">Sending…</p>`;
+      window.AUTH.requestLink(email).then(res => {
+        if (!box) return;
+        if (!res.ok) {
+          const msg = res.error === "invalid_email" ? "That doesn't look like a valid email."
+            : res.error === "rate_limited" ? "Too many attempts — try again in a few minutes."
+            : "Something went wrong — try again.";
+          box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
+          return;
+        }
+        box.innerHTML = res.dev_link
+          ? `<div class="notice">Dev mode — no email sender configured yet, so here's the link
+               directly: <a href="${res.dev_link}">${esc(res.dev_link)}</a></div>`
+          : `<div class="notice">Check your email for the sign-in link — it expires in 15 minutes.</div>`;
+      });
       return;
     }
 
@@ -795,6 +824,66 @@
     `;
   }
 
+  // ---- accounts (Phase 1: magic-link) ---------------------------------
+  function viewLogin(learner, parts, query) {
+    const auth = window.AUTH.get();
+    if (auth.checked && auth.user) { location.hash = "#/account"; return ""; }
+    const err = query && query.get("error");
+    return `
+      <h1>Sign in</h1>
+      <p class="lead">Enter your email — we'll send a one-click sign-in link. No password to
+        remember or leak.</p>
+      ${err ? `<div class="notice" style="border-color:var(--warn);margin-bottom:14px">
+        That link was invalid or has expired. Request a new one below.</div>` : ""}
+      <form data-form="login-request" class="field">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" name="email" required placeholder="you@example.com" />
+        <button class="btn" type="submit" style="margin-top:10px">Send sign-in link</button>
+      </form>
+      <div id="loginResult"></div>
+      <p class="hint" style="margin-top:18px">Signing in doesn't move or affect the lesson
+        progress on this device — that stays exactly as it is, in this browser. Accounts are for
+        entitlements, qualifications and the leaderboard as those roll out.</p>
+    `;
+  }
+
+  function viewAccount(learner) {
+    const auth = window.AUTH.get();
+    if (!auth.checked) return `<h1>Account</h1><p class="lead">Checking your sign-in status…</p>`;
+    if (!auth.user) { location.hash = "#/login"; return ""; }
+    const u = auth.user;
+    return `
+      <h1>Account</h1>
+      <p class="lead">Signed in as <strong>${esc(u.email)}</strong>.</p>
+      <p class="hint">Account created ${esc(new Date(u.created_at).toLocaleDateString())}.</p>
+      <div class="notice" style="margin-top:14px">Subscriptions, learning plans, qualifications
+        and the leaderboard attach to this account as they roll out. Your lesson progress on this
+        device stays in this browser regardless of which account you're signed into.</div>
+      <button class="btn btn--ghost" type="button" data-action="logout" style="margin-top:16px">Sign out</button>
+    `;
+  }
+
+  function renderAuthNav() {
+    const el = document.getElementById("authNav");
+    if (!el) return;
+    const { checked, user } = window.AUTH.get();
+    if (!checked) { el.innerHTML = ""; return; }
+    el.innerHTML = user
+      ? `<a data-nav href="#/account">${esc(user.email)}</a>
+         <button class="link-btn" type="button" data-action="logout">Sign out</button>`
+      : `<a data-nav href="#/login">Sign in</a>`;
+  }
+
+  document.getElementById("authNav").addEventListener("click", e => {
+    if (e.target.closest("[data-action='logout']")) {
+      window.AUTH.logout().then(() => { renderAuthNav(); location.hash = "#/"; });
+    }
+  });
+  window.AUTH.onChange(() => {
+    renderAuthNav();
+    if (parseHash().path === "/login" || parseHash().path === "/account") router();
+  });
+
   // ---- reset -----------------------------------------------------
   document.getElementById("resetBtn").addEventListener("click", () => {
     if (confirm("Reset this learner? All progress and evidence on this device will be cleared.")) {
@@ -806,4 +895,5 @@
 
   window.addEventListener("hashchange", router);
   router();
+  window.AUTH.refresh();
 })();

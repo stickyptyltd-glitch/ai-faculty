@@ -30,7 +30,7 @@ cat >> dist/_headers <<'EOF'
 
 /app/*
   ! Content-Security-Policy
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://aifaculty-api.lecheyne24.workers.dev; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
   X-Robots-Tag: noindex, nofollow
 EOF
 

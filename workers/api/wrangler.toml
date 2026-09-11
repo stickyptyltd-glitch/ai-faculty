@@ -1,0 +1,34 @@
+name = "aifaculty-api"
+main = "index.js"
+compatibility_date = "2024-11-01"
+workers_dev = true
+
+# Same-origin API for the app once aifaculty.org is live. main.js's AUTH client posts to
+# /api/... when the host matches *.aifaculty.org, and to the workers.dev URL otherwise
+# (previews, local testing) — same split as landing/app.js uses for /signup.
+routes = [
+  { pattern = "aifaculty.org/api/*", zone_name = "aifaculty.org" }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aifaculty"
+database_id = "3e1266d0-4cf9-4d99-a3fd-fc8bd328cfa7"
+
+# Reused from the signup Worker for auth-request rate limiting (prefix "authrl:" keeps keys
+# from colliding with signup's "rl:"/"email:" keys in the same namespace).
+[[kv_namespaces]]
+binding = "SIGNUPS"
+id = "1764d7ac08d14438aa1179e4a748cbce"
+
+[vars]
+APP_ORIGIN = "https://aifaculty.org"
+RESEND_FROM = "AI Faculty <accounts@aifaculty.org>"
+# Leave empty to run in dev mode: request-link responses include the sign-in link directly
+# instead of emailing it, so the flow is testable before Resend is configured. Set this and
+# real email takes over automatically — no code change needed.
+RESEND_API_KEY = ""
+
+[vars.rate_limit]
+window_seconds = 3600
+max_per_ip = 8

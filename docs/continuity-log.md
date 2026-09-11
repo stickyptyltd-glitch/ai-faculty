@@ -283,9 +283,53 @@ landing copy before any public announcement; act on findings from founder testin
 - Redeployed to `aifaculty.org/app/` (deployment `6402e9f6`); verified live (content diff,
   notice text, single CSP header, headless render of the Legal overview).
 
+## v0.18 — 2026-09-12 — Platform roadmap approved; Phase 1 (accounts) shipped
+
+Founder asked for individual accounts, monetization with a free tier, multi-pathway learning
+plans, a qualification/achievement system, and a scored leaderboard with rewards — plus a
+standing prompt to keep expanding pathway content. Two deliverables:
+
+- **`docs/expansion-prompt.md`** — a self-contained, reusable prompt for `/loop`/a scheduled
+  agent that adds one new pathway per run, carrying forward this session's hard-learned rules
+  (lowercase+specific critique signals, `rubric.length <= fields.length`, draft-content
+  labelling) and explicit guardrails to stay out of the accounts/payments/leaderboard code.
+- **Five-phase plan** (`/home/dayle/.claude/plans/smooth-scribbling-heron.md`, approved):
+  1. accounts (magic-link) 2. monetization/free tier 3. learning plans 4. qualifications 5.
+  leaderboard+rewards. Two corrections to the original framing, both logged as founder decisions:
+  **certificates are free on every tier** (payment funds breadth — concurrent pathways/plans/
+  early access — never the credential itself) and **leaderboard entry is free for everyone**
+  (a paid-only prize pool is a pay-to-enter structure; free entry avoids that risk entirely).
+  Rewards = store credit/discount codes (not cash, per founder decision). Existing `STORE`
+  (localStorage) progress is explicitly untouched through all five phases — only new identity/
+  entitlement/plan/qualification/leaderboard data moves to a server.
+
+**Phase 1 shipped and verified live:**
+- New Cloudflare D1 database `aifaculty` (id `3e1266d0-4cf9-4d99-a3fd-fc8bd328cfa7`),
+  `users`/`magic_links`/`sessions` tables (`workers/api/migrations/0001_accounts.sql`).
+- New Worker `aifaculty-api` (`workers/api/`, route `aifaculty.org/api/*`) — passwordless
+  magic-link auth: `POST /api/auth/request-link`, `GET /api/auth/verify`, `GET /api/auth/me`,
+  `POST /api/auth/logout`. Sessions are httpOnly/Secure/SameSite=Lax cookies, hashed at rest.
+  Reuses the signup Worker's `SIGNUPS` KV for rate limiting and its Resend integration pattern
+  — `RESEND_API_KEY` is empty for now, so `request-link` runs in **dev mode**: it hands the
+  sign-in link straight back in the JSON response instead of emailing it (stops automatically
+  the moment a real key is set — no code change needed).
+- App: `app/js/auth.js` (a small `window.AUTH` fetch client), `#/login` + `#/account` routes and
+  a signed-in-state nav slot in `main.js`, CSP `connect-src` extended for the API's workers.dev
+  origin (`build.sh`). Signing in does **not** touch existing localStorage progress.
+- Verified live end-to-end: curl round-trip (request-link → verify → cookie → `/me` → logout →
+  reused-token correctly rejected) and a headless-Chrome two-navigation run confirming the
+  signed-in nav and `#/account` page render correctly. Test accounts/sessions purged from D1
+  before committing.
+- **Needs from founder before Phase 2 (money)**: a Resend API key (or stay in dev-link mode
+  longer), and which Stripe account to connect (via the Stripe MCP connector already available
+  in-session).
+
 ## Open threads
+- **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
+  leaderboard) — plan approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.
 - **More domains** — professional-services variants, public sector, sales-engineering, product
-  management, design/UX, journalism, and industry-specific academies.
+  management, design/UX, journalism, and industry-specific academies. Now automatable via
+  `docs/expansion-prompt.md`.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Diagnostic → pathway recommendation** from answer B.
 - **Enforce pathway prerequisites** for real (non-founder) learners — currently advisory only.
