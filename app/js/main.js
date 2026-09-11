@@ -404,8 +404,14 @@
 
     if (stepKey === "demonstrate") {
       const d = L.demonstrate;
+      // Cards, not one hand-wrapped SVG: result strings run past 200 chars for some
+      // competencies (e.g. SF5) — HTML reflow handles that; manually-wrapped SVG text
+      // wouldn't without either clipping or a very tall guess. The .demo__rail below is
+      // what turns the stack into a connected flow (a numbered line through every card,
+      // ending at the result) — see styles.css.
       const steps = d.steps.map((s, i) => `
         <div class="card card--tight demo-step" data-i="${i}">
+          <span class="demo-step__dot">${i + 1}</span>
           <div class="card__label">Step ${i + 1} · ${esc(s.move)}</div>
           <p style="margin:6px 0"><em>Thinking:</em> ${esc(s.think)}</p>
           <p style="margin:0"><strong>→ ${esc(s.result)}</strong></p>
@@ -419,10 +425,13 @@
             <button class="btn btn--sm" data-action="demo-play">▶ Play the example</button>
             <button class="btn btn--ghost btn--sm" data-action="demo-all">Show all steps</button>
           </div>
-          ${steps}
-          <div class="card next demo-step" data-i="${d.steps.length}">
-            <div class="card__label">The finished result</div>
-            <p style="margin:0">${esc(d.full)}</p>
+          <div class="demo__rail">
+            ${steps}
+            <div class="card next demo-step" data-i="${d.steps.length}">
+              <span class="demo-step__dot demo-step__dot--end">🏁</span>
+              <div class="card__label">The finished result</div>
+              <p style="margin:0">${esc(d.full)}</p>
+            </div>
           </div>
         </div>
         ${nav()}`;
@@ -616,16 +625,18 @@
         <div class="hint">${esc(f.hint || "")}</div>
         <textarea name="${f.key}" required></textarea></div>`).join("");
     const dims = cp.rubricDims.map(d => `<li>${esc(d)}</li>`).join("");
-    const refItems = (cp.after || []).map(id => {
-      const comp = C.competency(id);
-      if (!comp) return "";
-      return `<li><strong>${esc(comp.id)} ${esc(comp.name)}</strong> — ${esc(comp.canDo)}
-        <a data-nav href="#/learn/${comp.id}/0" style="margin-left:6px">revisit the lesson →</a></li>`;
-    }).join("");
-    const referencePanel = refItems ? `
+    const refNodes = (cp.after || []).map(id => C.competency(id)).filter(Boolean);
+    const refLinks = refNodes.map(comp =>
+      `<a data-nav href="#/learn/${comp.id}/0" class="chainlink">${esc(comp.id)} →</a>`).join("");
+    const referencePanel = refNodes.length ? `
       <details class="card card--tight" style="margin-bottom:14px">
         <summary style="cursor:pointer;font-weight:600">Reference — the capabilities this draws on</summary>
-        <ul style="margin:8px 0 0">${refItems}</ul>
+        <div class="diagram-scroll" style="margin-top:12px">
+          ${window.DIAGRAMS.competencyChain(
+            refNodes.map(c => ({ id: c.id, name: c.name })), cp.title
+          )}
+        </div>
+        <div class="chainlinks">${refLinks}</div>
       </details>` : "";
 
     return `

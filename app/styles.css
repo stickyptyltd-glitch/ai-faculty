@@ -188,15 +188,38 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
 /* "watch it done" play-through — a lightweight visual clip */
 .demo__bar { height: 4px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
 .demo__bar > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s ease; }
-.demo-step { transition: opacity .45s ease, transform .45s ease; }
+.demo-step { position: relative; transition: opacity .45s ease, transform .45s ease; }
 .demo.playing .demo-step { opacity: 0; transform: translateY(10px); }
 .demo.playing .demo-step.reveal { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .demo-step { transition: none; }
   .demo.playing .demo-step { opacity: 1; transform: none; }
 }
+/* the rail turns the step cards into one connected flow instead of a stack — a line
+   through every numbered dot, ending at the result. Cards stay untouched (still just
+   .card/.card--tight), so any length of move/result text still just reflows normally. */
+.demo__rail { position: relative; padding-left: 26px; margin-left: 4px; }
+.demo__rail::before {
+  content: ""; position: absolute; left: 9px; top: 14px; bottom: 14px;
+  width: 2px; background: var(--border);
+}
+.demo-step__dot {
+  position: absolute; left: -26px; top: 13px; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--bg); border: 2px solid var(--accent);
+  color: var(--accent); font: 700 10.5px/1 ui-monospace, SFMono-Regular, Consolas, monospace;
+  display: flex; align-items: center; justify-content: center; z-index: 1;
+}
+.demo-step__dot--end { border-color: var(--good); color: var(--good); font-size: 11px; }
 details.card summary { list-style: revert; }
 details.card summary::-webkit-details-marker { display: revert; }
+
+/* prerequisite-chain diagram (checkpoint "Reference" panel) */
+.chainlinks { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; }
+.chainlink {
+  font: 500 12.5px ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: var(--accent); text-decoration: none;
+}
+.chainlink:hover { text-decoration: underline; }
 
 /* quick-check MCQs */
 .qcheck__opts { display: flex; flex-direction: column; gap: 8px; }

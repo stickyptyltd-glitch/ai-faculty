@@ -373,6 +373,38 @@ applies to all 93 competencies (7 foundation + 86 pathway) and both checkpoint t
   competencies' worked examples and field hints are more concrete/templated than others across
   the 93. Worth a consistency pass at some point, separate from this scaffolding fix.
 
+## v0.20 — 2026-09-12 — First two diagrams from the design exploration ship
+
+Founder feedback ("let's explore better graphics") led to a design-exploration artifact
+(published separately, not in-repo) proposing four diagram types drawn from real lesson content
+— process flow, before/after, decision ladder, competency map — plus a live proof that a small
+generator could draw them from data `content.js` already has, not new per-competency authoring.
+Founder picked two to build first: **flow diagrams** and the **competency map**.
+
+- **New `app/js/diagrams.js`** — `DIAGRAMS.competencyChain(nodes, capstoneLabel)`: a vertical
+  inline-SVG prerequisite chain ending in a capstone node, with real word-wrap (checked against
+  the longest actual competency name, 57 chars, and the longest `after[]` array, CP2's 7) so it
+  never clips or needs new authored content.
+- **Checkpoint "Reference" panel** (`main.js` `viewCheckpoint`) now renders that chain instead of
+  a bullet list, plus a compact row of `#/learn/<id>/0` quick-links below it (kept from the
+  previous version). Verified against the live-deployed files directly (LEGCAP, CP2) — correct
+  wrapping, connectors, and capstone styling.
+- **"Watch it done" step deliberately did NOT become one hand-authored SVG** like the design
+  exploration's mockup — checked first: the longest real `demonstrate.steps[].result` string is
+  213 characters (SF5). Hand-wrapped SVG text would clip or need a tall guess at that length;
+  plain HTML cards reflow correctly at any length for free. Instead, the existing step cards
+  (untouched internals) gained a `.demo__rail` — a connecting line through numbered dots, ending
+  at a 🏁 marker on the finished-result card — so the stack now reads as one connected flow
+  without touching the part that has to handle arbitrary real text.
+- Both are zero-new-authoring, applying instantly to all 93 competencies / 18 checkpoints since
+  they're driven entirely by structured data (`demonstrate.steps`, `checkpoint.after[]`) that
+  already existed. Deployed and verified live via headless-Chrome screenshots (O1's demonstrate
+  step, LEGCAP's reference panel using the live-served `diagrams.js`).
+- **Not done yet** (the other two diagram types from the exploration, by founder's own
+  sequencing): before/after panels on critique challenges, and the AI-role decision ladder —
+  both need a small amount of new per-use data (a corrected-version field; a role classification)
+  rather than being free, so they're queued separately.
+
 ## Open threads
 - **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
   leaderboard) — plan approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.
