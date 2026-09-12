@@ -464,7 +464,66 @@ well-known example... don't assume your jurisdiction's rule is the only one."
   happened, and that distinction is what the banner now says).
 - Verified live: the updated HR pathway banner screenshotted on the deployed site.
 
+## v0.23 — 2026-09-12 — First real end-to-end learner walkthrough (automated, not skipped)
+
+Founder said "go do the walkthrough now." Every prior quality gate on this platform had been
+me (structural sweeps, screenshots, my own reading) — nobody had gone through diagnostic →
+foundation → a work pathway → capstone as an actual learner. Puppeteer-core (installed fresh,
+driving the already-installed system Chrome via CDP — no puppeteer browser download) ran the
+**real, unskipped path** against the live site: diagnostic → an Applied Project → the full
+foundation module (C1–C7, both challenges/competency, CP1 + CP2) → chose **Operations & Admin**
+→ all 5 competencies + their challenges → the **OPSCAP capstone**, including requesting the
+independent second assessment. Answers were genuine and specific (not generic padding) —
+hand-written per field around one consistent fictional scenario (a two-person agency's client
+onboarding), critique challenges answered with real, specific critiques of the actual material.
+No shortcuts: founder-skip was deliberately not used, since real learners can't use it either.
+
+**Three real bugs found and fixed, each verified against the live site before and after:**
+1. **Adding an Applied Project silently did nothing on screen** (`main.js`, `kind === "project"`
+   handler) — the data saved correctly (confirmed via `STORE.projects`), but the page never
+   re-rendered: the handler set `location.hash` to the value it was already on (the form only
+   ever renders on `#/projects`), so `hashchange` never fired and `router()` never re-ran. A
+   real learner clicking "Add project" would see nothing happen and reasonably assume it broke.
+   Fixed: call `router()` directly when the hash is unchanged.
+2 & 3. **The independent second assessment's "specific" heuristic was too narrow, twice** —
+   two different genuinely detailed capstone answers (CP2, then OPSCAP) scored "Developing"
+   instead of "Meets"/"Exceeds" on the strict pass purely for not containing one of a short
+   fixed list of phrases (spelling out "three" instead of "3", writing "since"/"so there is"
+   instead of the exact phrase "instead of"/"so that"). First fix broadened the phrase list
+   (`app/js/faculty.js` `fieldBand`) — caught by walkthrough attempt 1, then **failed again on
+   different wording** on attempt 2. Second, structural fix: a strict-mode answer already well
+   past double its word floor (the padding-screen minWords gate already ran) is itself evidence
+   of real engagement and no longer gets capped at "Developing" just for missing a phrase — the
+   phrase list now only decides Meets vs. Exceeds, never blocks a substantive answer outright.
+   Both fixes deployed and re-verified against the exact same answers that had failed.
+
+**One design gap noted, not fixed (needs a product decision, not a bug fix):** all 29 evidence
+records from the walkthrough ended up "Not attached to a project" — the `project` dropdown on
+every challenge/checkpoint form defaults to unselected and is easy to miss. A diligent learner
+doing every real task could finish an entire pathway with an empty portfolio unless they
+remember to pick their project on every single submission. Worth a founder decision: default to
+the learner's most recent project, or prompt for it, rather than silently defaulting to none.
+
+**What held up well:** all 10 Ops & Admin challenges plus the capstone passed on the *first*
+genuine attempt with real, specific (non-copied) answers — real signal that the pathway's
+scaffolding (reference panels, worked examples, the connector rail — v0.19/v0.20 work) actually
+prepares a good-faith learner for what it then tests. The 3 foundation critique challenges
+correctly rejected generic non-specific padding and correctly passed once given a real,
+specific critique — the assessor isn't trivially gameable by word-count alone.
+
+Confirmed end-state: `foundationDone = true`, all 3 checkpoints (CP1, CP2, OPSCAP) passed and
+confirmed, 29 evidence records, Ops & Admin pathway 100% (5/5) with capstone passed.
+
 ## Open threads
+- **Applied Projects default to unattached** — found in the v0.23 walkthrough. Every challenge/
+  checkpoint form's project dropdown defaults to "not attached"; a diligent learner can finish a
+  whole pathway with an empty portfolio. Needs a founder decision (default to most recent
+  project? prompt for it?), not just a fix.
+- **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
+  (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
+  it's a billing/payment-method action. Once upgraded: onboard `aifaculty.org` to Email Service,
+  add the `send_email` binding to `workers/api/wrangler.toml`, update `handleRequestLink` to
+  send for real instead of dev-mode, deploy, verify a real email arrives.
 - **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
   leaderboard) — plan approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.
 - **More domains** — professional-services variants, public sector, sales-engineering, product

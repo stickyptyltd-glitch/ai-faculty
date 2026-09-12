@@ -162,7 +162,11 @@
     if (kind === "project") {
       window.STORE.update(l => M.addProject(l, data.name, data.context, data.goal));
       window.STORE.log("project", data.name);
-      location.hash = "#/projects";
+      // This form only ever renders on #/projects, so setting the hash to the value it's
+      // already at doesn't fire hashchange — router() never re-ran and the new project
+      // silently never appeared (data saved, screen looked untouched). Re-render directly.
+      if (location.hash === "#/projects" || location.hash === "#projects") router();
+      else location.hash = "#/projects";
       return;
     }
 

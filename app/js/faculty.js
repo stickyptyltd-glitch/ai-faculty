@@ -51,13 +51,24 @@ window.FACULTY = (function () {
     const n = wc(val);
     const min = strict ? Math.ceil(f.minWords * 1.4) : f.minWords;
     if (n < min) return "Developing";
+    // Broadened once already (spelled-out numbers, more connectors, quoted detail) after a
+    // walkthrough found a genuinely detailed answer capped for missing "instead of" by one
+    // word ("instead"). Second walkthrough pass found the same failure again on different
+    // wording ("since", "so there is") — a fixed phrase list will always miss some genuine
+    // way of writing a reason. Real fix: a phrase list should raise the band, never be the
+    // only way to avoid being capped. An answer already well past the word floor (strict or
+    // not) is itself evidence of real engagement, not padding — the floor above already
+    // screens out padding — so length alone is enough to clear "Developing" under strict;
+    // the phrase match now only decides Meets vs. Exceeds.
     const specific =
       /\d/.test(val) ||
-      /\b(because|so that|trade-?off|instead of|whereas|rather than|in order to)\b/i.test(val) ||
+      /\b(because|so|since|given that|due to|as a result|which means|means that|so that|trade-?off|instead of|whereas|rather than|in order to|for example|for instance|such as|specifically|in practice|as opposed to|in particular)\b/i.test(val) ||
+      /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand)\b/i.test(val) ||
+      /["“][^"”]{3,}["”]/.test(val) ||
       /\b(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b/.test(val) ||
       /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(val);
     if (n >= min * 2 && specific) return "Exceeds";
-    if (strict && !specific) return "Developing";
+    if (strict && !specific && n < min * 2) return "Developing";
     return "Meets";
   }
 
