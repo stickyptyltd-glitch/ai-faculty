@@ -1772,6 +1772,127 @@ window.CONTENT = (function () {
         { label: "Wait for a clinician to complain", ok: false, why: "By then it's been wrong for weeks." },
       ]},
     ],
+
+    PM1: [
+      { q: "\"Add a chatbot\" is an example of:", options: [
+        { label: "A clear requirement", ok: false, why: "It prescribes a solution, not a requirement." },
+        { label: "A solution wearing a request's clothes — the real problem was never named", ok: true, why: "Exactly the failure mode this lesson is about." },
+        { label: "An acceptance criterion", ok: false, why: "It's not testable — it doesn't say how you'd know it worked." },
+      ]},
+      { q: "Which is a real acceptance criterion?", options: [
+        { label: "\"The export feature works well\"", ok: false, why: "Not checkable — 'works well' by what test?" },
+        { label: "\"A client can download a CSV that opens correctly in the competitor's importer\"", ok: true, why: "Someone could actually check this." },
+        { label: "\"Users will be happy\"", ok: false, why: "Not testable at all." },
+      ]},
+    ],
+    PM2: [
+      { q: "Before asking AI to prioritise a backlog, you should:", options: [
+        { label: "Just ask \"what's most important\"", ok: false, why: "With no criteria, AI invents a proxy for importance." },
+        { label: "Name the criteria and weights first", ok: true, why: "So the score reflects what actually matters, not an invented proxy." },
+        { label: "Sort by ticket age", ok: false, why: "Age isn't a criterion for importance." },
+      ]},
+      { q: "AI's prioritisation score is:", options: [
+        { label: "The decision", ok: false, why: "A score is an input, not the decision — trade-offs it can't see still need a person." },
+        { label: "An input to the decision, which a person still makes", ok: true, why: "Exactly the lesson's point." },
+        { label: "Only useful once perfectly accurate", ok: false, why: "It's useful now, as an input to check and weigh, not a final answer." },
+      ]},
+    ],
+    PM3: [
+      { q: "AI says \"users consistently want mobile\" from 2 of 8 interviews. This is:", options: [
+        { label: "A fair summary", ok: false, why: "2 of 8 is not 'consistently' — the real count changes the story." },
+        { label: "A fabricated pattern — the real count should be stated instead", ok: true, why: "Prevalence claims need a real number, not a vibe word." },
+        { label: "Fine as long as it's directionally correct", ok: false, why: "The direction implied ('consistently') is the specific thing that's wrong." },
+      ]},
+      { q: "Nobody in a research session mentioned pricing. That means:", options: [
+        { label: "Pricing is not a concern", ok: false, why: "Silence is a gap in what was asked, not evidence of anything." },
+        { label: "The interview didn't cover it — a gap, not a finding", ok: true, why: "Absence of a mention isn't absence of an issue." },
+        { label: "Pricing should be removed from the roadmap", ok: false, why: "That's an unsupported conclusion from silence." },
+      ]},
+    ],
+    PM4: [
+      { q: "AI's PRD draft includes a specific success metric nobody agreed to. You should:", options: [
+        { label: "Keep it — it sounds reasonable", ok: false, why: "A plausible invented number is still invented, and will be quoted as a real target." },
+        { label: "Cut it or replace it with a real, agreed target", ok: true, why: "An unset target should read as unset, not filled in with something invented." },
+        { label: "Soften the wording around it", ok: false, why: "Hedging doesn't make a fabricated number real." },
+      ]},
+      { q: "AI's PRD draft correctly flags a genuine open question. You should:", options: [
+        { label: "Let AI guess at a reasonable answer", ok: false, why: "A genuine unknown needs a real answer, not a guess." },
+        { label: "Answer it yourself with the real decision", ok: true, why: "AI correctly surfacing an unknown is useful — worth actually answering." },
+        { label: "Delete the question from the draft", ok: false, why: "Removing the question doesn't resolve the actual unknown." },
+      ]},
+    ],
+    PM5: [
+      { q: "AI's status update rounds an \"at risk, blocked\" item up to \"on track\" because it reads better. You should:", options: [
+        { label: "Leave it — it's close enough", ok: false, why: "Rounding a hedge up to certainty is exactly what erodes stakeholder trust later." },
+        { label: "Correct it back to the real status and name the blocker", ok: true, why: "The update should state what's actually known." },
+        { label: "Remove the item from the update entirely", ok: false, why: "Omitting a real risk isn't the same as reporting it accurately." },
+      ]},
+      { q: "AI adds a specific date to an update for an item that hasn't started, with no real basis. This is:", options: [
+        { label: "Helpful, since it gives a target", ok: false, why: "An invented date reads exactly as confident as a real one, and gets quoted back as a commitment." },
+        { label: "An invented date that should be removed, stated as 'not yet started, no date committed'", ok: true, why: "Only a genuinely committed date belongs in the update." },
+        { label: "Fine if it's marked 'estimated'", ok: false, why: "The label doesn't fix a date with no real basis behind it." },
+      ]},
+    ],
+    PS1: [
+      { q: "AI's guidance page states an eligibility rule that sounds plausible for \"this kind of scheme.\" You should:", options: [
+        { label: "Trust it — it matches how similar schemes usually work", ok: false, why: "\"How schemes usually work\" is exactly how an invented rule gets published as fact." },
+        { label: "Check it against the actual policy document, word for word", ok: true, why: "Every stated rule needs to trace to the real source." },
+        { label: "Publish it and correct it if someone complains", ok: false, why: "A citizen could rely on a wrong rule before any complaint surfaces it." },
+      ]},
+      { q: "The policy document doesn't say whether sole traders qualify. The guidance should:", options: [
+        { label: "Assume they do, since it's not explicitly excluded", ok: false, why: "A gap in the policy isn't a yes — it's an unanswered question." },
+        { label: "Flag it as needing a real policy answer, not guess", ok: true, why: "A genuine gap in the source stays a gap, flagged for a real decision." },
+        { label: "Leave sole traders out of the guidance entirely", ok: false, why: "Silently excluding them isn't resolving the actual gap either." },
+      ]},
+    ],
+    PS2: [
+      { q: "\"Overwhelming support\" for a proposal, when the real split is 55/30/15, is:", options: [
+        { label: "A reasonable summary", ok: false, why: "It erases how substantial the 30% opposition actually was." },
+        { label: "An overstatement — the real proportions should be stated as numbers", ok: true, why: "Vibe words hide how close or lopsided a result actually was." },
+        { label: "Fine as long as 55% is a majority", ok: false, why: "A bare majority isn't 'overwhelming', and the framing still buries the minority's substance." },
+      ]},
+      { q: "A minority of respondents raised a specific, fixable concern. The summary should:", options: [
+        { label: "Drop it, since it's a small percentage", ok: false, why: "A consultation exists partly to surface exactly this kind of concern." },
+        { label: "Represent it on its substance, however few raised it", ok: true, why: "Minority concerns don't stop mattering for being few." },
+        { label: "Mention only that \"some concerns were raised\"", ok: false, why: "Vague acknowledgement without the actual concern isn't useful to a reader." },
+      ]},
+    ],
+    PS3: [
+      { q: "An AI pre-screen for a benefits application should:", options: [
+        { label: "Make the accept/reject decision automatically for clear cases", ok: false, why: "Even a 'clear' automatic decision on something with appeal rights needs a human owner." },
+        { label: "Check completeness and compile evidence against criteria — a person still decides", ok: true, why: "AI's role is compiling and checking, not deciding." },
+        { label: "Rank applications and let staff work top-down", ok: false, why: "A ranking that isn't checked for hidden proxies can encode bias the same way a decision would." },
+      ]},
+      { q: "A pre-screen is found to down-rank one postcode area at a higher rate, for reasons nobody set out to create. The fix is:", options: [
+        { label: "Tell the system to ignore postcode", ok: false, why: "A learned pattern often routes through correlated features even once the obvious one is excluded." },
+        { label: "Stop letting the pre-screen drive outcomes; score only against explicit criteria with human review, and monitor rates by area", ok: true, why: "Remove the learned pattern's power over the outcome, and keep checking." },
+        { label: "Review that postcode's applications more closely from now on", ok: false, why: "That singles out the affected group again instead of fixing the process." },
+      ]},
+    ],
+    PS4: [
+      { q: "AI proposes redactions for an information request. Before release, you should:", options: [
+        { label: "Send it — AI already checked for personal data", ok: false, why: "AI's redaction pass is a first draft, not the check — disclosure is one-way." },
+        { label: "Have a person check every proposed redaction and hunt for anything missed, especially in attachments", ok: true, why: "Attachments are exactly where a redaction pass is most likely to miss something." },
+        { label: "Spot-check a sample of the redactions", ok: false, why: "A sample doesn't catch a single missed item in a specific document — this needs a full check." },
+      ]},
+      { q: "What should be logged when information is withheld from a request?", options: [
+        { label: "Nothing — the requester doesn't need to know why", ok: false, why: "Without a logged reason, a later appeal can't be assessed fairly." },
+        { label: "The specific item withheld and the exemption it falls under", ok: true, why: "That's what makes an appeal possible to handle." },
+        { label: "Just a note that \"some redactions were made\"", ok: false, why: "Too vague to support a real appeal process." },
+      ]},
+    ],
+    PS5: [
+      { q: "AI ranks Bid A as \"the strongest overall proposal.\" This ranking should be checked because:", options: [
+        { label: "AI might have misread a bid", ok: false, why: "The real risk is different: 'strongest overall' can reflect writing quality, not the published criteria." },
+        { label: "Scoring must be against the explicit published criteria, not overall impression or writing quality", ok: true, why: "A well-written bid and the best bid against the criteria aren't the same thing." },
+        { label: "Overall rankings are always unreliable", ok: false, why: "The issue isn't rankings in general — it's ranking against the wrong thing." },
+      ]},
+      { q: "A panel member has a prior working relationship with one bidder. They should:", options: [
+        { label: "Score all the bids as normal, since one relationship won't affect the outcome", ok: false, why: "A conflict of interest can bias a decision even unintentionally — it needs handling, not assuming it's fine." },
+        { label: "Declare it and recuse from scoring that specific bid", ok: true, why: "This is exactly what protects the integrity of the process." },
+        { label: "Just mention it informally to a colleague", ok: false, why: "An informal mention doesn't create an auditable record of how the conflict was handled." },
+      ]},
+    ],
   };
 
   // =================================================================
@@ -7954,6 +8075,751 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
     },
   ];
 
+  // =================================================================
+  //  PRODUCT MANAGEMENT — a fifth wave beyond the initial + broader-scope catalogues.
+  // =================================================================
+  const PM_COMPETENCIES = [
+    {
+      id: "PM1", name: "Turn a vague ask into a spec AI can build from",
+      canDo: "Turn a vague feature request into a spec with a real user problem, testable acceptance criteria, and explicit non-goals — before AI or an engineer touches it.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "Sales asked for \"a dashboard\" after a client complained. Engineering built a dashboard. It showed the wrong metrics, took three sprints, and the client's actual complaint — a broken alert — was never touched, because nobody had asked what problem \"a dashboard\" was supposed to solve.",
+          point: "\"Build a dashboard\" is a solution wearing a request's clothes. Nobody checked what problem it was solving.",
+        },
+        explain: {
+          paras: [
+            "A spec has three parts: the **real user problem** behind the ask (not the requested feature — the pain underneath it), **acceptance criteria** specific enough that someone could actually check the box, and explicit **non-goals** — what this deliberately does not solve.",
+            "AI is fast at drafting user stories and edge cases once the real problem and scope are pinned down. It cannot find the real problem for you — that usually takes asking the person who made the request one more question.",
+          ],
+          keyIdea: "A spec names the real user problem, states testable acceptance criteria, and draws an explicit non-goals line — before anyone, AI included, drafts a solution.",
+        },
+        demonstrate: {
+          task: "Request: \"clients want to export their data.\"",
+          steps: [
+            { move: "Dig for the real problem", think: "What are they actually trying to do with the export?", result: "Turns out clients want to migrate to a competitor's tool that only imports CSV — a one-time migration, not ongoing export." },
+            { move: "Define acceptance criteria", think: "How would we know this is done?", result: "A client can download a CSV of their last 12 months of records that opens correctly in the competitor's importer." },
+            { move: "Draw the non-goals line", think: "What are we NOT solving?", result: "Not a recurring export or API integration, not full historical export, not other formats." },
+            { move: "Hand to AI", think: "Now it's safe to draft.", result: "AI drafts the user story and three edge cases — empty account, special characters, more than 12 months of history — for the engineer to review." },
+          ],
+          full: "The real ask was a one-time CSV migration, not a recurring export feature — a completely different, much smaller build. AI drafted the story and edge cases only once the actual problem and scope were nailed down by a person.",
+        },
+        deconstruct: [
+          "Digging for the real problem changed the entire scope of the build, not just its wording.",
+          "\"Exportable\" isn't an acceptance criterion; \"opens correctly in the competitor's importer\" is — someone can actually check it.",
+          "AI drafted well once given a precise problem — it couldn't have found the real problem itself, since that required asking the client a question nobody had asked.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Request: \"add a dark mode.\"",
+          fields: [
+            { key: "problem", label: "The real problem behind the request", hint: "What is the actual pain, not the requested feature.", minWords: 8 },
+            { key: "criteria", label: "Acceptance criteria", hint: "How you'd know it's done.", minWords: 6 },
+            { key: "nongoals", label: "What's explicitly out of scope", hint: "Name at least one thing you're not solving.", minWords: 5 },
+          ],
+          model: {
+            problem: "A subset of users work at night and find the bright interface hard on the eyes; a couple also mentioned battery drain on OLED phones.",
+            criteria: "A user can switch to a dark theme in settings, it persists across sessions, and every screen — not just the main one — respects it.",
+            nongoals: "Not an auto-switch-by-time-of-day feature, and not a fully custom theme builder.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PM1.1", "Reproduce", "Spec a real feature request",
+          "Take a real vague request from your own work. Name the real problem, the acceptance criteria, and the non-goals.",
+          "Strong answer: the real problem is distinct from the requested feature; acceptance criteria are things someone could actually check; non-goals name a real boundary.",
+          [
+            { key: "request", label: "The request, as it landed", hint: "One line, in the requester's words.", minWords: 5 },
+            { key: "problem", label: "The real problem", hint: "The pain underneath the request.", minWords: 8 },
+            { key: "criteria", label: "Acceptance criteria", hint: "Checkable, not vague.", minWords: 6 },
+            { key: "nongoals", label: "Non-goals", hint: "What this deliberately doesn't solve.", minWords: 5 },
+          ],
+          [
+            { label: "Real problem is distinct from the requested feature" },
+            { label: "Acceptance criteria are checkable" },
+            { label: "Non-goals name a real boundary" },
+          ],
+          "independent"),
+        critiqueChallenge("PM1.2", "Adapt", "Fix a solution-shaped request",
+          "Here's a request as it landed. Find every problem and rewrite it as a real spec.",
+          "\"Users are complaining. Add a help chatbot to the app.\"",
+          [
+            { label: "No user problem named — what are they actually complaining about", signals: ["no problem named", "what are they complaining", "actual complaint", "underlying issue", "root cause"] },
+            { label: "\"Add a chatbot\" is a solution, not a requirement", signals: ["solution not a requirement", "prescribes the solution", "jumps to a fix", "not a requirement", "solution disguised"] },
+            { label: "No acceptance criteria", signals: ["no acceptance criteria", "how would you know", "no success test", "not testable", "no way to check"] },
+            { label: "No scope boundary", signals: ["no scope", "out of scope", "unbounded", "no boundary", "could mean anything"] },
+          ],
+          "transferable",
+          { text: "\"Support tickets this month show 40% of complaints are users unable to find the billing page. Fix: a user can find and reach the billing page within one click from account settings, verified by a 10-user hallway test. Not solving: general navigation redesign, or any AI-assisted support tooling.\"",
+            changes: ["Names the real, specific complaint instead of a vague 'users are complaining'", "Replaces the prescribed chatbot solution with an open problem statement", "Adds a checkable acceptance criterion (one click, verified by a test)", "Adds an explicit non-goal boundary"] }),
+      ],
+    },
+    {
+      id: "PM2", name: "Prioritise with AI, decide yourself",
+      canDo: "Use AI to score and organise a backlog against real criteria — while the actual prioritisation call and its trade-offs stay yours.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "A PM fed the backlog to AI and asked \"what should we build next.\" AI produced a confident ranked list. The team started building #1. Three weeks in, someone realised AI had ranked it highest because it appeared most often in old tickets — not because it mattered most to revenue or retention.",
+          point: "Asked to prioritise with no criteria, AI invents a proxy for importance and states it with total confidence.",
+        },
+        explain: {
+          paras: [
+            "AI can score backlog items against **explicit criteria and weights** you name — reach, revenue impact, effort, confidence — and show its reasoning per item. It should never be asked \"what's most important\" with nothing to score against.",
+            "The actual prioritisation call is still yours: a score is an input, not a decision. Trade-offs a score can't see — a partner deal, a strategic bet, team morale — are exactly why a person makes the final call.",
+          ],
+          keyIdea: "Name the criteria and weights first; have AI score with visible reasoning; spot-check the reasoning on the top few; make the final call yourself, including trade-offs no score captures.",
+        },
+        demonstrate: {
+          task: "Scoring a backlog of 12 items for the next sprint.",
+          steps: [
+            { move: "Name criteria and weights", think: "What actually matters this quarter?", result: "Reach ×2, revenue impact ×3, effort (inverse) ×1, confidence ×1." },
+            { move: "AI scores with visible reasoning", think: "Not just a number.", result: "A scored table where every item's reasoning is shown, not hidden." },
+            { move: "Spot-check the top 3", think: "Does the reasoning actually hold?", result: "Item ranked #2 scored high on \"reach\" from an old ticket count, not current usage — corrected using the real analytics figure." },
+            { move: "Make the actual call", think: "Score isn't the decision.", result: "The team picks the #1 scored item but deliberately bumps a lower-scored one up because it unblocks a partner deal — a trade-off no score captures." },
+          ],
+          full: "AI scored the backlog fast against named criteria with visible reasoning. Spot-checking caught a stale data source behind one score. The final call still weighed a real trade-off — the partner deal — that no score could see.",
+        },
+        deconstruct: [
+          "Naming criteria and weights up front is what stopped an invented proxy standing in for judgement.",
+          "Spot-checking the reasoning behind a score caught a stale data source before it drove a decision.",
+          "The score is an input to the decision, not the decision — the partner-deal trade-off only a person would know to make.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Prioritise a backlog of 3 features for a solo founder's app with limited engineering time this month.",
+          fields: [
+            { key: "criteria", label: "Criteria and weights", hint: "Named before scoring.", minWords: 6 },
+            { key: "reasoning", label: "How you'd spot-check the reasoning", hint: "Not just trust the score.", minWords: 5 },
+            { key: "tradeoff", label: "A trade-off the score can't see", hint: "The human call.", minWords: 6 },
+          ],
+          model: {
+            criteria: "Revenue impact ×3, how many current users it affects ×2, engineering days required (inverse) ×1.",
+            reasoning: "Check the top-scored item's revenue-impact estimate traces to a real number I have, not a guess.",
+            tradeoff: "A lower-scored bug fix might jump the queue anyway if it's the one thing a key customer is threatening to churn over.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PM2.1", "Reproduce", "Score a real backlog with named criteria",
+          "Take a real backlog of at least 3 items from your own work. Name criteria and weights, have AI score them, and spot-check the reasoning.",
+          "Strong answer: criteria and weights are named before scoring; the reasoning behind at least one score was actually checked, not just trusted.",
+          [
+            { key: "items", label: "The backlog items", hint: "At least 3, one line each.", minWords: 6 },
+            { key: "criteria", label: "Criteria and weights", hint: "Named up front.", minWords: 6 },
+            { key: "spotcheck", label: "What you checked in the reasoning", hint: "And what you found.", minWords: 8 },
+          ],
+          [
+            { label: "Criteria and weights named before scoring" },
+            { label: "Reasoning was actually spot-checked, not just trusted" },
+            { label: "A real trade-off beyond the score is named" },
+          ],
+          "independent"),
+        scenarioChallenge("PM2.2", "Create", "The AI's top pick was based on stale data",
+          "AI ranked feature X highest, citing \"most requested\" — but the request count came from tickets two years old, and nobody has asked for it recently.",
+          "What do you do?",
+          [
+            { id: "a", label: "Ship it anyway — it's still a valid request", ok: false, why: "A stale signal presented as current is exactly the kind of reasoning that needs checking before it drives a decision." },
+            { id: "b", label: "Re-run the ranking against current data, and start checking the reasoning behind every score before trusting a ranking again", ok: true, why: "Fix the immediate ranking and the process that let stale data pass as current." },
+            { id: "c", label: "Stop using AI for prioritisation entirely", ok: false, why: "The fix is checking the reasoning, not abandoning a genuinely useful speed-up." },
+          ],
+          "transferable"),
+      ],
+    },
+    {
+      id: "PM3", name: "Synthesise user research without inventing patterns",
+      canDo: "Use AI to summarise interview transcripts and survey responses — with every claimed pattern traceable to actual quotes, not invented.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "AI summarised 8 user interviews as \"users consistently want a mobile app.\" Only 2 of the 8 mentioned mobile at all, and one of those said they'd never use it. The team built a mobile roadmap off a mis-synthesised pattern.",
+          point: "\"Users consistently want\" from 2 of 8 mentions is a fabricated pattern wearing the language of a real finding.",
+        },
+        explain: {
+          paras: [
+            "AI is good at organising and tagging themes across many transcripts fast. It is unreliable at claiming a pattern's **prevalence** — \"users want X\" needs a real count, in the respondents' own words, not a vibe.",
+            "Every claimed theme needs the actual quotes attached, so a person can check it wasn't cherry-picked or invented. And nobody mentioning something is a gap in what was asked, not evidence either way.",
+          ],
+          keyIdea: "State prevalence with real numbers (X of Y), attach the actual quotes behind every claimed theme, and treat silence as a gap in the data, not a finding.",
+        },
+        demonstrate: {
+          task: "Synthesising 8 onboarding interviews.",
+          steps: [
+            { move: "Tag themes", think: "Across all 8.", result: "\"Confusing signup\" tagged in 5 of 8; \"wants mobile\" tagged in 2 of 8." },
+            { move: "Check prevalence claims", think: "How many actually said this?", result: "Rewrite \"users want mobile\" to \"2 of 8 mentioned mobile, one negatively.\"" },
+            { move: "Pull the actual quotes", think: "Verify against source.", result: "Attach the 5 real quotes behind \"confusing signup\" so a reader can judge for themselves." },
+            { move: "Note silence honestly", think: "Absence isn't evidence.", result: "Nobody mentioned pricing — that's a gap in what was asked, not evidence pricing is fine." },
+          ],
+          full: "Themes were tagged across all 8 transcripts, but every prevalence claim was rewritten with a real count, every theme carried its actual quotes, and silence on pricing was flagged as an unasked question, not a finding.",
+        },
+        deconstruct: [
+          "\"Consistently want\" from 2 of 8 mentions is a fabricated pattern — the real count changes the story completely.",
+          "Attaching actual quotes is what lets someone else check the synthesis, not just trust it.",
+          "No one mentioning pricing means the interview didn't cover it, not that pricing is a non-issue.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Synthesising 6 survey free-text responses about a new onboarding flow.",
+          fields: [
+            { key: "theme", label: "A claimed theme", hint: "In plain language.", minWords: 5 },
+            { key: "prevalence", label: "The real prevalence", hint: "X of Y, not a vibe word.", minWords: 5 },
+            { key: "evidence", label: "The quotes behind it", hint: "So someone else can check.", minWords: 6 },
+          ],
+          model: {
+            theme: "Several respondents found the signup form too long.",
+            prevalence: "3 of 6 respondents mentioned form length specifically.",
+            evidence: "\"too many fields\", \"why do you need my job title\", \"took forever to get through\" — the actual three comments.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PM3.1", "Reproduce", "Synthesise real research honestly",
+          "Take real interview or survey data from your own work. State a theme with its real prevalence and the quotes behind it.",
+          "Strong answer: prevalence is a real count, not a vibe word; the actual quotes are attached; silence is treated as a gap, not a finding.",
+          [
+            { key: "source", label: "The research", hint: "What it is, how many respondents.", minWords: 6 },
+            { key: "theme", label: "A claimed theme", hint: "Plain language.", minWords: 5 },
+            { key: "prevalence", label: "Real prevalence + quotes", hint: "X of Y, plus the evidence.", minWords: 8 },
+          ],
+          [
+            { label: "Prevalence is a real count, not a vibe word" },
+            { label: "Actual quotes are attached to the theme" },
+            { label: "Silence is treated as a gap, not evidence" },
+          ],
+          "independent"),
+        critiqueChallenge("PM3.2", "Adapt", "Fix an overstated research summary",
+          "Here's a research summary. Find every problem and rewrite it honestly.",
+          "\"Users love the new onboarding flow — it's a huge hit.\" (Based on 3 of 40 survey respondents leaving a positive comment about onboarding; the other 37 didn't mention it.)",
+          [
+            { label: "\"A huge hit\" vastly overstates 3 of 40 respondents", signals: ["3 of 40", "overstates", "small fraction", "not most users", "tiny minority"] },
+            { label: "37 respondents saying nothing isn't evidence of anything, positive or negative", signals: ["said nothing", "silence isn't evidence", "no mention", "37 said nothing", "didn't respond"] },
+            { label: "No negative or neutral feedback is mentioned — selective quoting", signals: ["selective", "cherry-pick", "only positive", "ignores negative", "one-sided"] },
+            { label: "No comparison to a baseline or the previous flow", signals: ["no baseline", "no comparison", "compared to what", "no before", "versus the old flow"] },
+          ],
+          "transferable",
+          { text: "\"3 of 40 survey respondents (8%) left an unprompted positive comment about the new onboarding flow. We don't have comparable data on the old flow, and 37 respondents didn't mention onboarding either way — this is a small positive signal, not evidence of broad preference.\"",
+            changes: ["Replaces 'a huge hit' with the real 8% figure", "States plainly that the other 37 said nothing, rather than implying broad approval", "Removes the one-sided framing", "Names the missing baseline instead of implying an improvement"] }),
+      ],
+    },
+    {
+      id: "PM4", name: "Draft specs and PRDs with AI, own the trade-offs",
+      canDo: "Get AI to draft a PRD fast — while you own every trade-off and fact it can't supply for you.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "AI drafted a full PRD from a one-line prompt — complete with invented user personas, a made-up success metric, and a launch timeline nobody had agreed to. It read great. None of it was real.",
+          point: "A PRD template has sections for personas, metrics and timelines — AI will fill them in with something plausible if you don't supply the real answers.",
+        },
+        explain: {
+          paras: [
+            "AI drafts structure and prose fast from what you actually give it. Feed it the real inputs — the actual problem, criteria, constraints and stakeholders already worked out — section by section, not a one-line prompt.",
+            "Check every stated fact traces to something real: a success metric nobody agreed to, a persona nobody researched, or a date nobody committed to are all invented the moment they appear polished on the page.",
+          ],
+          keyIdea: "Feed AI your real inputs section by section; check every fact in the draft traces to something actually agreed; treat genuine open questions AI surfaces as real work, not something to guess at.",
+        },
+        demonstrate: {
+          task: "Drafting a PRD for the CSV-migration feature (from PM1).",
+          steps: [
+            { move: "Feed real inputs", think: "Not a one-liner.", result: "Give AI the real problem, acceptance criteria and non-goals already decided." },
+            { move: "AI drafts sections", think: "Structure fast.", result: "Produces a problem statement, user stories, edge cases, and open questions." },
+            { move: "Check invented facts", think: "Does every claim trace to something real?", result: "AI invented \"90% of users complete export within 2 minutes\" as a success metric — nobody set that target; cut it." },
+            { move: "Answer real open questions", think: "AI flagged a genuine unknown.", result: "AI asked what happens to scheduled exports — a real open question, answered by the PM, not guessed at." },
+          ],
+          full: "AI drafted the PRD fast from real inputs already decided. An invented success metric was caught and cut; a genuine open question AI correctly surfaced was answered by a person instead of guessed at.",
+        },
+        deconstruct: [
+          "Feeding AI the real problem, criteria and non-goals already decided produced a far better draft than a one-line prompt would have.",
+          "An invented success metric reads exactly as confident as a real one — checking every number is non-negotiable.",
+          "AI correctly surfacing a genuine open question is a good sign, worth rewarding by actually answering it, not skipping past it.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Draft a PRD section for a feature that removes a confusing settings toggle.",
+          fields: [
+            { key: "inputs", label: "The real inputs you'd feed AI", hint: "Problem, criteria, constraints.", minWords: 8 },
+            { key: "invented", label: "What you'd check for invention", hint: "Metrics, personas, dates.", minWords: 6 },
+            { key: "openq", label: "A real open question to answer, not guess", hint: "Something genuinely unknown.", minWords: 5 },
+          ],
+          model: {
+            inputs: "The real problem (users toggle it by accident and file support tickets), the acceptance criterion (the toggle is removed and defaults to the safer setting), and the constraint that we can't break existing users who rely on the old setting.",
+            invented: "Any success metric with a specific percentage nobody agreed to, and any claim about how many users are affected that isn't from real ticket data.",
+            openq: "What happens to the small number of users currently using the non-default setting — that needs a real decision, not an assumption.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PM4.1", "Reproduce", "Draft and check a real PRD section",
+          "Take a real feature from your own work. Feed AI the real inputs, then check the draft for invented facts.",
+          "Strong answer: real inputs are named before drafting; at least one invented fact is caught and named; a genuine open question is answered, not skipped.",
+          [
+            { key: "feature", label: "The feature", hint: "One line.", minWords: 4 },
+            { key: "inputs", label: "The real inputs fed to AI", hint: "Problem, criteria, constraints.", minWords: 8 },
+            { key: "invented", label: "What the draft invented, if anything", hint: "Or a justified 'nothing found'.", minWords: 6 },
+          ],
+          [
+            { label: "Real inputs are named before drafting" },
+            { label: "The draft is checked for invented facts" },
+            { label: "A genuine open question is answered, not skipped" },
+          ],
+          "independent"),
+        scenarioChallenge("PM4.2", "Create", "The PRD states an invented conversion number",
+          "AI's PRD draft states: \"this will increase conversion by 15%\" — with no source and nobody having set that target.",
+          "What do you do?",
+          [
+            { id: "a", label: "Keep it — it sounds like a reasonable estimate", ok: false, why: "A plausible-sounding number with no source is still fabricated, and it will be quoted as if it were a real target." },
+            { id: "b", label: "Remove it — only include a success metric if there's a real target agreed with the team; otherwise state it as unknown", ok: true, why: "An unset target should read as unset, not be filled in with something invented for readability." },
+            { id: "c", label: "Soften it to \"may increase conversion by around 15%\"", ok: false, why: "Hedging a fabricated number doesn't make it real — it's still a made-up figure, just phrased more carefully." },
+          ],
+          "transferable"),
+      ],
+    },
+    {
+      id: "PM5", name: "Stakeholder communication that doesn't overpromise",
+      canDo: "Use AI to draft status updates and roadmap communications — accurate to the actual state, without inventing certainty about dates or scope.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "AI drafted a roadmap update saying a feature was \"on track for Q2.\" The engineer had flagged a blocking dependency the week before — the PM had mentioned it in passing, and AI's draft smoothed it into confident language anyway.",
+          point: "Asked to write a clean update, AI will round a hedge up to confidence because it reads better — exactly the direction that gets a PM in trouble.",
+        },
+        explain: {
+          paras: [
+            "A status update states what's actually known, names real risks and blockers, and never states a date as certain unless it's genuinely committed.",
+            "AI drafts fast from your notes; you supply the actual confidence level per item — on track, at risk, blocked — and check the draft didn't quietly upgrade a hedge into certainty for readability.",
+          ],
+          keyIdea: "Supply the real status and confidence level per item; check the draft didn't round a hedge up to certainty; never let AI invent a date that wasn't actually committed.",
+        },
+        demonstrate: {
+          task: "Drafting a monthly roadmap update for 4 features.",
+          steps: [
+            { move: "Supply real status", think: "Not vague.", result: "2 on track, 1 at risk (blocked on a dependency), 1 not started." },
+            { move: "AI drafts", think: "Clean and readable.", result: "Produces a readable update from the real statuses." },
+            { move: "Check for upgraded certainty", think: "Did it round up?", result: "AI wrote \"on track\" for the at-risk item because it read better; corrected back to \"at risk — blocked on X, need Y by Friday.\"" },
+            { move: "Check for invented dates", think: "Any date not actually committed?", result: "AI added \"expected mid-March\" for the not-started item with no basis; removed, replaced with \"not yet started, no date committed.\"" },
+          ],
+          full: "The update was drafted fast from the real statuses, but an at-risk item that had been smoothed into \"on track\" was corrected, and an invented date on the not-started item was removed.",
+        },
+        deconstruct: [
+          "AI rounding \"at risk\" up to \"on track\" because it reads better is exactly the failure mode that erodes stakeholder trust later.",
+          "An invented date reads just as confident as a committed one — the difference only shows up when it's checked.",
+          "Supplying the real confidence level per item up front is what a clean draft can't substitute for.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Draft a client-facing status email about a delayed delivery.",
+          fields: [
+            { key: "status", label: "The real status supplied", hint: "Not vague — the actual state.", minWords: 6 },
+            { key: "certainty", label: "What you'd check for upgraded certainty", hint: "A hedge rounded up.", minWords: 5 },
+            { key: "dates", label: "How you'd check dates", hint: "Committed vs invented.", minWords: 5 },
+          ],
+          model: {
+            status: "The delivery is now 2 weeks behind because a dependency from a third-party vendor slipped; we don't yet have a firm new date from them.",
+            certainty: "Check the draft doesn't say \"on track for next week\" when the real answer is \"waiting on the vendor, no firm date yet.\"",
+            dates: "Any specific new delivery date in the draft must be one the team actually committed to, not one that sounds reassuring.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PM5.1", "Reproduce", "Draft an honest status update",
+          "Take a real project status from your own work. Supply the real state and check the AI draft for upgraded certainty or invented dates.",
+          "Strong answer: the real status (including any risk) is stated plainly; the draft is checked for rounded-up confidence and invented dates.",
+          [
+            { key: "project", label: "The project", hint: "One line.", minWords: 4 },
+            { key: "status", label: "The real status", hint: "Including any risk or blocker.", minWords: 8 },
+            { key: "checked", label: "What you checked in the draft", hint: "Upgraded certainty, invented dates.", minWords: 8 },
+          ],
+          [
+            { label: "Real status, including risk, is stated plainly" },
+            { label: "Draft checked for upgraded certainty" },
+            { label: "Draft checked for invented dates" },
+          ],
+          "independent"),
+        scenarioChallenge("PM5.2", "Create", "The draft says \"we're confident this will ship Friday\"",
+          "The team hasn't finished testing, and there's a known open bug. AI's draft update says \"we're confident this will ship Friday.\"",
+          "What do you do?",
+          [
+            { id: "a", label: "Send it — Friday is still the target", ok: false, why: "A target and a confident promise are different things; stating unfinished testing and a known bug as confidence is inaccurate." },
+            { id: "b", label: "Rewrite it to state the real status — testing in progress, one known open bug — and give Friday as a target, not a promise", ok: true, why: "Match the language to what's actually known, and keep the target separate from a commitment." },
+            { id: "c", label: "Just remove the word \"confident\" and leave the rest", ok: false, why: "The underlying problem is the update doesn't mention testing or the open bug at all — one word isn't the fix." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
+  // =================================================================
+  //  PUBLIC SECTOR & GOVERNMENT SERVICES — a sixth wave, new domain.
+  // =================================================================
+  const PS_COMPETENCIES = [
+    {
+      id: "PS1", name: "Drafting public-facing guidance with AI",
+      canDo: "Use AI to draft public-facing guidance and citizen communications — accurate to the actual policy, in plain language, without inventing rules.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "AI drafted a guidance page answering \"who qualifies for the grant\" and invented a plausible-sounding eligibility rule that wasn't in the actual scheme. It read authoritative. A citizen relied on it and was later told they didn't qualify.",
+          point: "AI pattern-matches to how these schemes usually work. What this scheme actually says has to come from the real document, every time.",
+        },
+        explain: {
+          paras: [
+            "AI drafts fluent, accessible-sounding text fast. Every rule, eligibility criterion or number it states must be traced to the actual policy document — not paraphrased confidently from how similar schemes usually work.",
+            "Plain language is a genuine, separate skill worth having AI help with. Simplifying wording is fine; inventing content to fill a gap in the source is not — an unanswered question in the policy stays unanswered in the guidance, flagged for a real answer.",
+          ],
+          keyIdea: "Feed AI the real policy text, check every stated rule and number against it, and flag genuine gaps in the source instead of guessing at an answer.",
+        },
+        demonstrate: {
+          task: "Drafting a plain-language guidance page for a small-business grant scheme.",
+          steps: [
+            { move: "Feed the actual policy text", think: "Not a summary of similar schemes.", result: "Give AI the real eligibility rules and figures from the scheme document." },
+            { move: "AI drafts plain language", think: "Readable version.", result: "Produces a clear, accessible draft." },
+            { move: "Check every claim against the source", think: "Does each stated rule exist in the real document?", result: "AI added \"fewer than 10 employees\" — the real cap was 15; corrected." },
+            { move: "Check for gaps papered over", think: "What wasn't actually in the source?", result: "The draft implied sole traders qualify; the scheme document doesn't say either way — flagged for a real policy answer, not guessed." },
+          ],
+          full: "The guidance was drafted in plain language from the real policy text, one incorrect figure was caught and corrected against the source, and a genuine gap in the policy was flagged rather than silently resolved.",
+        },
+        deconstruct: [
+          "An invented eligibility rule reads exactly as authoritative as a real one — checking every stated rule against the source document is non-negotiable.",
+          "A wrong cap (10 vs 15 employees) could genuinely exclude someone who qualifies — the stakes of an unchecked figure here are real.",
+          "A genuine gap in the policy stays a gap in the guidance, flagged for a real answer — not smoothed over by AI guessing at what's probably meant.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Draft plain-language guidance from a real (or realistic) policy extract about a council parking permit scheme.",
+          fields: [
+            { key: "source", label: "The real source you'd feed AI", hint: "The actual policy text, not a summary.", minWords: 6 },
+            { key: "checked", label: "What you'd verify against the source", hint: "Every rule and number.", minWords: 6 },
+            { key: "gaps", label: "A gap you'd flag rather than guess", hint: "Something the policy doesn't actually say.", minWords: 5 },
+          ],
+          model: {
+            source: "The council's actual permit policy document, including the real fee, the eligibility radius, and the renewal process.",
+            checked: "Every fee, distance and deadline in the draft is checked word-for-word against the policy document, not assumed to match similar schemes.",
+            gaps: "The policy doesn't say what happens if someone moves address mid-permit — flag that for the policy team rather than inventing an answer.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PS1.1", "Reproduce", "Draft checked guidance from a real policy",
+          "Take a real (or realistic) policy document from your own work. Draft plain-language guidance and verify every claim against it.",
+          "Strong answer: every rule/number in the draft is traced to the real document; any gap in the source is flagged, not guessed at.",
+          [
+            { key: "policy", label: "The policy", hint: "One line, what it covers.", minWords: 5 },
+            { key: "draft", label: "The plain-language draft", hint: "Or a summary of it.", minWords: 10 },
+            { key: "verified", label: "What you checked against the source", hint: "And what you found.", minWords: 8 },
+          ],
+          [
+            { label: "Rules and numbers traced to the real document" },
+            { label: "Plain language, not just simplified vocabulary" },
+            { label: "A genuine gap is flagged, not guessed at" },
+          ],
+          "independent"),
+        critiqueChallenge("PS1.2", "Adapt", "Fix guidance with an invented rule",
+          "Here's a draft guidance page. Find every problem.",
+          "\"To qualify for the home insulation grant, you must own your home, have lived there for at least 2 years, and have a combined household income under £40,000.\" (The actual scheme document says nothing about a minimum residency period.)",
+          [
+            { label: "The 2-year residency requirement doesn't exist in the actual scheme — it's invented", signals: ["invented", "doesn't exist", "not in the scheme", "fabricated", "no such rule"] },
+            { label: "No citation to the source policy for any of the stated figures", signals: ["no citation", "no source", "not traced", "unverified", "where does this come from"] },
+            { label: "An invented eligibility rule could wrongly exclude a real applicant", signals: ["wrongly exclude", "real applicant", "turns someone away", "excludes people who qualify"] },
+            { label: "No route to check or challenge an eligibility decision is mentioned", signals: ["no route to challenge", "no appeal", "how do i query", "no contact"] },
+          ],
+          "transferable",
+          { text: "\"To qualify for the home insulation grant: you must own your home, and your combined household income must be under £40,000 (see scheme document section 3). If you're unsure whether you qualify, contact [team] before applying.\"",
+            changes: ["Removes the invented 2-year residency requirement", "Cites the source section for the income figure", "Adds a route to check eligibility before applying"] }),
+      ],
+    },
+    {
+      id: "PS2", name: "Summarising public consultation responses fairly",
+      canDo: "Use AI to summarise public consultation submissions — representing the real range of views, including minority positions, without smoothing them away.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "AI summarised 200 consultation responses as \"overwhelming support for the proposal.\" The real breakdown was 55% support, 30% opposed with a specific accessibility concern, 15% mixed. The opposition's concern — a real, fixable issue — was dropped from the summary for being a minority view.",
+          point: "A consultation exists partly to surface exactly the concerns a majority-support headline erases.",
+        },
+        explain: {
+          paras: [
+            "Summarising many submissions needs real proportions stated with numbers — \"most\" or \"overwhelming\" without a figure hides how close or lopsided it actually was.",
+            "Minority and dissenting views get represented on their substance, not dropped for being few. And a question many people skipped is a gap in what was asked, not evidence of agreement.",
+          ],
+          keyIdea: "State real proportions with numbers, represent minority concerns on their substance, and treat unanswered questions as gaps, not agreement.",
+        },
+        demonstrate: {
+          task: "Summarising 200 responses to a proposed bus-route change.",
+          steps: [
+            { move: "State real proportions", think: "Numbers, not vibe words.", result: "55% support, 30% opposed, 15% mixed — stated as figures, not \"most people.\"" },
+            { move: "Pull out substantive minority concerns", think: "Even if few.", result: "The 30% opposed raised a specific accessibility issue — the new route removes a stop near a care home." },
+            { move: "Check no theme was dropped for being small", think: "Small isn't irrelevant.", result: "A 5% mention of cost impact almost got cut for being minor — kept, since it's a real, distinct concern." },
+            { move: "Distinguish silence from agreement", think: "Unanswered isn't agreement.", result: "40% didn't comment on the proposed timing — noted as unanswered, not counted as support." },
+          ],
+          full: "The summary stated real proportions, kept the substantive accessibility concern from the opposing minority visible and specific, and treated an unanswered question as a gap rather than folding it into apparent support.",
+        },
+        deconstruct: [
+          "\"Overwhelming support\" from 55% erases how substantial the 30% opposition actually was.",
+          "The accessibility concern was real and fixable — dropping it for being a minority view would have missed the point of consulting at all.",
+          "40% not commenting on timing is a gap in the data, not a silent 40% in favour.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Summarise 50 responses to a proposed change in library opening hours.",
+          fields: [
+            { key: "proportions", label: "Real proportions", hint: "Numbers, not vibe words.", minWords: 6 },
+            { key: "minority", label: "A minority concern kept on its substance", hint: "Not dropped for being few.", minWords: 6 },
+            { key: "silence", label: "Something people didn't comment on", hint: "Treated as a gap, not agreement.", minWords: 5 },
+          ],
+          model: {
+            proportions: "30 of 50 supported the change, 12 opposed, 8 gave mixed or conditional views.",
+            minority: "Several of the 12 opposed specifically raised that evening closure would affect students who use the library after school — a distinct, actionable concern.",
+            silence: "Almost nobody commented on weekend hours specifically, which is a gap in the consultation, not evidence people are happy with the current weekend hours.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PS2.1", "Reproduce", "Summarise real consultation responses fairly",
+          "Take real (or realistic) consultation responses from your own work. State real proportions and represent a minority concern on its substance.",
+          "Strong answer: proportions are real numbers; a minority concern is represented specifically, not dropped; silence is distinguished from agreement.",
+          [
+            { key: "consultation", label: "The consultation", hint: "One line, what it's about.", minWords: 5 },
+            { key: "proportions", label: "Real proportions", hint: "Numbers.", minWords: 6 },
+            { key: "minority", label: "A minority concern, kept specific", hint: "Not smoothed away.", minWords: 6 },
+          ],
+          [
+            { label: "Proportions stated as real numbers" },
+            { label: "A minority concern is represented on its substance" },
+            { label: "Silence is distinguished from agreement" },
+          ],
+          "independent"),
+        scenarioChallenge("PS2.2", "Create", "The summary dropped the dissenting view",
+          "An AI-drafted consultation summary says \"the proposal was well received\" and doesn't mention that 30% of respondents raised a specific accessibility concern.",
+          "What's wrong, and what do you do?",
+          [
+            { id: "a", label: "Leave it — 30% is still a minority, and the majority is what matters for the decision", ok: false, why: "The decision may still go ahead, but the consultation's job is to surface the concern, not erase it from the record." },
+            { id: "b", label: "Rewrite the summary to state the real proportions and represent the accessibility concern specifically, regardless of the eventual decision", ok: true, why: "A consultation summary's job is accurate representation, not making the outcome look cleaner than it was." },
+            { id: "c", label: "Mention that \"some concerns were raised\" without specifics", ok: false, why: "Vague acknowledgement without the actual concern is nearly as bad as omitting it — a reader can't act on \"some concerns.\"" },
+          ],
+          "transferable"),
+      ],
+    },
+    {
+      id: "PS3", name: "Case processing support — the decision stays human",
+      canDo: "Use AI to help process applications and cases faster — while the actual decision, and its reasoning, stays with an accountable person.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "An automated pre-screen for a benefits application quietly rejected applications from a specific postcode area at a much higher rate. It was only discovered after a complaint — a feature correlated with the postcode had been acting as a proxy nobody had checked for.",
+          point: "A pre-screen that quietly decides, rather than flags for a person, can encode and scale a pattern nobody intended and nobody is checking.",
+        },
+        explain: {
+          paras: [
+            "AI can check application completeness, compile facts against explicit published criteria, and draft the decision letter. It must not be the decision-maker — especially where there's an appeal right.",
+            "The reasoning behind every decision has to be stated in terms of the actual published criteria, checkable by the applicant, with a named accountable person who can explain it — not \"the system flagged it.\"",
+          ],
+          keyIdea: "AI compiles and checks completeness against explicit criteria; a person decides, explains the reasoning in terms of those criteria, and is accountable — every time, not just on appeal.",
+        },
+        demonstrate: {
+          task: "Processing applications for a hardship fund.",
+          steps: [
+            { move: "AI checks completeness", think: "Mechanical.", result: "Flags any application missing a required document before it reaches a caseworker." },
+            { move: "AI compiles against criteria", think: "Not a recommendation.", result: "Lays out how each application matches the published eligibility criteria, with the source document quoted." },
+            { move: "A person decides", think: "Not automatic.", result: "The caseworker reads the compiled evidence and makes the actual eligibility call." },
+            { move: "The reasoning is recorded", think: "Checkable.", result: "The decision letter states which criteria were and weren't met, in plain terms the applicant can contest." },
+          ],
+          full: "AI sped up completeness checking and evidence compilation. Every decision was still made and owned by a named caseworker, with reasoning recorded in terms an applicant could actually contest.",
+        },
+        deconstruct: [
+          "A completeness check and a compiled evidence pack are not the same as a decision — the difference is where the actual judgement happens.",
+          "A proxy for a protected characteristic can hide inside an innocent-looking feature — that's exactly why the decision needs a human check, every time, not just on complaint.",
+          "\"The system flagged it\" is not an explanation an applicant can contest; the published criteria are.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Design AI support for processing planning-permission applications.",
+          fields: [
+            { key: "aidoes", label: "What AI legitimately does", hint: "Completeness, compiling against criteria.", minWords: 6 },
+            { key: "humandoes", label: "What stays with a person, and how it's explained", hint: "The actual decision.", minWords: 6 },
+            { key: "check", label: "How you'd check for a hidden proxy pattern", hint: "Not just on complaint.", minWords: 5 },
+          ],
+          model: {
+            aidoes: "Checks the application has all required documents and plans, and compiles it against the published planning criteria with citations.",
+            humandoes: "A planning officer makes the actual decision and states it in terms of the specific criteria met or not met, so it can be appealed on those grounds.",
+            check: "Periodically compare approval rates across different applicant areas or types against the stated criteria to catch a pattern nobody intended.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PS3.1", "Reproduce", "Design AI support for a real case process",
+          "Take a real (or realistic) application or case process. Split what AI legitimately does from what stays with an accountable person.",
+          "Strong answer: AI's role is completeness/compiling only; a named person decides and can explain the reasoning in terms of the criteria.",
+          [
+            { key: "process", label: "The process", hint: "One line.", minWords: 5 },
+            { key: "aidoes", label: "What AI does", hint: "Completeness, compiling.", minWords: 6 },
+            { key: "humandoes", label: "What stays human, and how it's explained", hint: "The decision + reasoning.", minWords: 8 },
+          ],
+          [
+            { label: "AI's role is limited to completeness/compiling against criteria" },
+            { label: "A named person makes and owns the decision" },
+            { label: "The reasoning is stated in terms an applicant can contest" },
+          ],
+          "independent"),
+        scenarioChallenge("PS3.2", "Create", "The pre-screen learned a postcode pattern",
+          "Analysis shows an AI pre-screen has been down-ranking applications from a specific postcode area at a much higher rate than others, for reasons nobody set out to create.",
+          "What do you do?",
+          [
+            { id: "a", label: "Add a rule telling the system to ignore postcode", ok: false, why: "If the pattern is learned from correlated features, telling it to ignore the obvious one doesn't remove the underlying bias." },
+            { id: "b", label: "Stop letting the pre-screen produce a ranking that drives outcomes; score only against the explicit published criteria, with a person reviewing every decision and rates monitored by area", ok: true, why: "Remove the learned pattern from having any decision-making power, and keep checking for it going forward." },
+            { id: "c", label: "Only review the postcode area's applications more closely from now on", ok: false, why: "That singles out the affected group again rather than fixing the process that produced the bias for everyone." },
+          ],
+          "transferable"),
+      ],
+    },
+    {
+      id: "PS4", name: "Records and information requests support",
+      canDo: "Use AI to help process records and information requests — with every disclosure checked against exemptions by a person before release.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "AI drafted a response to an information request and redacted what it judged to be personal data — but missed a commercially sensitive figure buried in an attached spreadsheet. It went out unredacted before anyone caught it.",
+          point: "A disclosure is one-way. AI's redaction pass is a first draft, not the check.",
+        },
+        explain: {
+          paras: [
+            "AI can help search and compile the documents that are actually responsive to a request, and draft the covering response fast.",
+            "The exemption and redaction decision — what can and can't be released — must be checked by a person against the real, complete document, including attachments, before release. Once sent, it can't be unsent.",
+          ],
+          keyIdea: "AI compiles and proposes redactions; a person checks every proposed redaction and hunts for anything AI missed, especially in attachments, before anything irreversible goes out.",
+        },
+        demonstrate: {
+          task: "Responding to an information request that includes an email thread with an attachment.",
+          steps: [
+            { move: "Compile responsive documents", think: "Everything in scope.", result: "AI gathers the email thread and its spreadsheet attachment." },
+            { move: "AI proposes redactions", think: "A first pass.", result: "Flags a named individual's email address for redaction in the thread." },
+            { move: "A person checks every proposal, and hunts for what was missed", think: "Including attachments.", result: "The reviewer finds an unredacted commercially sensitive figure in the spreadsheet AI hadn't flagged." },
+            { move: "Sign-off and log", think: "Before release.", result: "The corrected response is approved by a named officer, with what was withheld and why logged for any appeal." },
+          ],
+          full: "AI compiled the documents and proposed a first-pass redaction, but a person's own check of the full document, attachments included, caught a sensitive figure AI had missed, before anything was released.",
+        },
+        deconstruct: [
+          "AI's redaction proposal was a reasonable first pass and still missed something real in an attachment — exactly why it can't be the final check.",
+          "Attachments are where a redaction pass is most likely to miss something, precisely because they're easy to skim past.",
+          "Logging what was withheld and why is what makes an eventual appeal possible to handle fairly.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Design the AI-assisted process for a records request that includes a long email thread.",
+          fields: [
+            { key: "compile", label: "What AI compiles", hint: "Search and gather.", minWords: 5 },
+            { key: "check", label: "What a person checks before release", hint: "Every proposal, plus attachments.", minWords: 6 },
+            { key: "log", label: "What's logged for appeal", hint: "What was withheld and why.", minWords: 5 },
+          ],
+          model: {
+            compile: "AI searches the mailbox and gathers every email and attachment that's actually responsive to the request.",
+            check: "A named officer reviews every AI-proposed redaction against the source, and separately checks attachments for anything AI didn't flag.",
+            log: "Each withheld item is logged with the specific exemption it falls under, so a later appeal can be assessed against the actual reasoning.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PS4.1", "Reproduce", "Design a checked records-request process",
+          "Take a real (or realistic) records/information request process. Design the AI-assisted compile step and the human check before release.",
+          "Strong answer: AI's role is compiling and a first redaction pass; a person checks every proposal plus attachments; withheld items are logged with their reason.",
+          [
+            { key: "request", label: "The request type", hint: "One line.", minWords: 5 },
+            { key: "compile", label: "What AI compiles/proposes", hint: "Search, first-pass redaction.", minWords: 6 },
+            { key: "check", label: "The human check before release", hint: "Including attachments.", minWords: 8 },
+          ],
+          [
+            { label: "AI's redaction proposal is treated as a first pass" },
+            { label: "A person checks attachments specifically, not just the main document" },
+            { label: "Withheld items are logged with the specific reason" },
+          ],
+          "independent"),
+        critiqueChallenge("PS4.2", "Adapt", "Find the gap in a records-request workflow",
+          "Here's how records requests are handled. Find every problem.",
+          "\"AI searches the mailbox, redacts anything that looks like personal data, and the response is sent out the same day to keep our response times fast.\"",
+          [
+            { label: "No human check of AI's proposed redactions before release", signals: ["no human check", "no review", "not checked", "unreviewed", "no second pair of eyes"] },
+            { label: "\"Anything that looks like personal data\" will miss non-personal but sensitive information, like commercial figures", signals: ["commercially sensitive", "not just personal data", "other exemptions", "misses other sensitive"] },
+            { label: "Same-day send with no review step prioritises speed over an irreversible check", signals: ["same day", "irreversible", "too fast", "no time to check", "speed over accuracy"] },
+            { label: "No log of what was withheld or why, for a later appeal", signals: ["no log", "no record of what was withheld", "no reason recorded", "can't appeal"] },
+          ],
+          "transferable",
+          { text: "\"AI searches the mailbox and proposes redactions for personal data and other exempt information. A named officer reviews every proposed redaction against the source documents, including attachments, before release. What's withheld and the specific exemption is logged for any appeal.\"",
+            changes: ["Adds the missing human review step before release", "Widens the redaction check beyond personal data to other exemption categories", "Removes the same-day-regardless-of-review framing", "Adds a logged reason for every withheld item"] }),
+      ],
+    },
+    {
+      id: "PS5", name: "Procurement and vendor evaluation support",
+      canDo: "Use AI to help summarise and score vendor bids — while the scoring criteria, conflicts of interest, and the final award decision stay explicit and human.",
+      lesson: {
+        activate: {
+          heading: "When this goes wrong",
+          story: "AI's bid summary favoured a vendor because their proposal was better written — not because it scored higher against the actual published criteria. A stronger bid on paper, less polished in prose, ranked lower in the AI's summary for reasons that had nothing to do with what was being procured.",
+          point: "AI is genuinely good at summarising prose quality. Prose quality is not a procurement criterion.",
+        },
+        explain: {
+          paras: [
+            "AI can extract each bid's claims and lay them out against the published scoring criteria, fast, across many bids.",
+            "Scoring must be against those explicit criteria, not writing quality or confidence of tone. Conflicts of interest and the final award decision are a human panel's job, with the reasoning recorded so the decision can be challenged or audited.",
+          ],
+          keyIdea: "Extract each bid's claims against the published criteria only; a human panel scores, checks conflicts of interest, and makes the award decision, with reasoning recorded.",
+        },
+        demonstrate: {
+          task: "Evaluating 5 bids for an IT support contract.",
+          steps: [
+            { move: "Extract claims per criterion", think: "Not overall impression.", result: "AI lays out what each bid claims against each of the 6 published scoring criteria." },
+            { move: "Check the extraction, not the prose", think: "Substance over style.", result: "One well-written bid's claims against \"response time\" turn out vaguer than a plainer bid's specific SLA commitment." },
+            { move: "Check conflicts of interest", think: "Before scoring is finalised.", result: "A panel member flags a prior working relationship with one bidder and recuses themselves from scoring that bid." },
+            { move: "The panel decides and records why", think: "Auditable.", result: "The award decision states the scores per criterion and the reasoning, available if challenged." },
+          ],
+          full: "AI extracted each bid's claims against the actual criteria, which surfaced that a plainer bid had a more specific, stronger commitment than a better-written one. A conflict of interest was caught and handled, and the panel's reasoning was recorded.",
+        },
+        deconstruct: [
+          "A better-written proposal and a better bid against the actual criteria are not the same thing — AI's extraction made that visible instead of hidden behind prose quality.",
+          "Catching a conflict of interest before scoring is finalised protects the integrity of the whole process, not just that one bid.",
+          "Recording the reasoning per criterion is what makes an award decision defensible if challenged.",
+        ],
+        guided: {
+          intro: "Your turn. Then reveal the model answer.",
+          task: "Design AI support for evaluating bids for a building-maintenance contract.",
+          fields: [
+            { key: "extract", label: "What AI extracts", hint: "Per published criterion.", minWords: 6 },
+            { key: "coi", label: "How conflicts of interest are checked", hint: "Before scoring is final.", minWords: 5 },
+            { key: "decide", label: "How the panel decides and records why", hint: "Auditable reasoning.", minWords: 6 },
+          ],
+          model: {
+            extract: "AI lays out each bid's stated price, response-time commitment, and relevant experience against the published scoring criteria, quoting the bid text.",
+            coi: "Every panel member declares any prior relationship with a bidder before scoring begins, and recuses from scoring that specific bid if there's a conflict.",
+            decide: "The panel scores each bid per criterion independently, then discusses and records the final award reasoning against those scores.",
+          },
+        },
+      },
+      challenges: [
+        fieldsChallenge("PS5.1", "Reproduce", "Score real bids against explicit criteria",
+          "Take a real (or realistic) procurement decision. Extract bid claims against the published criteria, and check for conflicts of interest.",
+          "Strong answer: extraction is per explicit criterion, not overall impression; conflicts of interest are checked before scoring is final; reasoning is recorded.",
+          [
+            { key: "procurement", label: "The procurement", hint: "One line.", minWords: 5 },
+            { key: "extract", label: "Claims extracted per criterion", hint: "Not overall impression.", minWords: 8 },
+            { key: "coi", label: "Conflicts of interest checked", hint: "Before scoring is final.", minWords: 5 },
+          ],
+          [
+            { label: "Extraction is against explicit criteria, not writing quality" },
+            { label: "Conflicts of interest are checked before scoring is final" },
+            { label: "The award reasoning is recorded" },
+          ],
+          "independent"),
+        scenarioChallenge("PS5.2", "Create", "The AI summary favoured the best-written bid",
+          "AI's bid comparison ranks Bid A highest, citing it as \"the strongest overall proposal\" — but on the specific published criteria, Bid B commits to a faster response time and a lower price.",
+          "What's the issue, and what do you do?",
+          [
+            { id: "a", label: "Go with the AI's overall ranking — it read all the bids in full", ok: false, why: "Reading all the bids doesn't mean the ranking is based on the published criteria rather than how persuasively each was written." },
+            { id: "b", label: "Re-score both bids explicitly against each published criterion, not an overall impression, and use that to decide", ok: true, why: "Procurement scoring has to be against the stated criteria specifically, not a holistic 'strongest overall' read." },
+            { id: "c", label: "Ask AI to re-rank them, emphasising it should be objective this time", ok: false, why: "Telling it to be more objective doesn't fix the underlying issue — the extraction needs to be structured against explicit criteria, not another holistic pass." },
+          ],
+          "transferable"),
+      ],
+    },
+  ];
+
   const PATHWAYS = [
     // ---- Using AI at work ----
     {
@@ -8102,6 +8968,26 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       forRoles: "clinicians · nurses · medical admin · allied health · practice managers",
       status: "available", prereq: "foundation",
       competencies: HEALTH_COMPETENCIES, capstoneId: "HEALTHCAP",
+      rubricEmphasis: ["Safety", "Verification"],
+    },
+
+    // ---- Fifth/sixth wave: Product Management, Public Sector ----
+    {
+      id: "pm", group: "work",
+      title: "Product Management",
+      tagline: "Turn vague asks into real specs, prioritise against named criteria, and synthesise research honestly — without AI inventing the parts only judgement can supply.",
+      forRoles: "product managers · founders wearing the PM hat · product owners",
+      status: "available", prereq: "foundation",
+      competencies: PM_COMPETENCIES, capstoneId: "PMCAP",
+      rubricEmphasis: ["Reasoning", "Evidence"],
+    },
+    {
+      id: "public", group: "work",
+      title: "Public Sector & Government Services",
+      tagline: "Draft guidance, summarise consultations, and process cases with AI — while decisions, disclosures and fairness stay with an accountable person.",
+      forRoles: "civil servants · council officers · policy and grants teams · public-facing case workers",
+      status: "available", prereq: "foundation",
+      competencies: PS_COMPETENCIES, capstoneId: "PSCAP",
       rubricEmphasis: ["Safety", "Verification"],
     },
   ];
@@ -8423,6 +9309,46 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
         { key: "patientinfo", label: "Patient-facing information handling", hint: "Clinician approval; dosing / warnings / safety-netting; accessibility.", minWords: 8 },
         { key: "governance", label: "The safety case + owner + incident route", hint: "Named accountability; how a bad output is reported and actioned.", minWords: 10 },
         { key: "stopmonitor", label: "Monitoring + the kill switch", hint: "Post-update checks; the fallback to manual.", minWords: 8 },
+      ],
+      rubricDims: ["Safety", "Verification", "Reasoning", "Structure", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "PMCAP",
+      pathway: "pm",
+      title: "Work Capstone — spec, prioritise and ship a real feature with AI, honestly",
+      after: ["PM1", "PM2", "PM3", "PM4", "PM5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real feature or request from your own work. Spec the real problem, prioritise it against named criteria, synthesise any research honestly, and draft the PRD and a status update — with every fact and trade-off checked.",
+      whatGood:
+        "The spec names a real problem distinct from the requested feature, with checkable acceptance criteria and non-goals; prioritisation used named criteria with spot-checked reasoning and a stated human trade-off; any research synthesis states real prevalence with quotes attached; the PRD's facts are checked against real inputs, not invented; and a status update states real confidence without upgrading a hedge.",
+      fields: [
+        { key: "spec", label: "The real problem, criteria and non-goals", hint: "Distinct from the requested feature.", minWords: 15 },
+        { key: "prioritise", label: "Prioritisation: criteria, spot-check, trade-off", hint: "Named criteria; what you checked; the human call.", minWords: 12 },
+        { key: "research", label: "Research synthesis, if used", hint: "Real prevalence + quotes, or 'not applicable' explained.", minWords: 8 },
+        { key: "prd", label: "The PRD draft, fact-checked", hint: "What was invented and caught.", minWords: 12 },
+        { key: "comms", label: "A status update, checked for overpromising", hint: "Real confidence, no invented dates.", minWords: 8 },
+      ],
+      rubricDims: ["Clarity", "Structure", "Reasoning", "Evidence", "Verification"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "PSCAP",
+      pathway: "public",
+      title: "Work Capstone — a real public-facing AI use, done accountably",
+      after: ["PS1", "PS2", "PS3", "PS4", "PS5"],
+      stage: "Demonstration",
+      brief:
+        "Take a real or realistic public-sector AI use from your own work — guidance, a consultation, a case process, a records request, or a procurement. Show the AI's role, what a person checked or decided, and how it's recorded.",
+      whatGood:
+        "Every stated rule/figure is traced to a real source, not invented; proportions and minority views (where relevant) are represented honestly; the actual decision or disclosure stays with a named accountable person who can explain the reasoning; and what was checked, decided or withheld is logged for challenge or appeal.",
+      fields: [
+        { key: "usecase", label: "The public-sector use", hint: "One line: guidance, consultation, case, records, or procurement.", minWords: 8 },
+        { key: "aidoes", label: "What AI does", hint: "Drafting, compiling, extracting — the mechanical part.", minWords: 10 },
+        { key: "verified", label: "What was checked against a real source", hint: "Rules, figures, proportions.", minWords: 10 },
+        { key: "human", label: "The human decision + how it's explained", hint: "Named accountability, contestable reasoning.", minWords: 10 },
+        { key: "record", label: "What's logged for challenge or appeal", hint: "What was decided/withheld and why.", minWords: 8 },
       ],
       rubricDims: ["Safety", "Verification", "Reasoning", "Structure", "Evidence"],
       raisesTo: "advanced",

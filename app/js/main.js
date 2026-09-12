@@ -801,14 +801,14 @@
       <h1>${esc(p.title)}</h1>
       <p class="lead">${esc(p.tagline)}</p>
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
-      ${["legal","finance","hr","health"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
+      ${["legal","finance","hr","health","public"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
         <strong>Reviewed for unverified specifics, not yet signed off by a licensed professional.</strong>
         This pathway teaches AI-workflow judgement, not the law/regulation of your jurisdiction —
         every lesson was checked (2026-09-12) to defer to your own jurisdiction, policy or a
         qualified professional rather than state a specific regulation, threshold or citation as
-        settled fact. Scenario numbers and company policies in the examples are illustrative.
-        Still pending formal sign-off by a lawyer/accountant/HR specialist/clinician — check
-        anything you rely on.</div>` : ""}
+        settled fact. Scenario numbers and policies in the examples are illustrative.
+        Still pending formal sign-off by a lawyer/accountant/HR specialist/clinician/legal-policy
+        officer as relevant — check anything you rely on.</div>` : ""}
       ${p.prereq && p.prereq !== "foundation" && C.pathway(p.prereq)
         ? `<div class="notice" style="margin-bottom:14px">Best taken after the
            <a data-nav href="#/pathway/${p.prereq}">${esc(C.pathway(p.prereq).title)}</a> pathway —
@@ -880,17 +880,18 @@
   function viewAbout() {
     return `
       <h1>About this prototype</h1>
-      <p class="lead">AI Faculty v0.6 — foundation module + 16 work &amp; build pathways.</p>
+      <p class="lead">AI Faculty v0.7 — foundation module + 18 work &amp; build pathways.</p>
       <ul>
         <li><strong>Diagnostic</strong> → Learner Intelligence Model</li>
         <li><strong>Foundation module</strong> (AI-Assisted Workflow Designer, C1–C7): each competency is a
           6-step lesson — story → idea → played worked example → the moves → quick-check MCQs → guided
           attempt — then 2–3 rubric-assessed challenges on your own task</li>
         <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
-        <li><strong>Pathways</strong> — after the foundation, go deep. 16 built, each with a capstone:
+        <li><strong>Pathways</strong> — after the foundation, go deep. 18 built, each with a capstone:
           <em>Using AI at work</em> (Software, Content, Operations &amp; Admin, Customer Support,
           Research &amp; Analysis, Education &amp; Training, Legal &amp; Contracts, Sales,
-          Finance &amp; Accounting, HR &amp; People, Healthcare &amp; Clinical Support) and
+          Finance &amp; Accounting, HR &amp; People, Healthcare &amp; Clinical Support, Product
+          Management, Public Sector &amp; Government Services) and
           <em>building AI</em> (AI Engineering, Technical Foundations, ML Practitioner,
           Agentic Systems, AI Safety)</li>
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>

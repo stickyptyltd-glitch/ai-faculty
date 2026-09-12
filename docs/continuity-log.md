@@ -514,6 +514,40 @@ specific critique — the assessor isn't trivially gameable by word-count alone.
 Confirmed end-state: `foundationDone = true`, all 3 checkpoints (CP1, CP2, OPSCAP) passed and
 confirmed, 29 evidence records, Ops & Admin pathway 100% (5/5) with capstone passed.
 
+## v0.24 — 2026-09-12 — Repo relocated; two new pathways (Product Management, Public Sector)
+
+**Repo moved.** Mid-session, the founder asked for a company-wide file consolidation pass
+(matching the earlier MindMend/TrueKindred cleanup). AI Faculty is a Sticky Pty Ltd platform but
+not a health-and-therapy sub-brand, so it moved as a sibling top-level folder: from
+`/home/dayle/projects/ai-faculty` to
+`<9800224a drive>/sticky/sticky.pty.ltd/ai-faculty/` (a real `mv`, not a copy — git history,
+remote and the one uncommitted change all carried over intact). Confirmed via a full-machine
+search that this was the **only** copy anywhere — nothing to dedup, nothing archived under
+`_legacy_`. A pre-move snapshot (paths/sizes/mtimes, git status/log) is at
+`/home/dayle/Desktop/ai-faculty_snapshots/pre-move-20260912-171245.txt`. The company's
+`COMPANY_MAP.md` now has a full "Platform 2: AI Faculty" section. **Everything else —
+`aifaculty.org`, the GitHub remote, Cloudflare account/project, build/deploy commands — is
+unchanged**; only the local path on disk moved.
+
+**Two new pathways**, following the standing pattern (`docs/expansion-prompt.md`) after the
+founder said to continue building breadth:
+- **Product Management** (PM1–PM5, PMCAP) — spec a vague ask, prioritise against named criteria
+  (not an AI-invented proxy), synthesise user research without inventing prevalence, draft PRDs
+  with facts checked against real inputs, and stakeholder comms that don't upgrade a hedge to a
+  promise.
+- **Public Sector & Government Services** (PS1–PS5, PSCAP) — drafting public guidance grounded
+  in the real policy document, summarising consultations without smoothing away minority views,
+  case-processing support where the decision stays human (same "stays human" pattern as HR5),
+  records/FOI requests with a human check before an irreversible disclosure, and procurement
+  scoring against explicit criteria rather than writing quality. Added to the regulated-domain
+  banner list (`main.js`) alongside Legal/Finance/HR/Health, for the same reason — FOI/procurement/
+  decision-fairness concepts vary by jurisdiction, and the lessons were written to defer to real
+  policy/jurisdiction throughout, same discipline as the v0.22 audit.
+- 18 pathways now, 89 pathway-competencies (79 + 10). Validated with an upgraded structural
+  sweep (now also checks checkpoint `after[]` resolution and QUICK_CHECKS completeness — both
+  clean) and the lowercase/weak-signal check on the new critique challenges (clean). Deployed and
+  verified live (screenshots of both pathway overview pages, including the Public Sector banner).
+
 ## Open threads
 - **Applied Projects default to unattached** — found in the v0.23 walkthrough. Every challenge/
   checkpoint form's project dropdown defaults to "not attached"; a diligent learner can finish a
