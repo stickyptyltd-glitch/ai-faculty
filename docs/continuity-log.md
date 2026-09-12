@@ -548,6 +548,70 @@ founder said to continue building breadth:
   clean) and the lowercase/weak-signal check on the new critique challenges (clean). Deployed and
   verified live (screenshots of both pathway overview pages, including the Public Sector banner).
 
+## v0.25 — 2026-09-12 — Founder admin panel (progress sync + roles + analytics)
+
+The founder asked for an admin/human-management panel to oversee learners, then described a much
+bigger ask in the same breath: time-on-platform and per-class duration, scores, pathway
+popularity, struggle points, a feedback channel, a peer-review system that routes "exceeded" work
+back to other learners for random re-scoring (for credit, and as a refresher for the reviewer),
+a Trust-Pilot-style student rating system, and recognition (honor roll, class president).
+
+A codebase audit before building found the load-bearing fact shaping everything here: **every bit
+of learner progress lived only in browser localStorage** — the server (`workers/api`) had exactly
+3 tables (`users`, `magic_links`, `sessions`) and 4 routes, all pure login/session. It had never
+seen a single completion, score, or timestamp, and there was no role/admin concept anywhere.
+None of the founder's asks could be built directly — they all sit on a progress-sync pipeline
+that didn't exist. Full plan at `/home/dayle/.claude/plans/humble-purring-hopper.md`.
+
+**Built and shipped (Phase A + B of that plan):**
+- `workers/api/migrations/0003_progress.sql` — `users.role` (default `'learner'`, founder's own
+  row set to `'founder'` by hand), `submissions` (band/confidence/raw answer text/duration per
+  challenge or checkpoint), `activity_log` (mirrors the client's `STORE.log` event kinds).
+- `workers/api/index.js` — `requireAuth`/`requireFounder` guards (first reusable auth middleware
+  in this Worker — `handleMe` used to be the only inline check); `POST /api/progress/sync`;
+  `GET /api/admin/overview` (learner/active/submission totals, pathway popularity, per-competency
+  struggle points sorted worst-first); `GET /api/admin/learners` and `/api/admin/learners/:id`.
+  "Time on platform" is derived from activity/submission timestamps with a 20-minute session-gap
+  cutoff rather than a live heartbeat — cheaper, adequate for founder-level reporting, no
+  background ping from every open tab.
+- `app/js/auth.js` — generic `apiGet`/`apiPost` helpers, reused by the sync hooks and the panel.
+- `app/js/store.js` — `STORE.log()` now best-effort mirrors every activity event to the server
+  when signed in; never blocks or affects the local save, silently no-ops when signed out.
+- `app/js/main.js` — the challenge/checkpoint `confirm` handler now also syncs the submission
+  (band derived from `fieldReports`, duration measured from view-entered to confirm); new
+  `#/admin` (Overview) and `#/admin/learners` (+ per-learner detail) views, gated on
+  `user.role === 'founder'` client-side (the real enforcement is server-side 403).
+- Verified end-to-end against the live site with a real session cookie: `/me` returns
+  `role:"founder"`, `/admin/overview`/`/admin/learners`/`/admin/learners/:id` all return real
+  data after a synced submission and 401 without a session; smoke-test rows deleted afterward so
+  the panel starts from a genuinely empty state.
+
+**Deliberately not built yet — designed in the plan file, sequenced as follow-on phases because
+they depend on real `submissions` data existing first:**
+- **Phase C — feedback channel.** A `feedback` table + a small in-app form, surfaced as an admin
+  tab.
+- **Phase D — peer review.** Route a learner's `Exceeds` submission to another learner who has
+  already passed that same competency, for random re-scoring — earns the reviewer credit and
+  doubles as spaced repetition. Flagged an open privacy decision: this is the one place a
+  learner's own written answer becomes visible to a peer. Designed anonymized-by-default
+  ("a peer's answer," no name shown) — not yet confirmed with the founder, needs sign-off before
+  building.
+- **Phase E — student rating / "Trust Pilot" system.** Derived from Phase D's review outcomes
+  into a per-skill reputation score. Designed as private (learner's own account + admin view
+  only) rather than a public directory, pending an explicit ask for that.
+- **Phase F — recognition (honor roll, class president).** A monthly cron snapshot into a
+  `recognition_awards` table, so an award is a fixed historical fact rather than a live-changing
+  rank. This is the same feature named "leaderboard" in the approved 5-phase platform roadmap —
+  reached from this direction rather than a separate system.
+
+**New open item this pass surfaced:** dev-mode sign-in (`DEV_LINKS=true`, no `RESEND_API_KEY`)
+is still live — anyone can mint a session for any email today, including the founder's own. The
+admin panel being gated on `role === 'founder'` is only as strong as that gate, so closing
+dev-mode (or requiring both a real founder role AND a real email key before the admin route does
+anything) should happen before this panel is treated as actually access-controlled, not just
+functionally gated. See the standing "Cloudflare Email Service" open thread below — the two are
+now the same blocker.
+
 ## Open threads
 - **Applied Projects default to unattached** — found in the v0.23 walkthrough. Every challenge/
   checkpoint form's project dropdown defaults to "not attached"; a diligent learner can finish a
