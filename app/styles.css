@@ -213,6 +213,19 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
 details.card summary { list-style: revert; }
 details.card summary::-webkit-details-marker { display: revert; }
 
+/* before/after on a critique challenge — shown only once the rubric is met */
+.beforeafter { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 4px; }
+@media (min-width: 560px) { .beforeafter { grid-template-columns: 1fr 1fr; } }
+.beforeafter__panel { border-radius: 10px; padding: 12px 13px; border: 1px solid var(--border); background: var(--surface-2); }
+.beforeafter__panel--before { border-color: #3a2530; }
+.beforeafter__panel--after { border-color: #1d3a26; }
+.beforeafter__label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-bottom: 7px; }
+.beforeafter__panel--before .beforeafter__label { color: var(--bad); }
+.beforeafter__panel--after .beforeafter__label { color: var(--good); }
+.beforeafter__text { font-style: italic; font-size: 13.5px; white-space: pre-wrap; margin: 0; }
+.beforeafter__changes { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-dim); }
+.beforeafter__changes li::before { content: "→ "; color: var(--good); }
+
 /* prerequisite-chain diagram (checkpoint "Reference" panel) */
 .chainlinks { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; }
 .chainlink {

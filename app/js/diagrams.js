@@ -92,5 +92,45 @@ window.DIAGRAMS = (function () {
     </svg>`;
   }
 
-  return { esc, wrapText, competencyChain };
+  // ---- AI-role ladder (do it / assist / check / stay out) --------------
+  // items: [{ label, role }], role one of "do-it" | "assist" | "check" | "stay-out".
+  // Only bands that actually have an item render — a lesson doesn't have to hit all 4
+  // to be worth drawing (forcing every band would misrepresent what the lesson said).
+  const ROLE_BANDS = [
+    { key: "do-it", title: "DO IT", sub: "AI acts, a person spot-checks after", color: "var(--good)" },
+    { key: "assist", title: "ASSIST", sub: "AI proposes, a person decides before it happens", color: "var(--accent)" },
+    { key: "check", title: "CHECK", sub: "AI never decides, only flags for a person", color: "var(--warn)" },
+    { key: "stay-out", title: "STAY OUT", sub: "no AI role at all", color: "var(--bad)" },
+  ];
+
+  function roleLadder(items) {
+    const W = 320, boxW = 292, pad = 10, fontSize = 11, lineH = 14, gap = 10;
+    const charsPerLine = Math.max(14, Math.floor((boxW - pad * 2) / (fontSize * 0.56)));
+    const bands = ROLE_BANDS
+      .map(b => ({ ...b, items: items.filter(it => it.role === b.key).map(it => it.label) }))
+      .filter(b => b.items.length);
+
+    let y = 8;
+    const parts = [];
+    bands.forEach(b => {
+      const bodyLines = b.items.flatMap(label => wrapText("→ " + label, charsPerLine));
+      const h = pad * 2 + 14 /* title */ + 12 /* sub */ + bodyLines.length * lineH + 4;
+      parts.push(`<rect x="${(W - boxW) / 2}" y="${y}" width="${boxW}" height="${h}" rx="9" fill="var(--surface-2)" stroke="${b.color}" stroke-width="1.4"/>`);
+      let ty = y + pad;
+      parts.push(`<text x="${pad + (W - boxW) / 2 + 4}" y="${ty + 10}" font-size="12" font-weight="700" fill="${b.color}">${esc(b.title)}</text>`);
+      ty += 14;
+      parts.push(`<text x="${pad + (W - boxW) / 2 + 4}" y="${ty + 9}" font-size="9.5" fill="var(--text-dim)">${esc(b.sub)}</text>`);
+      ty += 12;
+      bodyLines.forEach((line, i) => {
+        parts.push(`<text x="${pad + (W - boxW) / 2 + 4}" y="${ty + 10 + i * lineH}" font-size="${fontSize}" fill="var(--text)">${esc(line)}</text>`);
+      });
+      y += h + gap;
+    });
+
+    const totalH = y - gap + 8;
+    const label = esc(items.map(it => `${it.label} (${it.role})`).join("; "));
+    return `<svg viewBox="0 0 ${W} ${totalH}" role="img" aria-label="AI role ladder: ${label}">${parts.join("")}</svg>`;
+  }
+
+  return { esc, wrapText, competencyChain, roleLadder };
 })();

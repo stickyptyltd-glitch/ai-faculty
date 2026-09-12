@@ -405,6 +405,39 @@ Founder picked two to build first: **flow diagrams** and the **competency map**.
   both need a small amount of new per-use data (a corrected-version field; a role classification)
   rather than being free, so they're queued separately.
 
+## v0.21 — 2026-09-12 — The other two diagrams: before/after and the AI-role ladder
+
+Founder said "continue" — shipped the two remaining diagram types from the exploration.
+
+- **Before/after on critique challenges.** `critiqueChallenge()` takes an optional 8th arg,
+  `fixed: { text, changes: [] }` — a corrected version of `material` plus a short list of what
+  changed. Authored it for **all 28 critique challenges across the platform** (every pathway
+  that has one), not a sample — applied via a small Node script that locates each call by id and
+  inserts the literal with proper string-escaping, rather than 28 hand-edits. Rendered in
+  `renderResult` (`main.js`) as a two-panel comparison, but **only once the learner's own
+  submission reaches "ready"** — revealing a near-complete answer on a "revise" verdict would
+  let a resubmission just copy it instead of earning the pass. This is new authored content,
+  unlike the previous two diagrams, but full-coverage rather than partial.
+- **AI-role decision ladder.** `DIAGRAMS.roleLadder(items)` draws the do-it/assist/check/
+  stay-out bands from Fig. 3 of the exploration, but **only the bands a lesson's real content
+  actually supports** — no fabricated "assist" example where a lesson never described one.
+  Authored `lesson.roleMap` for 5 competencies chosen because their content is genuinely about
+  AI-role boundaries, one per named pathway: **O1** (Ops), **L5** (Legal), **FN1** (Finance),
+  **HR5** (HR), **HC1** (Healthcare) — each sourced from that competency's own `demonstrate`
+  walkthrough, not invented. Deliberately did not force this onto Safety (SF3/SF4's real content
+  — a red-team probe sequence, a guardrail-layers list — doesn't actually fit the ladder shape;
+  forcing it would misrepresent the lesson). Rendered on the **deconstruct** ("The moves") step,
+  when `roleMap` is present.
+- Verified: a real thorough ED1.2 critique confirmed to reach `verdict: "ready"` against the
+  live `faculty.js` (5/5 rubric items caught), the before/after component screenshotted with
+  real content.js data and the actual app CSS, and all 5 `roleMap` competencies' ladders
+  screenshotted together (correct wrapping, correct band omission, correct colours) plus one
+  (FN1) verified live on the deployed deconstruct page.
+- All four diagram types from the design exploration are now shipped. Two (flow, competency
+  map) are universal; two (before/after, role ladder) are authored where genuinely warranted —
+  28/28 critique challenges, 5/~15 role-relevant competencies. Extending the role ladder further
+  is additive (add `roleMap` to more competencies) whenever there's a genuine fit.
+
 ## Open threads
 - **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
   leaderboard) — plan approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.

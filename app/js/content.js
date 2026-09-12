@@ -52,9 +52,12 @@ window.CONTENT = (function () {
   function fieldsChallenge(id, ladder, title, brief, whatGood, fields, rubric, raises) {
     return { id, ladder, type: "fields", title, brief, whatGood, fields, rubric, raises };
   }
-  function critiqueChallenge(id, ladder, title, brief, material, expected, raises) {
+  // fixed (optional): { text, changes: [] } — a corrected version of `material` plus a short
+  // list of what changed, for the before/after diagram on the challenge screen. Optional so
+  // a not-yet-authored challenge just renders without it.
+  function critiqueChallenge(id, ladder, title, brief, material, expected, raises, fixed) {
     return {
-      id, ladder, type: "critique", title, brief, material, expected, raises,
+      id, ladder, type: "critique", title, brief, material, expected, raises, fixed,
       whatGood: "A complete critique names each problem, says why it's a problem, and gives the fix. Aim to catch every issue in the checklist, not just one.",
       ask: { key: "critique", label: "Work through it: what's wrong, why, and how would you fix each one?", hint: "One problem at a time. For each: name it → why it matters → the fix.", minWords: 30 },
     };
@@ -1851,7 +1854,8 @@ window.CONTENT = (function () {
             { label: "'Make it use AI' is a solution, not a requirement", signals: ["solution not", "prescribes a solution", "not a requirement", "jumps to", "premature solution", "why ai", "solution rather"] },
             { label: "No scope boundary or constraints", signals: ["scope", "out of scope", "constraint", "boundary", "what's not", "no constraints"] },
           ],
-          "transferable"),
+          "transferable", { text: `Title: "Search returns no results for common misspellings."
+Body: "Support tickets show users searching 'recieve', 'seperate', etc. and getting zero results, then abandoning. Acceptance: a 20-term misspelling test set returns the correct top result for ≥18/20. Out of scope: synonym search, filters. No implementation prescribed — the team decides whether that's AI or a static correction list."`, changes: ["“bad” / “complain” → one concrete, observed problem (misspellings return zero results)", "Added testable acceptance criteria (≥18/20 on a named test set)", "“Make it use AI” removed — states the problem, leaves the solution open", "Added an explicit scope boundary (no synonyms, no filters)"] }),
       ],
     },
 
@@ -1985,7 +1989,13 @@ window.CONTENT = (function () {
             { label: "`e.includes('@')` is a near-useless email check", signals: ["includes('@')", "weak check", "not a real", "\"@\" is not", "barely validates", "poor validation", "just checks for @"] },
             { label: "Crashes on a short/blank line — split(',')[2] is undefined, then .includes throws", signals: ["undefined", "blank line", "empty line", "short line", "throws", "crash", "missing column", "[2]"] },
           ],
-          "transferable"),
+          "transferable", { text: `function validEmails(csv) {
+  const EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+  return csv.split('\\n')
+    .slice(1) // drop the header row
+    .map(line => splitCsvLine(line)[2])
+    .filter(v => v && EMAIL_RE.test(v.trim()));
+}`, changes: ["Skips the header row instead of trying to validate it as an email", "Uses a real CSV-line splitter, not naive split(',') — quoted commas won't break it", "A real email pattern replaces the near-useless includes('@')", "Filters blank/short lines before checking, so it can't throw on a missing column"] }),
         fieldsChallenge("S3.2", "Transfer", "Review a real AI change from your work",
           "Take a real change AI has written for you (or a snippet from a project). Run the failure-mode checklist and write up what you found.",
           "Strong answer: you actually went through the specific checks (invented APIs, swallowed errors, edges, security, spec match) and reported concrete findings — or a reasoned 'clean, and here's what I verified'.",
@@ -2236,7 +2246,7 @@ window.CONTENT = (function () {
             { label: "No must-not-say / brand guardrails ('exciting' invites hype and false urgency)", signals: ["must not", "guardrail", "hype", "false urgency", "overclaim", "brand", "not say", "tone limits"] },
             { label: "No proof points — no sale details, discount, dates, or terms", signals: ["proof", "details", "discount", "dates", "terms", "what's the sale", "the actual offer", "no specifics"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Can you write an email for our 20%-off weekend sale (Fri–Sun, code WKND20) to customers who bought in the last 6 months? Goal: get them to use the code before Sunday night. Keep the tone warm, not hypey — no ‘today only!!’ urgency language. Send by Thursday 3pm so I can review before it goes out Friday morning."`, changes: ["“people” → a defined audience (customers who bought in the last 6 months)", "“get people to buy” → one specific action, by a deadline", "Added a brand guardrail (no false-urgency language)", "Added the missing proof points and a review step before it sends"] }),
       ],
     },
 
@@ -2385,7 +2395,7 @@ window.CONTENT = (function () {
             { label: "'Studies show ... twice as productive' — vague/invented research claim", signals: ["studies show", "which studies", "invented", "no citation", "vague research", "made up", "cite the study"] },
             { label: "'As seen in Forbes' — needs a real, linkable article or it's misleading", signals: ["forbes", "as seen in", "linkable", "real article", "which article", "prove it", "actually featured"] },
           ],
-          "transferable"),
+          "transferable", { text: `"We work with hundreds of small businesses. In our own December cohort, teams using the tool completed onboarding 40% faster than the prior quarter’s average (internal data, n=34). [Link the Forbes mention here if it’s real — otherwise remove it.]"`, changes: ["“#1 platform” removed — no ranking claim without a named, checkable source", "“40% month over month” replaced with one real, attributable, scoped stat", "The invented “studies show…twice as productive” claim is cut entirely", "“As seen in Forbes” only stays with a real, linkable article"] }),
       ],
     },
 
@@ -2620,7 +2630,7 @@ window.CONTENT = (function () {
             { label: "No citation / no way to check which part the answer came from", signals: ["citation", "cite", "which part", "source", "trace", "no grounding check", "can't verify"] },
             { label: "No no-answer handling — it'll answer from general knowledge when the docs don't cover it", signals: ["no answer", "don't know", "general knowledge", "hallucinate", "not covered", "makes it up", "fallback"] },
           ],
-          "transferable"),
+          "transferable", { text: `"We chunk the docs, embed the chunks, and retrieve the ones most similar to the actual question — not just the 3 most recently edited files. Each answer cites which chunk it came from, so it can be checked. If nothing retrieved passes a relevance threshold, the model says it doesn’t know rather than answering from general knowledge."`, changes: ["Retrieval is based on relevance to the question, not recency", "Chunking keeps pieces within the context window instead of dumping full docs", "Citations let you check which part of a doc an answer came from", "Explicit no-answer handling when nothing relevant is retrieved"] }),
       ],
     },
 
@@ -4071,7 +4081,7 @@ window.CONTENT = (function () {
             { label: "No answer type — 'what you find' could be anything", signals: ["answer type", "what form", "what kind of answer", "deliverable", "a number", "a list", "recommendation", "shape of the answer"] },
             { label: "Nothing said about what would change the conclusion", signals: ["would change", "what would flip", "hinges on", "depends on", "key assumption", "sensitive to"] },
           ],
-          "transferable"),
+          "transferable", { text: `"We’re deciding whether to enter the UK mid-market segment (50–250 employees) this quarter. Research that segment for our product category over the last 12 months: market size, top 3 competitors’ pricing, and any regulatory barriers. Deliverable: a 1-page brief with a recommendation. The finding that would most change my mind: evidence a competitor already dominates this segment."`, changes: ["Names the actual decision the research serves", "Scopes the market by geography, segment size and time window", "States the deliverable shape (a 1-page brief with a recommendation)", "Names what would change the conclusion"] }),
       ],
     },
 
@@ -4208,7 +4218,7 @@ window.CONTENT = (function () {
             { label: "'A meta-analysis of 47 trials' is a classic fabrication shape — oddly specific, hard to check", signals: ["meta-analysis", "47 trials", "fabricat", "made up", "too specific", "suspicious", "does persson", "invented", "oddly specific"] },
             { label: "Source credibility and interest — is Henley's own study on its own recommended practice", signals: ["credible", "interest", "conflict", "who funded", "henley's own", "bias", "marking their own", "independent"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Before using any of these: (1) confirm the Henley Business School 2019 study exists and actually reports ‘up to 40%’ — check the original, not a summary; (2) trace the 71% figure to the named journal article and confirm the finding and sample size; (3) verify the 47-trial meta-analysis by Persson (2022) actually exists — an oddly precise, hard-to-check number is a classic fabrication shape; (4) note Henley is a business school evaluating a practice it also promotes, and read the finding accordingly."`, changes: ["Treats “exists” as a separate check from “sounds plausible,” for every citation", "Requires tracing each precise figure to the original source, not the paraphrase", "Flags the oddly-specific “47 trials” as a classic fabrication shape", "Adds source-interest as its own check"] }),
         scenarioChallenge("R3.2", "Create", "A perfectly formatted citation you can't find",
           "You've searched the title, the authors and the DOI. Nothing. The formatting is flawless and the journal is real.",
           "What do you conclude?",
@@ -4276,7 +4286,7 @@ window.CONTENT = (function () {
             { label: "'non-randomised pilot' became 'study' — the design limitation is hidden", signals: ["non-randomised", "pilot", "design", "observational", "study", "not a trial", "two hospitals", "small"] },
             { label: "The authors' own caution against over-interpreting the 8% is dropped", signals: ["caution", "over-interpret", "authors warn", "8%", "the figure", "don't rely", "authors themselves"] },
           ],
-          "transferable"),
+          "transferable", { text: `"A non-randomised pilot at two hospitals suggested the checklist might reduce complications by around 8%, though staffing also increased during the study period and the authors caution against over-interpreting that figure."`, changes: ["“found…reduces” reverts to the original’s hedge (“suggested…might”)", "The staffing confound is restated, not dropped", "“study” becomes “non-randomised pilot at two hospitals” again", "The authors’ own caution about the 8% is kept in"] }),
         fieldsChallenge("R4.2", "Transfer", "Summarise a real source faithfully",
           "Take a real report, paper or article relevant to your work. Write a short summary, then audit your own summary against the source.",
           "Strong answer: the summary keeps the source's hedges, scope, uncertainty and direction/magnitude; the self-audit names at least one thing that was tempting to round up; and a reader acting on the summary would not be surprised by the original.",
@@ -4352,7 +4362,7 @@ window.CONTENT = (function () {
             { label: "'start development immediately' — recommendation not separated from findings, and outruns them", signals: ["recommendation", "separate", "immediately", "outruns", "not the finding", "conflates", "premature", "jump"] },
             { label: "The uninvestigated account migration is a material gap and should be visible", signals: ["migration", "not investigated", "material gap", "surface it", "surface the", "make it visible", "flag the unknown", "footnote"] },
           ],
-          "transferable"),
+          "transferable", { text: `"One survey (32% response rate) suggests some customer interest in a mobile app; we don’t yet have direct evidence on retention — a competitor’s blog post is the only signal there. Recommendation (separate from the findings above): given the low cost, we suggest a small pilot before full build. Open gap: account migration for existing users hasn’t been investigated and needs scoping before any go/no-go."`, changes: ["“clearly shows” downgraded to “suggests,” response rate stays visible", "The retention claim is labelled unsupported, not stated as fact", "The recommendation is separated from the findings, “immediately” removed", "The uninvestigated migration gap is surfaced, not hidden"] }),
         fieldsChallenge("R5.2", "Transfer", "Report a real piece of research honestly",
           "Take research you've actually done — or build on your R2.1 / R1.1 work from this pathway. Write the honest findings brief.",
           "Strong answer: language is matched to each finding's evidence level; the load-bearing uncertainty is prominent, not buried; findings and recommendation are clearly separated; and 'what would change the conclusion' is specific.",
@@ -4422,6 +4432,13 @@ window.CONTENT = (function () {
             airole: "AI can: read amounts and categories off receipts, flag lines missing a receipt or over a cap, draft the query email. Humans keep: the 'is this legitimate' judgement, the final approval, and scheduling the payment.",
           },
         },
+        // AI-role ladder — the real onboarding actions from `demonstrate`, classified.
+        roleMap: [
+          { label: "Creates the project record", role: "do-it" },
+          { label: "Drafts the kickoff agenda", role: "do-it" },
+          { label: "Checks contract terms vs quote (flags if >5% off)", role: "check" },
+          { label: "Sets up billing", role: "stay-out" },
+        ],
       },
       challenges: [
         fieldsChallenge("O1.1", "Reproduce", "Map a real process",
@@ -4449,7 +4466,7 @@ window.CONTENT = (function () {
             { label: "No handling for invoices that don't match any PO or don't match cleanly", signals: ["no match", "doesn't match", "exception", "what happens when", "no po", "review queue", "fallback"] },
             { label: "No audit trail / record of what the AI decided", signals: ["audit", "trail", "logged", "audit log", "record of", "reconstruct", "what it decided", "no record", "paper trail"] },
           ],
-          "transferable"),
+          "transferable", { text: `"We’ll map the current invoice process first — who checks what today. Then: AI reads the invoice and proposes a PO match, flagging partial deliveries, price changes and substitutions for a person to confirm. Once confirmed, AI drafts the payment for a human to approve and release — it never releases payment itself. Anything that doesn’t match a PO cleanly goes to a review queue. Every AI decision and the human confirmation are logged."`, changes: ["Starts by mapping the current process instead of skipping straight to automating it", "PO matching becomes AI-proposes / human-confirms, not an automatic lookup", "AI drafts the payment; a person still approves and releases it — the money step keeps a human gate", "Adds a review queue for non-matches, and an audit log of every AI decision"] }),
       ],
     },
 
@@ -4674,7 +4691,7 @@ window.CONTENT = (function () {
             { label: "\"Adds the vendor to the system\" — the AI now completes the process with no human sign-off at all", signals: ["completes", "no human", "no sign-off", "auto", "adds the vendor", "no approval", "finishes the process"] },
             { label: "The complaint search is a judgement call (what counts as disqualifying?) treated as automatic", signals: ["judgement", "what counts", "disqualifying", "complaint", "interpret", "how bad", "threshold"] },
           ],
-          "transferable"),
+          "transferable", { text: `"NEW AI WORKFLOW: the AI checks company registration and searches for complaints, drafts the file for the vendor record, and requests the two references. A human collects and reviews the references, applies finance-director approval for anything over £5k/year, and confirms before AI saves the completed file and adds the vendor to the system."`, changes: ["The two-reference control is restored — AI requests them, a human still reviews", "The >£5k finance-director approval gate is restored before anything is saved", "“Adds the vendor” now happens after human sign-off, not automatically", "The complaint search stays a flag for a person to judge, not an automatic pass"] }),
       ],
     },
 
@@ -4907,7 +4924,7 @@ window.CONTENT = (function () {
             { label: "Specific figures (10,000/hour, resets on the hour) will be quoted back as a promise", signals: ["quoted back", "promise", "commitment", "held to", "specific number", "10,000", "10000", "the figure"] },
             { label: "It should have declined and routed to a human", signals: ["should decline", "should have said", "i don't know", "route to a human", "escalate", "connect", "not covered"] },
           ],
-          "transferable"),
+          "transferable", { text: `"I don’t have a confirmed number for that in our documentation, so I don’t want to guess and risk giving you the wrong limit. I’ve flagged this to our team — someone will follow up with the exact figure within one business day. Anything else I can help with in the meantime?"`, changes: ["No longer invents a figure the knowledge base doesn’t contain", "Declines and routes to a human instead of answering from thin air", "No specific numbers stated that could later be held against the company", "Sets an honest, concrete expectation instead of a false-confident answer"] }),
       ],
     },
 
@@ -4971,7 +4988,7 @@ window.CONTENT = (function () {
             { label: "'Have you tried' puts the work back on the customer for the third time", signals: ["have you tried", "puts the work", "customer's job", "already tried", "third time", "onus"] },
             { label: "No ownership, no escalation, no 'we'll find out why this keeps happening'", signals: ["ownership", "escalat", "investigate", "why it keeps", "root cause", "own it", "no follow-up"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Hi [Name], I’m sorry — being logged out mid-call in front of a customer three times this week is genuinely disruptive, and I understand why it’s frustrating. I’ve escalated this to engineering as a priority bug, not a one-off; I’ll update you within 24 hours with what we’ve found. Does it tend to happen at a particular time of day, so we can narrow down the cause?"`, changes: ["Drops the cheerful opener and emoji for a message about professional embarrassment", "Acknowledges the actual impact instead of minimising it", "Escalates and takes ownership instead of “have you tried” on the third occurrence", "Commits to a concrete follow-up time, not an open-ended “let us know”"] }),
         fieldsChallenge("SU3.2", "Transfer", "Tone guide for your hardest cases",
           "For the customer situations you (or a team you know) find hardest, write the tone rules.",
           "Strong answer: tone rules are keyed to the customer's state, not the topic; each says what to lead with; and the avoid-list catches minimising and canned language.",
@@ -5220,7 +5237,7 @@ window.CONTENT = (function () {
             { label: "No assessment task is implied", signals: ["assessment", "no task", "how would you assess", "what would demonstrate", "how do you check"] },
             { label: "Three vague goals stacked with 'and' — nothing single to build toward", signals: ["three goals", "three outcomes", "stacked", "one thing", "single outcome", "build toward", "too many", "unfocused", "multiple outcomes"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Learners will correctly classify 8 of 10 unlabeled examples as supervised or unsupervised learning, unaided, in a 20-minute written test."`, changes: ["“understand” → “classify” — an action you can watch", "Conditions named — unaided, 20 minutes", "Standard named — 8 of 10", "One outcome, not three stacked"] }),
       ],
     },
 
@@ -5376,7 +5393,7 @@ window.CONTENT = (function () {
             { label: "'Applies the rubric' assumes the AI reads the rubric and the work correctly, unchecked", signals: ["applies the rubric", "misread", "assumes", "unchecked", "reads correctly", "no check that"] },
             { label: "No spot-checking of non-appealed work", signals: ["spot-check", "sample", "non-appealed", "random check", "no sampling"] },
           ],
-          "transferable"),
+          "transferable", { text: `"AI reads each submission and drafts a grade and feedback against the rubric. The teacher reviews every draft grade before it’s released — a fast confirm for straightforward, low-stakes work; a full read for borderline grades or high-stakes assessments. Every AI-drafted grade and the teacher’s confirmation are logged, so a pattern of errors would be visible even before a student appeals."`, changes: ["The AI drafts; the teacher assigns the final grade, not the reverse", "Every submission gets a teacher pass, not just appealed ones", "A student who doesn’t appeal is still protected — nothing ships unreviewed", "A log makes systematic AI errors visible without relying on appeals"] }),
       ],
     },
 
@@ -5692,7 +5709,7 @@ window.CONTENT = (function () {
             { label: "No check that current employees (whom you'll score) resemble the historical leavers", signals: ["current employees", "resemble", "representative", "who you'll score", "distribution", "coverage", "generalise"] },
             { label: "'months since last promotion' may be leakage depending on when it's measured", signals: ["months since last promotion", "when measured", "as of when", "snapshot", "point in time", "could be leakage"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Labels come from a 3-year window but exclude anyone who left in the last 6 months, avoiding censoring bias for people who might still leave. We split train/test by hire date, not randomly, so no employee’s history leaks across the split. Features exclude anything only known post-departure (e.g. exit-interview data); ‘months since last promotion’ is computed as of a fixed snapshot date, not present-day. We compared current employees’ score distribution against the historical training population before trusting the model on them."`, changes: ["Drops the leakage feature (exit-interview sentiment) entirely", "Splits by time, not randomly, so training and test can’t leak into each other", "Fixes the label window to avoid censoring people who might still leave", "Checks current employees resemble the historical population being scored", "Computes time-sensitive features as of a fixed snapshot"] }),
       ],
     },
 
@@ -5852,7 +5869,7 @@ window.CONTENT = (function () {
             { label: "No confusion matrix — no view of missed defects vs false alarms", signals: ["confusion matrix", "missed defects", "false alarms", "false negatives", "which mistakes", "breakdown"] },
             { label: "No train-vs-validation gap check for overfitting", signals: ["overfitting", "train vs validation", "train/validation gap", "train-test gap", "training accuracy", "generalis", "memoris", "learning curve"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Our defect-detection model has 96% accuracy — barely above the 97% we’d get by always predicting ‘no defect,’ since defects are only 3% of units. On a held-out set we never touched during tuning, precision is 61% and recall is 74%; the confusion matrix shows most misses are subtle surface defects. Train accuracy is 98% vs 96% on this untouched set — close enough that we don’t believe we’re overfitting. Not shipping until recall improves on the defect types we’re missing."`, changes: ["States the 97% no-defect baseline so the 96% headline reads correctly", "Uses a genuinely held-out set, never touched during tuning", "Reports precision/recall and a confusion matrix, not just accuracy", "Reports the train-vs-holdout gap as a check against overfitting"] }),
       ],
     },
 
@@ -6019,7 +6036,7 @@ window.CONTENT = (function () {
             { label: "No deal-breakers named", signals: ["deal-breaker", "must-have", "won't accept", "red line", "non-negotiable"] },
             { label: "Risk that AI returns stylistic noise and misses the clause that matters", signals: ["noise", "nitpick", "stylistic", "misses", "the one clause", "false issues", "signal"] },
           ],
-          "transferable"),
+          "transferable", { text: `"We’re the buy-side, about to sign this MSA with a new supplier worth £400k/year over 3 years. Please check: termination rights, liability caps, IP ownership of anything they build for us, and data-protection terms. Flag anything that would block signing this week — don’t flag routine boilerplate. Every flagged issue must cite the specific clause."`, changes: ["States the purpose and side (buy-side, about to sign) instead of “check it over”", "Replaces “anything bad” with a checklist scoped to this deal", "Adds the deal specifics that set the stakes (value, term)", "Names what would actually block signing, and requires a clause citation per issue"] }),
       ],
     },
 
@@ -6174,7 +6191,7 @@ window.CONTENT = (function () {
             { label: "\"arising from\" is broad — \"to the extent caused by\" is tighter", signals: ["arising from", "to the extent caused by", "broad", "causation", "tighter", "scope"] },
             { label: "A lawyer must review before this is used", signals: ["lawyer", "qualified", "review", "sign-off", "not use as-is", "legal review"] },
           ],
-          "transferable"),
+          "transferable", { text: `"The Client shall indemnify and hold harmless the Supplier against losses, damages and reasonable legal fees, up to a cap of 12 months’ fees, to the extent caused by the Client’s breach of this Agreement, excluding any portion caused by the Supplier’s own negligence. [Reviewed by qualified counsel before use.]"`, changes: ["Direction corrected — the Client indemnifies the Supplier, not the reverse", "A cap replaces the unlimited “any and all losses” language", "A carve-out for the other party’s own negligence is added", "“arising from” tightened to “to the extent caused by,” flagged for counsel review"] }),
       ],
     },
 
@@ -6304,6 +6321,13 @@ window.CONTENT = (function () {
             honest: "'The AI gave us a good map of what's in it and what to ask about — but it can't tell you if this is a good deal or a fair contract. For something you'll be locked into for 10 years, get a franchise solicitor to look at it. Treat the AI summary as prep, not advice.'",
           },
         },
+        // AI-role ladder — from `demonstrate`'s lease-review walkthrough.
+        roleMap: [
+          { label: "Summarising the key contract terms", role: "do-it" },
+          { label: "Listing questions to raise", role: "do-it" },
+          { label: "Flagging clauses that differ from a standard lease", role: "check" },
+          { label: "Judging whether the lease is acceptable, and whether to sign", role: "stay-out" },
+        ],
       },
       challenges: [
         fieldsChallenge("L5.1", "Reproduce", "Draw the line for a real contract situation",
@@ -6488,7 +6512,7 @@ window.CONTENT = (function () {
             { label: "Three asks (call, case studies, webinar)", signals: ["three asks", "multiple asks", "call, case studies, webinar", "one ask", "too many ctas", "second ask"] },
             { label: "'I hope this email finds you well' + exclamation marks — template tells, and nothing is sourced", signals: ["hope this email finds you well", "exclamation", "template", "tells", "no source", "not real personalisation"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Hi {FirstName} — saw {Company} just opened a second warehouse. Teams scaling that fast often hit fulfilment bottlenecks. Worth a 15-minute call Tuesday to see if it’s relevant? If not, no worries — I’ll leave it there."`, changes: ["Generic flattery replaced with one specific, real, sourced detail about the company", "Vague, unbackable claims (“revolutionary,” “10x”) removed", "One clear ask, not three", "No template tells, and an easy, low-pressure out"] }),
       ],
     },
 
@@ -6644,7 +6668,7 @@ window.CONTENT = (function () {
             { label: "'20 seats' stated firmly — notes say '~20 users'", signals: ["20 seats", "~20", "approximately", "firm number", "stated firmly", "about 20"] },
             { label: "The recap upgrades every hedge to a commitment — inflating CRM stage and forecast", signals: ["every hedge", "upgrades", "commitment", "inflate", "forecast", "crm stage", "pattern"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Dana (ops manager) is interested but budget is tight this year, possibly freeing up later. She wants to loop in her director before anything moves forward. No firm timeline — she mentioned early next year at the earliest. She asked what pricing looks like for roughly 20 users, not a formal proposal. Next step: send indicative pricing for ~20 seats and offer a call with her director when she’s ready."`, changes: ["“confirmed strong interest and budget” reverts to “tight, might free up”", "“Target go-live: Q1” removed — no firm timeline exists yet", "“requested a formal proposal” corrected to what she actually asked for", "“20 seats” restated as the approximate “~20 users” from the notes"] }),
       ],
     },
 
@@ -6777,6 +6801,13 @@ window.CONTENT = (function () {
             causal: "AI's 'margin fell because input costs rose' is a hypothesis. Confirm against the actual cost data and with procurement before stating it as the reason.",
           },
         },
+        // AI-role ladder — from `demonstrate`'s variance-commentary walkthrough.
+        roleMap: [
+          { label: "Drafting the variance commentary", role: "do-it" },
+          { label: "Explaining *why* a variance happened, before it's confirmed with the budget owner", role: "assist" },
+          { label: "Any figure AI repeats or cites (check it against the sheet)", role: "check" },
+          { label: "Performing the actual calculation", role: "stay-out" },
+        ],
       },
       challenges: [
         fieldsChallenge("FN1.1", "Reproduce", "Split the work for a real finance analysis",
@@ -6804,7 +6835,7 @@ window.CONTENT = (function () {
             { label: "CAGR is a compounding calculation AI frequently gets wrong", signals: ["cagr", "compound", "compounding", "gets wrong", "unreliable", "3 years", "growth rate"] },
             { label: "No source spreadsheet where the maths can be audited", signals: ["no spreadsheet", "no source", "can't audit", "no workpaper", "where's the maths", "not auditable"] },
           ],
-          "transferable"),
+          "transferable", { text: `"I gave the AI our P&L to draft the YoY growth, CAGR and cost-vs-revenue comparison as a first pass. Before anything went into the board pack, I recalculated the CAGR and two YoY figures myself and checked they matched. One CAGR figure was off — the AI had used the wrong number of periods — so I corrected it, with the source spreadsheet linked."`, changes: ["The AI’s numbers are treated as a draft, not a final answer", "Key figures are re-derived by a person before high-stakes use", "A specific error was actually caught by that re-check", "The source spreadsheet is linked so the maths can be audited"] }),
       ],
     },
 
@@ -6961,7 +6992,7 @@ window.CONTENT = (function () {
             { label: "No known-input testing", signals: ["known input", "no testing", "test with", "sanity test", "extreme inputs", "stress"] },
             { label: "'complex formulas' + 'built in an hour' + investors is exactly when errors hide", signals: ["complex", "an hour", "investors", "high stakes", "errors hide", "fast build", "rushed"] },
           ],
-          "transferable"),
+          "transferable", { text: `"The AI built a first draft of the fundraising model. Before sending it to investors, I traced the runway formula and two other key formulas cell-by-cell against what it claimed they did, ran three known-input test cases to confirm the model reacts sensibly, and grepped for hardcoded numbers that should be formulas. Two hardcoded values turned up in the revenue tab and were fixed. Sending to investors once that’s clean, not before."`, changes: ["The AI’s own description of a formula is no longer treated as proof it’s correct", "Key formulas are traced independently, cell by cell", "Known-input test cases check the model reacts sensibly", "A hardcode hunt runs — and catches something — before investors see it"] }),
       ],
     },
 
@@ -7118,7 +7149,7 @@ window.CONTENT = (function () {
             { label: "'method is in the chat history' is not a workpaper — not structured, retained, or reproducible", signals: ["chat history", "not a workpaper", "not retained", "not reproducible", "not structured", "no documentation"] },
             { label: "An auditor would have no trail of who checked what against what", signals: ["auditor", "no trail", "audit trail", "who checked", "against what", "no evidence"] },
           ],
-          "transferable"),
+          "transferable", { text: `"The junior uses AI to prepare the accruals, prepayments schedule and flux commentary. A senior accountant reviews each one against source documents and signs off before anything posts — the junior no longer posts their own work. The AI’s method and the reviewer’s sign-off are saved as a structured workpaper, not left in chat history."`, changes: ["Preparer and poster are now different people — segregation of duties restored", "“looks reasonable” replaced with review against source documents by someone else", "AI output is reviewed and approved before posting, not posted directly", "Method and sign-off are saved as a retained workpaper, not chat history"] }),
       ],
     },
   ];
@@ -7200,7 +7231,7 @@ window.CONTENT = (function () {
             { label: "'work whatever hours it takes' can deter carers and disabled applicants", signals: ["whatever hours", "boundaries", "carers", "disabled", "deter", "hours it takes", "burnout"] },
             { label: "'culture fit' is a bias vector — should be values alignment or specific behaviours", signals: ["culture fit", "bias", "values", "specific behaviours", "vague", "in-group"] },
           ],
-          "transferable"),
+          "transferable", { text: `"We’re looking for a marketing manager to join our team. You’ll need proven experience running multi-channel campaigns — we’re flexible on how many years that took — and the ability to manage shifting priorities. We offer flexible hours and support remote/hybrid work. We value people who collaborate well and communicate clearly; tell us about a campaign you’re proud of."`, changes: ["Age-coded language (“young,” “energetic,” “rockstar,” “digital native”) removed", "A specific, flexible experience requirement replaces “7+ years”", "“Top university degree” dropped for a demonstrable, job-relevant ask", "“Culture fit” replaced with named, observable behaviours"] }),
       ],
     },
 
@@ -7356,7 +7387,7 @@ window.CONTENT = (function () {
             { label: "The meaning has drifted from 'ok, some issues' to 'star performer'", signals: ["meaning", "drifted", "star performer", "shifted", "ok some issues", "changed the message", "different rating"] },
             { label: "A document this inflated undermines any future performance management of Sam", signals: ["undermine", "future performance management", "can't later", "record", "dispute", "contradicts"] },
           ],
-          "transferable"),
+          "transferable", { text: `"Sam had a solid year overall. There were a couple of missed deadlines, which we should talk through so they don’t recur, but Sam works well with the team and that’s a real strength. I’d like to see more consistent delivery before we discuss taking on more responsibility."`, changes: ["“exceptional,” “cornerstone,” “consistently demonstrated leadership” removed", "The invented Q2/Q3 incident details are dropped rather than fabricated", "No implied promotion promise — tied to seeing consistent delivery first", "Reads as “ok, some issues” again, not “star performer”"] }),
       ],
     },
 
@@ -7487,6 +7518,13 @@ window.CONTENT = (function () {
             safeguards: "Transparency to the employee, a bias audit across groups, human review of every score-influenced decision, no score as the stated reason, and a documented job-related rationale for each outcome.",
           },
         },
+        // AI-role ladder — from `demonstrate`'s promotion-panel walkthrough.
+        roleMap: [
+          { label: "Compiling each candidate's evidence + drafting the panel summary", role: "do-it" },
+          { label: "The panel's reasoning must cite criteria/evidence, never 'the tool said'", role: "check" },
+          { label: "Producing a readiness score or ranking", role: "stay-out" },
+          { label: "The promotion decision itself", role: "stay-out" },
+        ],
       },
       challenges: [
         fieldsChallenge("HR5.1", "Reproduce", "Draw the line for a real people process",
@@ -7567,6 +7605,12 @@ window.CONTENT = (function () {
             regulatory: "'Is this software intended to inform a clinical decision?' If yes, it's likely a medical device and a general AI tool used this way is non-compliant.",
           },
         },
+        // AI-role ladder — from `demonstrate`'s GP-practice walkthrough.
+        roleMap: [
+          { label: "Drafting referral letters, hospital-letter summaries, recall messages", role: "do-it" },
+          { label: "Every AI-drafted letter is read and signed by the GP", role: "check" },
+          { label: "Symptom-checking, pre-triage by urgency, interpreting blood results", role: "stay-out" },
+        ],
       },
       challenges: [
         fieldsChallenge("HC1.1", "Reproduce", "Map AI use for a real clinical setting",
@@ -7671,7 +7715,7 @@ window.CONTENT = (function () {
             { label: "Audio kept 'indefinitely' — patient data with no retention limit, likely non-compliant", signals: ["indefinitely", "retention", "no limit", "patient data", "non-compliant", "how long"] },
             { label: "No mention of patient consent to AI scribing", signals: ["consent", "patient consent", "opt out", "informed", "not mentioned"] },
           ],
-          "transferable"),
+          "transferable", { text: `"The AI scribe drafts notes during the visit; the clinician reads and edits each note before signing — not a quick glance. It suggests a systems-review and exam template based on what was discussed, but the clinician fills in only what was actually examined. Patients are told about and asked to consent to AI scribing at the start of the visit. Audio is deleted after a fixed retention period once the note is finalised."`, changes: ["“quick glance and sign” becomes an actual read-and-edit before signing", "Auto-filled normal findings removed — only what was actually examined is documented", "Patient consent to AI scribing is added", "Indefinite audio retention becomes a fixed, defined period"] }),
       ],
     },
 
@@ -7827,7 +7871,7 @@ window.CONTENT = (function () {
             { label: "Dosing and interaction information generated fresh each time will contain errors", signals: ["dosing", "interaction", "generated fresh", "errors", "each time", "inconsistent", "wrong dose"] },
             { label: "No source — the AI writes from its training, not the local formulary / guidelines", signals: ["no source", "training", "formulary", "guidelines", "not from the approved", "makes it up"] },
           ],
-          "transferable"),
+          "transferable", { text: `"A receptionist can request a leaflet topic, but a clinician (or pharmacist for medication leaflets) reviews and approves the AI-drafted content against the local formulary/guidelines before it reaches a patient — every leaflet, not a sample. Medication and dosing information is checked against the formulary, not generated fresh from the AI’s general knowledge each time."`, changes: ["Every leaflet gets clinical approval before reaching a patient, not a weekly spot-check", "A clinician or pharmacist, not a receptionist alone, is the approval point", "Medication/dosing content is checked against the actual formulary", "Removes the on-demand, unregulated framing — approval happens every time"] }),
       ],
     },
 

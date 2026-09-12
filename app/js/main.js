@@ -310,6 +310,32 @@
     const canConfirm = result.verdict === "ready";
     const offerSecond = ctx.scope === "checkpoint" && result.verdict === "ready" && result.assessor === 1;
 
+    // Shown only once the rubric is actually met — reinforcement for a real pass, not a
+    // shortcut past one. The fixed{} text is a near-complete answer; revealing it on a
+    // "revise" verdict would let a resubmission just copy it instead of earning the pass.
+    let beforeAfter = "";
+    if (ctx.scope === "challenge" && canConfirm) {
+      const chDef = C.challenge(ctx.cap, ctx.ch);
+      if (chDef && chDef.type === "critique" && chDef.fixed) {
+        const changes = chDef.fixed.changes.map(c => `<li>${esc(c)}</li>`).join("");
+        beforeAfter = `
+          <div class="card">
+            <div class="card__label">See it fully corrected</div>
+            <div class="beforeafter">
+              <div class="beforeafter__panel beforeafter__panel--before">
+                <div class="beforeafter__label">Before</div>
+                <p class="beforeafter__text">${esc(chDef.material)}</p>
+              </div>
+              <div class="beforeafter__panel beforeafter__panel--after">
+                <div class="beforeafter__label">After</div>
+                <p class="beforeafter__text">${esc(chDef.fixed.text)}</p>
+              </div>
+            </div>
+            <ul class="beforeafter__changes">${changes}</ul>
+          </div>`;
+      }
+    }
+
     box.innerHTML = `
       <h2>Assessment Faculty — formative feedback</h2>
       ${assessorLine}
@@ -321,6 +347,7 @@
         <div class="card__label">${rubricTitle}</div>
         <ul style="margin:0;list-style:none">${rubric}</ul>
       </div>
+      ${beforeAfter}
       ${offerSecond
         ? `<form data-form="second-assessment" style="margin-bottom:10px">
              <p class="notice" style="margin-bottom:10px">A single pass is a first opinion, not a mastery
@@ -438,10 +465,16 @@
     }
 
     if (stepKey === "deconstruct") {
+      // roleMap is authored only where a lesson is genuinely about AI's role/risk on real
+      // actions (not forced onto every competency) — see docs/continuity-log.md v0.20.
+      const roleLadder = L.roleMap && L.roleMap.length ? `
+        <h2 style="margin-top:22px">Where AI's role sits here</h2>
+        <div class="diagram-scroll">${window.DIAGRAMS.roleLadder(L.roleMap)}</div>` : "";
       return `${header}
         <h1>The moves</h1>
         <p class="lead">What just happened, so you can do it yourself:</p>
         <ul>${L.deconstruct.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+        ${roleLadder}
         ${nav()}`;
     }
 
