@@ -183,9 +183,22 @@ async function currentUser(request, env) {
   const tokenHash = await sha256Hex(token);
   const session = await env.DB.prepare("SELECT * FROM sessions WHERE token_hash = ?").bind(tokenHash).first();
   if (!session || new Date(session.expires_at) < new Date()) return null;
-  const user = await env.DB.prepare("SELECT id, email, display_name, created_at FROM users WHERE id = ?")
+  const user = await env.DB.prepare("SELECT id, email, display_name, created_at, role FROM users WHERE id = ?")
     .bind(session.user_id).first();
   return user || null;
+}
+
+// Small reusable guards — every route below uses one of these instead of inlining its own
+// currentUser() check, unlike the original single handleMe check.
+async function requireAuth(request, env, headers) {
+  const user = await currentUser(request, env);
+  return user ? { user } : { error: json(401, { ok: false, error: "not_signed_in" }, headers) };
+}
+async function requireFounder(request, env, headers) {
+  const r = await requireAuth(request, env, headers);
+  if (r.error) return r;
+  if (r.user.role !== "founder") return { error: json(403, { ok: false, error: "forbidden" }, headers) };
+  return r;
 }
 
 async function handleMe(request, env, headers) {
@@ -201,6 +214,166 @@ async function handleLogout(request, env, headers) {
     await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
   }
   return json(200, { ok: true }, { ...headers, "Set-Cookie": clearCookie() });
+}
+
+// ---- progress sync (Phase A: additive telemetry, never blocks the local-first save) -----
+
+async function handleProgressSync(request, env, headers) {
+  const auth = await requireAuth(request, env, headers);
+  if (auth.error) return auth.error;
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+
+  const now = new Date().toISOString();
+  const id = crypto.randomUUID();
+
+  if (body.type === "submission") {
+    const band = ["Not yet", "Developing", "Meets", "Exceeds"].includes(body.band) ? body.band : "Meets";
+    const kind = body.kind === "checkpoint" ? "checkpoint" : "challenge";
+    await env.DB.prepare(
+      `INSERT INTO submissions
+       (id, user_id, kind, pathway_id, cap_id, challenge_id, checkpoint_id, band, confidence,
+        fields_json, started_at, completed_at, duration_ms)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      id, auth.user.id, kind, body.pathwayId || null, String(body.capId || ""),
+      body.challengeId || null, body.checkpointId || null, band, body.confidence || null,
+      JSON.stringify(body.fields || {}), body.startedAt || null, now,
+      Number.isFinite(body.durationMs) ? Math.round(body.durationMs) : null
+    ).run();
+    return json(200, { ok: true, id }, headers);
+  }
+
+  if (body.type === "activity") {
+    await env.DB.prepare("INSERT INTO activity_log (id, user_id, ts, kind, detail) VALUES (?, ?, ?, ?, ?)")
+      .bind(id, auth.user.id, now, String(body.kind || "unknown"), body.detail != null ? String(body.detail) : null)
+      .run();
+    return json(200, { ok: true, id }, headers);
+  }
+
+  return json(400, { ok: false, error: "unknown_type" }, headers);
+}
+
+// ---- founder admin panel -------------------------------------------------------------
+
+const SESSION_GAP_MS = 20 * 60 * 1000; // consecutive events under this gap count as one continuous session
+
+// Reconstruct "time on platform" per user from raw timestamps (no live heartbeat tracking —
+// see the plan this shipped under: cheaper, adequate for founder-level reporting, and it
+// doesn't require every open tab to ping the server).
+function sumActiveMs(timestampsMs) {
+  if (timestampsMs.length < 2) return 0;
+  const sorted = [...timestampsMs].sort((a, b) => a - b);
+  let total = 0;
+  for (let i = 1; i < sorted.length; i++) {
+    const gap = sorted[i] - sorted[i - 1];
+    if (gap > 0 && gap <= SESSION_GAP_MS) total += gap;
+  }
+  return total;
+}
+
+async function handleAdminOverview(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+
+  const [{ results: users }, { results: subs }, { results: acts }] = await Promise.all([
+    env.DB.prepare("SELECT id, email, created_at FROM users").all(),
+    env.DB.prepare("SELECT user_id, pathway_id, cap_id, band, duration_ms, completed_at FROM submissions").all(),
+    env.DB.prepare("SELECT user_id, ts FROM activity_log").all(),
+  ]);
+
+  const now = Date.now();
+  const day = 24 * 3600 * 1000;
+  const byUserActs = {};
+  for (const a of acts) (byUserActs[a.user_id] ||= []).push(new Date(a.ts).getTime());
+  let activeToday = 0, activeWeek = 0;
+  for (const uid of Object.keys(byUserActs)) {
+    const last = Math.max(...byUserActs[uid]);
+    if (now - last <= day) activeToday++;
+    if (now - last <= 7 * day) activeWeek++;
+  }
+
+  const pathwayCounts = {};
+  const capStats = {}; // cap_id -> { attempts, belowMeets, totalDuration, durationCount }
+  for (const s of subs) {
+    if (s.pathway_id) pathwayCounts[s.pathway_id] = (pathwayCounts[s.pathway_id] || 0) + 1;
+    const cs = (capStats[s.cap_id] ||= { attempts: 0, belowMeets: 0, totalDuration: 0, durationCount: 0 });
+    cs.attempts++;
+    if (s.band === "Not yet" || s.band === "Developing") cs.belowMeets++;
+    if (Number.isFinite(s.duration_ms)) { cs.totalDuration += s.duration_ms; cs.durationCount++; }
+  }
+  const popularPathways = Object.entries(pathwayCounts).sort((a, b) => b[1] - a[1])
+    .map(([pathwayId, submissions]) => ({ pathwayId, submissions }));
+  const struggle = Object.entries(capStats).map(([capId, s]) => ({
+    capId, attempts: s.attempts,
+    belowMeetsPct: s.attempts ? Math.round((s.belowMeets / s.attempts) * 100) : 0,
+    avgDurationMs: s.durationCount ? Math.round(s.totalDuration / s.durationCount) : null,
+  })).sort((a, b) => b.belowMeetsPct - a.belowMeetsPct);
+
+  return json(200, {
+    ok: true,
+    totals: { learners: users.length, activeToday, activeWeek, submissions: subs.length },
+    popularPathways,
+    struggle,
+  }, headers);
+}
+
+async function handleAdminLearners(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+
+  const [{ results: users }, { results: subs }, { results: acts }] = await Promise.all([
+    env.DB.prepare("SELECT id, email, created_at FROM users").all(),
+    env.DB.prepare("SELECT user_id, band, duration_ms, completed_at FROM submissions").all(),
+    env.DB.prepare("SELECT user_id, ts FROM activity_log").all(),
+  ]);
+
+  const bandScore = { "Not yet": 0, "Developing": 1, "Meets": 2, "Exceeds": 3 };
+  const byUserSubs = {}, byUserActs = {};
+  for (const s of subs) (byUserSubs[s.user_id] ||= []).push(s);
+  for (const a of acts) (byUserActs[a.user_id] ||= []).push(new Date(a.ts).getTime());
+
+  const learners = users.map(u => {
+    const mySubs = byUserSubs[u.id] || [];
+    const myTimes = (byUserActs[u.id] || []).concat(
+      mySubs.map(s => new Date(s.completed_at).getTime())
+    );
+    const avgBandScore = mySubs.length
+      ? mySubs.reduce((sum, s) => sum + (bandScore[s.band] ?? 2), 0) / mySubs.length : null;
+    const lastActive = myTimes.length ? new Date(Math.max(...myTimes)).toISOString() : null;
+    return {
+      id: u.id, email: u.email, createdAt: u.created_at,
+      competenciesDone: mySubs.length,
+      avgBandScore: avgBandScore != null ? Math.round(avgBandScore * 100) / 100 : null,
+      timeOnPlatformMs: sumActiveMs(myTimes),
+      lastActive,
+    };
+  }).sort((a, b) => (b.lastActive || "").localeCompare(a.lastActive || ""));
+
+  return json(200, { ok: true, learners }, headers);
+}
+
+async function handleAdminLearnerDetail(request, env, headers, userId) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+
+  const user = await env.DB.prepare("SELECT id, email, created_at, role FROM users WHERE id = ?").bind(userId).first();
+  if (!user) return json(404, { ok: false, error: "not_found" }, headers);
+
+  const [{ results: submissions }, { results: activity }] = await Promise.all([
+    env.DB.prepare("SELECT * FROM submissions WHERE user_id = ? ORDER BY completed_at DESC").bind(userId).all(),
+    env.DB.prepare("SELECT * FROM activity_log WHERE user_id = ? ORDER BY ts DESC LIMIT 200").bind(userId).all(),
+  ]);
+  const times = activity.map(a => new Date(a.ts).getTime())
+    .concat(submissions.map(s => new Date(s.completed_at).getTime()));
+
+  return json(200, {
+    ok: true,
+    user,
+    timeOnPlatformMs: sumActiveMs(times),
+    submissions,
+    activity,
+  }, headers);
 }
 
 export default {
@@ -222,6 +395,19 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/api/auth/logout") {
       return handleLogout(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/progress/sync") {
+      return handleProgressSync(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/overview") {
+      return handleAdminOverview(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/learners") {
+      return handleAdminLearners(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname.startsWith("/api/admin/learners/")) {
+      const userId = url.pathname.slice("/api/admin/learners/".length);
+      return handleAdminLearnerDetail(request, env, headers, userId);
     }
     return json(404, { ok: false, error: "not_found" }, headers);
   },

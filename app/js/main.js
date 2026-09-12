@@ -28,7 +28,14 @@
     { test: p => p.startsWith("/pathway/"), view: viewPathwayOverview },
     { test: p => p === "/login", view: viewLogin },
     { test: p => p === "/account", view: viewAccount },
+    { test: p => p.startsWith("/admin/learners/"), view: viewAdminLearnerDetail },
+    { test: p => p === "/admin/learners", view: viewAdminLearners },
+    { test: p => p === "/admin", view: viewAdminOverview },
   ];
+
+  // "When was this challenge/checkpoint opened" — stamped by viewChallenge/viewCheckpoint,
+  // consumed once by the confirm handler below to compute duration_ms for progress sync.
+  const taskStarted = {};
 
   function stripMeta(data) {
     const { project, ...rest } = data;
@@ -72,6 +79,11 @@
     app.querySelectorAll("[data-action]").forEach(el => el.addEventListener("click", handleAction));
     app.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
     app.querySelectorAll(".qopt").forEach(el => el.addEventListener("click", handleQopt));
+
+    const path = parseHash().path;
+    if (path === "/admin") loadAdminOverview();
+    else if (path === "/admin/learners") loadAdminLearners();
+    else if (path.startsWith("/admin/learners/")) loadAdminLearnerDetail(parseHash().parts[2]);
   }
 
   function handleQopt(e) {
@@ -263,6 +275,12 @@
           M.raise(l, payload.cap, payload.result.stateTarget, payload.result.confidence);
         });
         window.STORE.log("challenge-evidence", payload.ch);
+        syncSubmission({
+          kind: "challenge", capId: payload.cap, challengeId: payload.ch,
+          pathwayId: pathwayOf(payload.cap), band: overallBand(payload.result),
+          confidence: payload.result.confidence, fields: stripMeta(payload.data),
+          startKey: `challenge:${payload.cap}:${payload.ch}`,
+        });
       } else {
         const cpDef = C.checkpoint(payload.cp);
         window.STORE.update(l => {
@@ -278,11 +296,46 @@
           cpDef.after.forEach(capId => M.raise(l, capId, payload.result.stateTarget, "medium"));
         });
         window.STORE.log("checkpoint-evidence", payload.cp);
+        syncSubmission({
+          kind: "checkpoint", capId: cpDef.after[0], checkpointId: payload.cp,
+          pathwayId: pathwayOf(cpDef.after[0]), band: overallBand(payload.result),
+          confidence: payload.result.confidence, fields: stripMeta(payload.data),
+          startKey: `checkpoint:${payload.cp}`,
+        });
       }
       sessionStorage.removeItem("aifaculty.assess");
       location.hash = "#/evidence";
       return;
     }
+  }
+
+  // Overall band for a submission, derived from its per-field bands. Checkpoints and
+  // "fields"-type challenges always have real bands (faculty.js fieldReport); critique/scenario
+  // challenges only carry pass/fail "ok" flags, so they default to "Meets" — confirm() only ever
+  // runs on a "ready" verdict, so every synced submission is a genuine pass, never below Meets.
+  function overallBand(result) {
+    const BANDS = ["Not yet", "Developing", "Meets", "Exceeds"];
+    const bands = (result.fieldReports || []).map(r => r.band).filter(Boolean);
+    if (!bands.length) return "Meets";
+    return BANDS[Math.min(...bands.map(b => BANDS.indexOf(b)))];
+  }
+
+  function pathwayOf(capId) {
+    const p = C.PATHWAYS.find(pw => pw.competencies.some(c => c.id === capId));
+    return p ? p.id : null; // null = a foundation competency, not a pathway one
+  }
+
+  // Best-effort server mirror of a passed submission, for the admin panel — never blocks or
+  // affects the local evidence save above, and silently no-ops when signed out.
+  function syncSubmission({ startKey, ...rest }) {
+    const startedMs = taskStarted[startKey];
+    delete taskStarted[startKey];
+    if (!window.AUTH.get().user) return;
+    window.AUTH.apiPost("/progress/sync", {
+      type: "submission", ...rest,
+      startedAt: startedMs ? new Date(startedMs).toISOString() : null,
+      durationMs: startedMs ? Date.now() - startedMs : null,
+    });
   }
 
   // ---- shared result renderer --------------------------------------
@@ -588,6 +641,7 @@
     const ch = C.challenge(capId, chId);
     if (!ch) return `<div class="notice">Unknown challenge.</div>`;
     const idx = c.challenges.findIndex(x => x.id === chId);
+    taskStarted[`challenge:${capId}:${chId}`] = Date.now();
 
     // Open by default on the first challenge (still close support) — the later,
     // higher-ladder challenges in the same competency stay collapsed since they're
@@ -656,6 +710,7 @@
         <div class="notice">Locked. Complete every challenge in ${esc(cp.after.join(", "))} first.</div>
         <a class="btn btn--ghost" data-nav href="#/" style="margin-top:12px">Back to progress</a>`;
     }
+    taskStarted[`checkpoint:${cpId}`] = Date.now();
     const done = M.checkpointDone(learner, cpId);
     const fields = cp.fields.map(f => `
       <div class="field"><label>${esc(f.label)}</label>
@@ -953,9 +1008,131 @@
     const { checked, user } = window.AUTH.get();
     if (!checked) { el.innerHTML = ""; return; }
     el.innerHTML = user
-      ? `<a data-nav href="#/account">${esc(user.email)}</a>
+      ? `${user.role === "founder" ? `<a data-nav href="#/admin">Admin</a>` : ""}
+         <a data-nav href="#/account">${esc(user.email)}</a>
          <button class="link-btn" type="button" data-action="logout">Sign out</button>`
       : `<a data-nav href="#/login">Sign in</a>`;
+  }
+
+  // ---- admin panel (founder-only; server enforces this, this is UX only) --------------
+  function requireFounderView(body) {
+    const auth = window.AUTH.get();
+    if (!auth.checked) return `<h1>Admin</h1><p class="lead">Checking your sign-in status…</p>`;
+    if (!auth.user) { location.hash = "#/login"; return ""; }
+    if (auth.user.role !== "founder") return `<h1>Admin</h1><div class="notice">Not authorized.</div>`;
+    return body();
+  }
+
+  function adminTabs(active) {
+    const tab = (href, label, key) =>
+      `<a data-nav href="${href}" style="margin-right:16px;font-weight:${active === key ? 700 : 400}">${label}</a>`;
+    return `<p style="margin-bottom:16px">${tab("#/admin", "Overview", "overview")}${tab("#/admin/learners", "Learners", "learners")}</p>`;
+  }
+
+  const TD = 'style="padding:6px 10px;border-bottom:1px solid var(--border)"';
+  const TH = 'style="text-align:left;padding:6px 10px"';
+
+  function fmtDuration(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) return "—";
+    const mins = Math.round(ms / 60000);
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  }
+  function fmtWhen(iso) { return iso ? new Date(iso).toLocaleString() : "—"; }
+
+  function adminErrorHtml(res) {
+    if (res.status === 401) { location.hash = "#/login"; return ""; }
+    if (res.status === 403) return `<div class="notice">Not authorized.</div>`;
+    return `<div class="notice">Could not load — try again.</div>`;
+  }
+
+  function viewAdminOverview() {
+    return requireFounderView(() => `<h1>Admin</h1>${adminTabs("overview")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
+  }
+  function viewAdminLearners() {
+    return requireFounderView(() => `<h1>Admin</h1>${adminTabs("learners")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
+  }
+  function viewAdminLearnerDetail() {
+    return requireFounderView(() => `<h1>Admin</h1>${adminTabs("learners")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
+  }
+
+  async function loadAdminOverview() {
+    const box = document.getElementById("adminBody");
+    if (!box || !window.AUTH.get().user) return;
+    const res = await window.AUTH.apiGet("/admin/overview");
+    if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const d = res.data;
+    const pathwayRows = d.popularPathways.map(p =>
+      `<tr><td ${TD}>${esc(p.pathwayId)}</td><td ${TD}>${p.submissions}</td></tr>`).join("")
+      || `<tr><td colspan="2" class="hint" ${TD}>No submissions yet.</td></tr>`;
+    const struggleRows = d.struggle.slice(0, 15).map(s =>
+      `<tr><td ${TD}>${esc(s.capId)}</td><td ${TD}>${s.attempts}</td><td ${TD}>${s.belowMeetsPct}%</td>
+        <td ${TD}>${s.avgDurationMs != null ? fmtDuration(s.avgDurationMs) : "—"}</td></tr>`).join("")
+      || `<tr><td colspan="4" class="hint" ${TD}>No submissions yet.</td></tr>`;
+    box.innerHTML = `
+      <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">
+        <div><div class="card__label">Learners</div><strong style="font-size:22px">${d.totals.learners}</strong></div>
+        <div><div class="card__label">Active today</div><strong style="font-size:22px">${d.totals.activeToday}</strong></div>
+        <div><div class="card__label">Active this week</div><strong style="font-size:22px">${d.totals.activeWeek}</strong></div>
+        <div><div class="card__label">Submissions</div><strong style="font-size:22px">${d.totals.submissions}</strong></div>
+      </div>
+      <h2 style="font-size:16px">Pathway popularity</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr><th ${TH}>Pathway</th><th ${TH}>Submissions</th></tr></thead>
+        <tbody>${pathwayRows}</tbody>
+      </table>
+      <h2 style="font-size:16px">Struggle points (worst first)</h2>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr><th ${TH}>Competency</th><th ${TH}>Attempts</th><th ${TH}>% below Meets</th><th ${TH}>Avg time</th></tr></thead>
+        <tbody>${struggleRows}</tbody>
+      </table>`;
+  }
+
+  async function loadAdminLearners() {
+    const box = document.getElementById("adminBody");
+    if (!box || !window.AUTH.get().user) return;
+    const res = await window.AUTH.apiGet("/admin/learners");
+    if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const rows = res.data.learners.map(l => `
+      <tr>
+        <td ${TD}><a data-nav href="#/admin/learners/${l.id}">${esc(l.email)}</a></td>
+        <td ${TD}>${fmtDuration(l.timeOnPlatformMs)}</td>
+        <td ${TD}>${l.competenciesDone}</td>
+        <td ${TD}>${l.avgBandScore ?? "—"}</td>
+        <td ${TD}>${fmtWhen(l.lastActive)}</td>
+      </tr>`).join("") || `<tr><td colspan="5" class="hint" ${TD}>No learners yet.</td></tr>`;
+    box.innerHTML = `
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th ${TH}>Email</th><th ${TH}>Time on platform</th><th ${TH}>Competencies done</th>
+          <th ${TH}>Avg band (0–3)</th><th ${TH}>Last active</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  async function loadAdminLearnerDetail(userId) {
+    const box = document.getElementById("adminBody");
+    if (!box || !window.AUTH.get().user) return;
+    const res = await window.AUTH.apiGet(`/admin/learners/${encodeURIComponent(userId)}`);
+    if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const d = res.data;
+    const subRows = d.submissions.map(s => `
+      <tr>
+        <td ${TD}>${esc(s.cap_id)}</td><td ${TD}>${esc(s.kind)}</td><td ${TD}>${bandTag(s.band)}</td>
+        <td ${TD}>${s.duration_ms != null ? fmtDuration(s.duration_ms) : "—"}</td>
+        <td ${TD}>${fmtWhen(s.completed_at)}</td>
+      </tr>`).join("") || `<tr><td colspan="5" class="hint" ${TD}>No submissions yet.</td></tr>`;
+    box.innerHTML = `
+      <p class="hint"><a data-nav href="#/admin/learners">← All learners</a></p>
+      <h2 style="font-size:16px">${esc(d.user.email)}</h2>
+      <p class="hint">Account created ${fmtWhen(d.user.created_at)} · time on platform ${fmtDuration(d.timeOnPlatformMs)}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:12px">
+        <thead><tr>
+          <th ${TH}>Competency</th><th ${TH}>Kind</th><th ${TH}>Band</th><th ${TH}>Time taken</th><th ${TH}>Completed</th>
+        </tr></thead>
+        <tbody>${subRows}</tbody>
+      </table>`;
   }
 
   document.getElementById("authNav").addEventListener("click", e => {
@@ -965,7 +1142,8 @@
   });
   window.AUTH.onChange(() => {
     renderAuthNav();
-    if (parseHash().path === "/login" || parseHash().path === "/account") router();
+    const p = parseHash().path;
+    if (p === "/login" || p === "/account" || p.startsWith("/admin")) router();
   });
 
   // ---- reset -----------------------------------------------------

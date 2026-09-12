@@ -49,5 +49,29 @@ window.AUTH = (function () {
 
   function get() { return state; }
 
-  return { get, refresh, requestLink, logout, onChange };
+  // Generic authenticated request helpers, reused by progress sync and the admin panel —
+  // never throw, always resolve to a uniform { ok, status, data } shape.
+  async function apiPost(path, body) {
+    try {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) };
+    } catch (e) {
+      return { ok: false, status: 0, data: null };
+    }
+  }
+  async function apiGet(path) {
+    try {
+      const res = await fetch(`${API_BASE}${path}`, { credentials: "include" });
+      return { ok: res.ok, status: res.status, data: await res.json().catch(() => null) };
+    } catch (e) {
+      return { ok: false, status: 0, data: null };
+    }
+  }
+
+  return { get, refresh, requestLink, logout, onChange, apiPost, apiGet };
 })();

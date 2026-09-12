@@ -79,6 +79,11 @@ window.STORE = (function () {
 
   function log(kind, detail) {
     update(l => { l.activity.unshift({ ts: new Date().toISOString(), kind, detail }); });
+    // Best-effort server mirror for the admin panel — never blocks or affects the local save
+    // above, and silently no-ops when signed out (anonymous/local-only use is unaffected).
+    if (window.AUTH && window.AUTH.get().user) {
+      window.AUTH.apiPost("/progress/sync", { type: "activity", kind, detail });
+    }
   }
 
   return { get, update, reset, log, blankLearner };
