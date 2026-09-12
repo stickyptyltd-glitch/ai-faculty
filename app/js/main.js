@@ -798,10 +798,13 @@
       <p class="lead">${esc(p.tagline)}</p>
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
       ${["legal","finance","hr","health"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
-        <strong>Draft content — not yet expert-verified.</strong> This pathway teaches AI-workflow
-        judgement, not the law/regulation of your jurisdiction. Regulatory and professional-standard
-        details here are illustrative and pending Research Faculty verification (R2+). Check specifics
-        against a qualified source before acting on them.</div>` : ""}
+        <strong>Reviewed for unverified specifics, not yet signed off by a licensed professional.</strong>
+        This pathway teaches AI-workflow judgement, not the law/regulation of your jurisdiction —
+        every lesson was checked (2026-09-12) to defer to your own jurisdiction, policy or a
+        qualified professional rather than state a specific regulation, threshold or citation as
+        settled fact. Scenario numbers and company policies in the examples are illustrative.
+        Still pending formal sign-off by a lawyer/accountant/HR specialist/clinician — check
+        anything you rely on.</div>` : ""}
       ${p.prereq && p.prereq !== "foundation" && C.pathway(p.prereq)
         ? `<div class="notice" style="margin-bottom:14px">Best taken after the
            <a data-nav href="#/pathway/${p.prereq}">${esc(C.pathway(p.prereq).title)}</a> pathway —
@@ -889,9 +892,11 @@
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Pathway content is an authored first draft. It teaches AI-workflow judgement, not the
-      domain itself — worked examples and any regulatory or professional-standard detail are
-      illustrative and pending Research Faculty verification (R2+). The regulated-domain pathways
-      (Legal, Finance, HR, Healthcare) carry this note on their overview page.</p>
+      domain itself — worked examples are illustrative. The regulated-domain pathways (Legal,
+      Finance, HR, Healthcare) were specifically reviewed (2026-09-12) to defer to your own
+      jurisdiction/policy/qualified professional rather than state regulatory specifics as fact;
+      they're still pending formal sign-off by a licensed professional in each field. Their
+      overview page carries the detail.</p>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
       (<code>js/faculty.js</code>) — one swappable seam for a real model later.</p>
       <p>Data lives only in this browser (<code>localStorage</code>). “Reset learner” in the footer clears it.</p>

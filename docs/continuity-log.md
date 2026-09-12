@@ -438,6 +438,32 @@ Founder said "continue" — shipped the two remaining diagram types from the exp
   28/28 critique challenges, 5/~15 role-relevant competencies. Extending the role ladder further
   is additive (add `roleMap` to more competencies) whenever there's a genuine fit.
 
+## v0.22 — 2026-09-12 — Regulated-pathway content audit: better than feared
+
+Ran the verification pass flagged since v0.16/v0.17: read every lesson, challenge and guided
+model across all 20 competencies in Legal, Finance, HR and Healthcare in full (not sampled),
+specifically hunting for the failure mode the governance note warned about — a specific
+regulation, statute, retention period or legal threshold asserted as settled fact instead of
+deferred to the learner's actual jurisdiction/policy/qualified professional.
+
+**Finding: the content held up.** No fabricated standard citations, no specific numeric legal/
+regulatory thresholds stated as universal fact. The consistent pattern already in place across
+all 20 competencies: "check your jurisdiction," "a qualified person," "per policy," "per the
+trust's retention and security policy," "often," "likely," "almost certainly" — genuine
+epistemic hedging, not overconfident specifics. Numeric examples (£400k contract value, £40k vs
+£38k variance, 12 months' fees) are illustrative scenario data for teaching exercises, clearly
+framed as such, not assertions of law. Only one line was tightened: HR2's guided model stated
+"In the UK / EU a candidate has rights around solely-automated decisions" — true and stable, but
+phrased in a way that could read as exhaustive; reworded to "many jurisdictions... UK/EU is one
+well-known example... don't assume your jurisdiction's rule is the only one."
+- Updated the draft-content notice on all 4 pathway overview pages, and the About page's general
+  version, to reflect the actual finding — from a blanket "not yet expert-verified" (implying
+  the content itself was suspect) to "reviewed for unverified specifics [date], not yet signed
+  off by a licensed professional" (accurate: the specific-claims risk was checked and is low;
+  formal professional sign-off — a real lawyer/accountant/HR specialist/clinician — still hasn't
+  happened, and that distinction is what the banner now says).
+- Verified live: the updated HR pathway banner screenshotted on the deployed site.
+
 ## Open threads
 - **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
   leaderboard) — plan approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.

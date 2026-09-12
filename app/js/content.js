@@ -7280,7 +7280,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
             criteria: "The explicit, job-related must-haves — 'available for shift work', 'evidence of reliability in a previous role', 'basic numeracy' — each scored with the supporting text quoted. Not a holistic 'fit' score.",
             humanrole: "A human reviews everyone within a band of the cut line; a random 10–15% sample of clear rejects; and anyone who requests a review.",
             biascheck: "Shortlist rate by gender, by age band (from graduation year if present), by postcode cluster as a proxy, by employment-gap presence. Any gap over a threshold → investigate the driving criterion.",
-            legal: "In the UK / EU a candidate has rights around solely-automated decisions with significant effects — build in the human review and the ability to explain and contest. Check the specific rules for where the candidates are.",
+            legal: "Many jurisdictions (UK/EU data-protection law is one well-known example) give people rights around solely-automated decisions with significant effects — build in the human review and the ability to explain and contest regardless. Check the specific rules for where the candidates actually are; don't assume your jurisdiction's rule is the only one or the strictest one.",
           },
         },
       },
