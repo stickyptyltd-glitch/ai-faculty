@@ -8827,6 +8827,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Software & Product Development",
       tagline: "Ship real features and fixes with AI as a fast pair — and catch it when it's wrong.",
       forRoles: "engineers · PMs · technical founders · designers who build",
+      recommend: ["write code", "coding", "software engineer", "developer", "ship features", "debug", "github", "build a product", "technical founder", "programming"],
       status: "available", prereq: "foundation",
       competencies: SOFTWARE_COMPETENCIES, capstoneId: "SWCAP",
       rubricEmphasis: ["Verification", "Safety"],
@@ -8836,6 +8837,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Content, Marketing & Comms",
       tagline: "Draft at scale with brand voice, checked claims, and disclosure done right.",
       forRoles: "writers · marketers · founders doing their own marketing",
+      recommend: ["marketing", "content writing", "copywriting", "blog post", "social media post", "brand voice", "ad campaign", "newsletter", "seo"],
       status: "available", prereq: "foundation",
       competencies: CONTENT_COMPETENCIES, capstoneId: "CONTCAP",
       rubricEmphasis: ["Reasoning", "Safety"],
@@ -8845,6 +8847,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Operations & Admin",
       tagline: "Map a process, then automate it with human checkpoints and an audit trail.",
       forRoles: "ops · EAs · office managers · small-business owners",
+      recommend: ["operations", "admin tasks", "office manager", "process automation", "scheduling", "standard operating procedure", "spreadsheet", "invoicing"],
       status: "available", prereq: "foundation",
       competencies: OPS_COMPETENCIES, capstoneId: "OPSCAP",
       rubricEmphasis: ["Structure", "Safety"],
@@ -8854,6 +8857,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Customer Support",
       tagline: "Triage, draft, ground answers in the knowledge base, and handle the hard cases.",
       forRoles: "support · customer success",
+      recommend: ["customer support", "customer service", "support tickets", "help desk", "customer success"],
       status: "available", prereq: "foundation",
       competencies: SUPPORT_COMPETENCIES, capstoneId: "SUPCAP",
       rubricEmphasis: ["Reasoning", "Safety"],
@@ -8863,6 +8867,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Research & Analysis",
       tagline: "Frame the question, synthesise many sources, verify every claim, never ship a fake citation.",
       forRoles: "analysts · researchers · journalists · students",
+      recommend: ["research analyst", "literature review", "synthesise sources", "fact-check", "write a report", "market research", "journalist", "journalism"],
       status: "available", prereq: "foundation",
       competencies: RESEARCH_COMPETENCIES, capstoneId: "RESCAP",
       rubricEmphasis: ["Verification", "Reasoning"],
@@ -8872,6 +8877,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Education & Training",
       tagline: "Design outcomes, generate checked materials, support feedback and assessment.",
       forRoles: "teachers · trainers · L&D · course creators",
+      recommend: ["teacher", "teaching", "training course", "curriculum", "lesson plan", "tutor", "instructional design"],
       status: "available", prereq: "foundation",
       competencies: EDUCATION_COMPETENCIES, capstoneId: "EDUCAP",
       rubricEmphasis: ["Clarity", "Safety"],
@@ -8883,6 +8889,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "AI Engineering — Building with LLMs",
       tagline: "Prompts as contracts, retrieval, tools, evals and production — build LLM features that hold up.",
       forRoles: "engineers · AI/ML engineers · technical founders shipping AI features",
+      recommend: ["prompt engineer", "build with llm", "llm application", "rag pipeline", "ai product feature", "chatgpt api", "openai api", "build an ai app"],
       status: "available", prereq: "foundation",
       competencies: ENGINEERING_COMPETENCIES, capstoneId: "ENGCAP",
       rubricEmphasis: ["Verification", "Structure"],
@@ -8892,6 +8899,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "How AI Works — Technical Foundations",
       tagline: "What a model actually is, so your decisions rest on how it works, not on vibes.",
       forRoles: "anyone building with or making decisions about AI",
+      recommend: ["how ai works", "understand ai", "learn about ai", "how llms work", "what is a language model", "ai literacy"],
       status: "available", prereq: "foundation",
       competencies: FOUNDATIONS_COMPETENCIES, capstoneId: "FNDCAP",
       rubricEmphasis: ["Clarity", "Reasoning"],
@@ -8901,6 +8909,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Machine Learning Practitioner",
       tagline: "Frame it, get the data right, train, evaluate honestly, deploy and monitor.",
       forRoles: "data scientists · ML engineers · analysts moving into ML",
+      recommend: ["machine learning", "data scientist", "train a model", "ml engineer", "dataset", "model evaluation"],
       status: "available", prereq: "foundation",
       competencies: ML_COMPETENCIES, capstoneId: "MLCAP",
       rubricEmphasis: ["Verification", "Evidence"],
@@ -8910,6 +8919,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Agentic Systems",
       tagline: "When an agent beats a workflow, and how to build one that fails safely.",
       forRoles: "engineers building autonomous or multi-step AI systems",
+      recommend: ["ai agent", "autonomous agent", "agentic system", "build an agent", "multi-step automation"],
       status: "available", prereq: "engineering",
       competencies: AGENTS_COMPETENCIES, capstoneId: "AGCAP",
       rubricEmphasis: ["Safety", "Structure"],
@@ -8919,6 +8929,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "AI Safety, Evals & Red-teaming",
       tagline: "Assess the risks, write the safety evals, break your own system before someone else does.",
       forRoles: "safety engineers · eval authors · anyone shipping consequential AI",
+      recommend: ["ai safety", "red team", "red-team", "risk assessment", "jailbreak", "responsible ai", "ai governance"],
       status: "available", prereq: "engineering",
       competencies: SAFETY_COMPETENCIES, capstoneId: "SAFECAP",
       rubricEmphasis: ["Safety", "Verification"],
@@ -8930,6 +8941,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Legal & Contracts",
       tagline: "Review contracts with AI as a fast first pass — and never let it be the last word on legal risk.",
       forRoles: "lawyers · paralegals · contract managers · founders reviewing their own contracts",
+      recommend: ["contract review", "law firm", "paralegal", "litigation", "legal team", "attorney"],
       status: "available", prereq: "foundation",
       competencies: LEGAL_COMPETENCIES, capstoneId: "LEGCAP",
       rubricEmphasis: ["Verification", "Safety"],
@@ -8939,6 +8951,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Sales",
       tagline: "Research accounts, draft outreach and follow-ups, and prep for calls — without fabricating facts or over-promising.",
       forRoles: "account executives · SDRs · sales leaders · founders selling",
+      recommend: ["sales outreach", "prospecting", "sales pipeline", "cold email", "account executive", "sales quota", "crm"],
       status: "available", prereq: "foundation",
       competencies: SALES_COMPETENCIES, capstoneId: "SALESCAP",
       rubricEmphasis: ["Reasoning", "Safety"],
@@ -8948,6 +8961,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Finance & Accounting",
       tagline: "Analyse, reconcile, model and report with AI — with the arithmetic checked and an auditable trail.",
       forRoles: "accountants · FP&A · bookkeepers · finance teams · founders doing their own books",
+      recommend: ["accounting", "bookkeeping", "financial analyst", "fp&a", "budgeting", "audit", "financial model"],
       status: "available", prereq: "foundation",
       competencies: FINANCE_COMPETENCIES, capstoneId: "FINCAP",
       rubricEmphasis: ["Verification", "Evidence"],
@@ -8957,6 +8971,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "HR & People",
       tagline: "Screen, write and support people processes with AI — without importing bias, breaching privacy, or removing the human from decisions about people.",
       forRoles: "recruiters · HR business partners · people ops · hiring managers",
+      recommend: ["human resources", "recruiting", "recruitment", "hiring", "people ops", "onboarding", "performance review"],
       status: "available", prereq: "foundation",
       competencies: HR_COMPETENCIES, capstoneId: "HRCAP",
       rubricEmphasis: ["Safety", "Reasoning"],
@@ -8966,6 +8981,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Healthcare & Clinical Support",
       tagline: "Use AI for admin, documentation and information support in clinical settings — where a confident wrong answer can harm someone.",
       forRoles: "clinicians · nurses · medical admin · allied health · practice managers",
+      recommend: ["healthcare", "clinical", "patient care", "nursing", "medical admin", "clinician", "practice manager"],
       status: "available", prereq: "foundation",
       competencies: HEALTH_COMPETENCIES, capstoneId: "HEALTHCAP",
       rubricEmphasis: ["Safety", "Verification"],
@@ -8977,6 +8993,7 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Product Management",
       tagline: "Turn vague asks into real specs, prioritise against named criteria, and synthesise research honestly — without AI inventing the parts only judgement can supply.",
       forRoles: "product managers · founders wearing the PM hat · product owners",
+      recommend: ["product manager", "product roadmap", "write a prd", "user stories", "product backlog", "product owner"],
       status: "available", prereq: "foundation",
       competencies: PM_COMPETENCIES, capstoneId: "PMCAP",
       rubricEmphasis: ["Reasoning", "Evidence"],
@@ -8986,11 +9003,28 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
       title: "Public Sector & Government Services",
       tagline: "Draft guidance, summarise consultations, and process cases with AI — while decisions, disclosures and fairness stay with an accountable person.",
       forRoles: "civil servants · council officers · policy and grants teams · public-facing case workers",
+      recommend: ["government", "public sector", "policy team", "civil servant", "council officer", "procurement", "foi request"],
       status: "available", prereq: "foundation",
       competencies: PS_COMPETENCIES, capstoneId: "PSCAP",
       rubricEmphasis: ["Safety", "Verification"],
     },
   ];
+
+  // Recommend a pathway from the learner's own diagnostic answer B ("what would you most like
+  // AI to help you accomplish professionally?"). Pure keyword scoring, transparent and
+  // deterministic — matches how the rest of the Faculty is authored rather than model-scored.
+  // Requires a real hit (score > 0); never forces a pick on thin/empty text.
+  function recommendPathway(text) {
+    const t = (text || "").toLowerCase();
+    if (!t.trim()) return null;
+    let best = null, bestScore = 0;
+    for (const p of PATHWAYS) {
+      if (!p.recommend) continue;
+      const score = p.recommend.reduce((n, kw) => n + (t.includes(kw) ? 1 : 0), 0);
+      if (score > bestScore) { bestScore = score; best = p; }
+    }
+    return best;
+  }
 
   const PATHWAY_CHECKPOINTS = [
     {
@@ -9387,6 +9421,6 @@ Body: "Support tickets show users searching 'recieve', 'seperate', etc. and gett
     PATHWAY, COMPETENCIES, CHECKPOINTS, DIAGNOSTIC,
     PATHWAYS, PATHWAY_CHECKPOINTS, QUICK_CHECKS,
     competency, challenge, checkpoint, pathway,
-    allCompetencies, competenciesFor, checkpointsFor, quickCheck, lessonSteps,
+    allCompetencies, competenciesFor, checkpointsFor, quickCheck, lessonSteps, recommendPathway,
   };
 })();

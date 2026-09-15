@@ -833,20 +833,32 @@
     `;
   }
 
+  // A pathway's prerequisite is either "foundation" (handled separately via fDone) or another
+  // pathway id — met once that pathway's competencies + capstone are all complete.
+  function prereqMet(learner, p) {
+    return !p.prereq || p.prereq === "foundation" ||
+      (!!C.pathway(p.prereq) && M.moduleComplete(learner, p.prereq));
+  }
+
   function viewPathwayCatalogue(learner) {
     const fDone = M.foundationDone(learner);
+    const rec = fDone && !learner.pathway && learner.intake ? C.recommendPathway(learner.intake.b) : null;
     const card = p => {
       const chosen = learner.pathway === p.id;
       const avail = p.status === "available";
+      const locked = avail && fDone && !chosen && !prereqMet(learner, p);
       const nComp = p.competencies.length || (p.outline ? p.outline.length : 0);
       const badge = chosen ? `<span class="pill pill--independent">Your pathway</span>`
+        : locked ? `<span class="pill pill--unknown">Locked</span>`
         : avail ? `<span class="pill pill--guided">Available</span>`
         : `<span class="pill pill--unknown">Planned</span>`;
       const action = chosen
         ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Open</a>`
-        : (avail && fDone)
-          ? `<a class="btn btn--sm" data-nav href="#/pathway/${p.id}">View &amp; choose</a>`
-          : `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">See the curriculum</a>`;
+        : locked
+          ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Locked — see why</a>`
+          : (avail && fDone)
+            ? `<a class="btn btn--sm" data-nav href="#/pathway/${p.id}">View &amp; choose</a>`
+            : `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">See the curriculum</a>`;
       return `<div class="card">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:6px">
           <strong style="font-size:15px">${esc(p.title)}</strong>${badge}
@@ -870,6 +882,12 @@
         <p style="margin:0 0 10px">You're still in the foundation module. Finish it, or —
         as the founder building this — skip ahead now.</p>
         <button class="btn btn--ghost btn--sm" data-action="skip-foundation">Skip foundation (founder)</button>
+      </div>` : ""}
+      ${rec ? `<div class="card next" style="margin-bottom:14px">
+        <div class="card__label">Recommended for you</div>
+        <p style="margin:0 0 10px">Based on what you told the diagnostic about your professional
+          goals, <strong>${esc(rec.title)}</strong> looks like a good fit — ${esc(rec.tagline)}</p>
+        <a class="btn" data-nav href="#/pathway/${rec.id}">View ${esc(rec.title)}</a>
       </div>` : ""}
       ${group("work", "Using AI at work", "Take the foundation skills into the real tasks of your role.")}
       ${group("build", "Building AI", "The technical track — how models work, and how to build systems on them.")}`;
@@ -901,10 +919,20 @@
         settled fact. Scenario numbers and policies in the examples are illustrative.
         Still pending formal sign-off by a lawyer/accountant/HR specialist/clinician/legal-policy
         officer as relevant — check anything you rely on.</div>` : ""}
-      ${p.prereq && p.prereq !== "foundation" && C.pathway(p.prereq)
-        ? `<div class="notice" style="margin-bottom:14px">Best taken after the
-           <a data-nav href="#/pathway/${p.prereq}">${esc(C.pathway(p.prereq).title)}</a> pathway —
-           it assumes that background.</div>` : ""}
+      ${(() => {
+        if (!p.prereq || p.prereq === "foundation" || !C.pathway(p.prereq)) return "";
+        const prereqP = C.pathway(p.prereq);
+        const met = prereqMet(learner, p);
+        return met
+          ? `<div class="notice" style="margin-bottom:14px">Built on the
+               <a data-nav href="#/pathway/${p.prereq}">${esc(prereqP.title)}</a> pathway —
+               you've completed it, so this one's background is already covered.</div>`
+          : `<div class="notice" style="margin-bottom:14px;border-color:var(--warn)">
+               <strong>Locked</strong> — this pathway assumes the
+               <a data-nav href="#/pathway/${p.prereq}">${esc(prereqP.title)}</a> pathway's
+               background. Finish that one first, or choose this anyway if you already have the
+               experience elsewhere.</div>`;
+      })()}
 
       ${p.competencies.length ? `
         <h2>Capabilities</h2>
@@ -914,8 +942,11 @@
         ${chosen
           ? `<a class="btn" data-nav href="#/" style="margin-top:16px">Continue this pathway</a>`
           : fDone
-            ? `<form data-form="choose-pathway" data-pathway="${p.id}" style="margin-top:16px">
-                 <button class="btn" type="submit">Choose ${esc(p.title)}</button></form>`
+            ? (prereqMet(learner, p)
+                ? `<form data-form="choose-pathway" data-pathway="${p.id}" style="margin-top:16px">
+                     <button class="btn" type="submit">Choose ${esc(p.title)}</button></form>`
+                : `<form data-form="choose-pathway" data-pathway="${p.id}" style="margin-top:16px">
+                     <button class="btn btn--ghost" type="submit">Choose anyway — I already have that background</button></form>`)
             : `<div class="notice" style="margin-top:16px">Finish the foundation module to start a pathway
                  (or use the founder skip on the <a data-nav href="#/pathways">pathways page</a>).</div>`}
       ` : p.outline ? `

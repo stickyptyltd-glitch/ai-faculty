@@ -60,8 +60,11 @@ window.PATHWAY = (function () {
 
     // 2) Choose a work pathway
     if (!learner.pathway) {
+      const rec = learner.intake && C.recommendPathway(learner.intake.b);
       return { action: "choose-pathway",
-        reason: "Foundation done. Now pick a work pathway — it takes these skills into the real tasks of your job.",
+        reason: rec
+          ? `Foundation done. Based on what you told us in the diagnostic, "${rec.title}" looks like a good fit — or browse all pathways and pick your own.`
+          : "Foundation done. Now pick a work pathway — it takes these skills into the real tasks of your job.",
         href: "#/pathways" };
     }
 

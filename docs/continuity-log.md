@@ -665,6 +665,41 @@ multi-projects cases (`selected` lands on the right `<option>`, hint text switch
 since no browser tool was available this session; no D1/Worker change needed, so only
 `build.sh && wrangler pages deploy` was required to ship it.
 
+## v0.28 — 2026-09-15 — Diagnostic → pathway recommendation; pathway prerequisites enforced
+
+Two of the three items the founder named together this session (the third, more pathway
+domains, follows in the next entry).
+
+**Diagnostic → pathway recommendation.** Every one of the 18 pathways now carries a
+`recommend: [...]` array of specific, lowercase phrases (same discipline as `critiqueChallenge`
+signals — multi-word and on-topic, never a bare common word, to avoid false positives).
+`CONTENT.recommendPathway(text)` scores a free-text answer against every pathway's list and
+returns the best match, or `null` on a genuine miss — it never forces a pick on thin signal.
+Wired into two places: the Pathway Engine's "choose a work pathway" reason (`pathway.js`) now
+names the recommended pathway when there's a hit, and the Pathways catalogue page shows a
+"Recommended for you" callout (with the pathway's own tagline) above the full list, which stays
+fully browsable either way. Deliberately kept as transparent keyword scoring, not a model call —
+consistent with how the rest of the Faculty is authored (`faculty.js`'s rubric heuristics), and
+it's server-free so it works with zero added latency or cost.
+
+**Pathway prerequisites, enforced.** Previously `agents` and `safety` (both `prereq:
+"engineering"`) showed only an advisory "best taken after" note and let you choose them
+immediately regardless. New `prereqMet(learner, p)` in `main.js` checks the prerequisite
+pathway's actual completion via the already-existing `MODEL.moduleComplete()` (competencies +
+capstone all done) — not just "started" or "chosen". Unmet prerequisites now show a real
+"Locked" state (badge on the catalogue card, a warn-coloured notice on the overview page) and
+the primary "Choose" button is replaced by an explicit, deliberately de-emphasised "Choose
+anyway — I already have that background" ghost button — following the same never-fully-lock
+precedent as the existing founder "Skip foundation" button, rather than a hard wall with no way
+through. `software`/`content`/etc. (`prereq: "foundation"`) are unaffected — foundation
+completion is still handled separately via `foundationDone`/the skip flag.
+
+Verified: extracted and unit-tested `recommendPathway` (hits, near-misses, and empty/no-signal
+text all behave as designed) and `prereqMet` (true for foundation-only prereqs; false→true for
+`agents`/`safety` traced through a simulated full completion of `engineering` via the same
+`MODEL` calls the app itself uses) in a throwaway Node harness — no browser tool was available
+this session, same constraint as v0.27. `node -c` clean on all three touched files.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
@@ -677,8 +712,6 @@ since no browser tool was available this session; no D1/Worker change needed, so
   management, design/UX, journalism, and industry-specific academies. Now automatable via
   `docs/expansion-prompt.md`.
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
-- **Diagnostic → pathway recommendation** from answer B.
-- **Enforce pathway prerequisites** for real (non-founder) learners — currently advisory only.
 - **Regulated-domain pathways** (Legal/Finance/HR/Healthcare) — decide experimental-academy
   status vs R2+ verification of regulatory specifics before non-founder learners (see v0.17).
 
