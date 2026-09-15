@@ -650,11 +650,22 @@ before it's built.
 - **Not done, and deliberately left for the founder**: Phase D (peer review) still needs the
   anonymized-by-default privacy call confirmed before it's built; Phases E/F depend on D.
 
+## v0.27 — 2026-09-15 — Fix: Applied Projects no longer default to unattached
+
+Picked up the other unblocked item from the v0.23 walkthrough's open list (the founder-decision
+one, peer review, is still deliberately untouched — see v0.26). `projectSelect()` (the `<select>`
+on every single challenge/checkpoint form, `app/js/main.js`) now defaults to the learner's **most
+recently created** project instead of "— not attached to a project —", with an explanatory hint
+("Defaulted to your most recent project — change it if this one belongs elsewhere") and "not
+attached" still present as the first, explicitly selectable option — nothing is hidden or forced,
+just a better default. Falls back to the original unattached-default behaviour exactly as before
+when the learner has zero projects. One shared function, so the fix applies everywhere it's used
+without touching the two call sites. Verified the rendered HTML for both the zero-projects and
+multi-projects cases (`selected` lands on the right `<option>`, hint text switches correctly)
+since no browser tool was available this session; no D1/Worker change needed, so only
+`build.sh && wrangler pages deploy` was required to ship it.
+
 ## Open threads
-- **Applied Projects default to unattached** — found in the v0.23 walkthrough. Every challenge/
-  checkpoint form's project dropdown defaults to "not attached"; a diligent learner can finish a
-  whole pathway with an empty portfolio. Needs a founder decision (default to most recent
-  project? prompt for it?), not just a fix.
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
   it's a billing/payment-method action. Once upgraded: onboard `aifaculty.org` to Email Service,

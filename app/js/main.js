@@ -50,15 +50,23 @@
   }
 
   function projectSelect(learner) {
-    const opts = (learner.projects || []).map(p =>
-      `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    const projects = learner.projects || [];
+    // Default to the most recently created project rather than "not attached" — found in the
+    // v0.23 walkthrough that a diligent learner can otherwise finish a whole pathway with an
+    // empty portfolio simply because this defaulted to nothing on every single form. Still
+    // fully changeable, and "not attached" stays the first, explicit option.
+    const recentId = projects.length ? projects[projects.length - 1].id : "";
+    const opts = projects.map(p =>
+      `<option value="${p.id}" ${p.id === recentId ? "selected" : ""}>${esc(p.name)}</option>`).join("");
     return `
       <div class="field">
         <label>Which Applied Project is this for?</label>
-        <div class="hint">Attaching your work to a real project builds a portfolio you can demonstrate.
+        <div class="hint">${recentId
+          ? "Defaulted to your most recent project — change it if this one belongs elsewhere."
+          : "Attaching your work to a real project builds a portfolio you can demonstrate."}
           <a data-nav href="#/projects">Manage projects</a></div>
         <select name="project">
-          <option value="">— not attached to a project —</option>
+          <option value="" ${recentId ? "" : "selected"}>— not attached to a project —</option>
           ${opts}
         </select>
       </div>`;
