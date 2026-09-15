@@ -254,6 +254,54 @@ async function handleProgressSync(request, env, headers) {
   return json(400, { ok: false, error: "unknown_type" }, headers);
 }
 
+// ---- feedback (Phase C: a small persistent channel, any signed-in learner) --------------
+
+const FEEDBACK_MAX_CHARS = 4000;
+
+async function handleFeedbackSubmit(request, env, headers) {
+  const auth = await requireAuth(request, env, headers);
+  if (auth.error) return auth.error;
+  // Keyed by IP like the auth rate limit — this endpoint is authenticated, but a compromised
+  // or scripted session shouldn't be able to flood the table any more than a logged-out one
+  // could flood magic-link requests.
+  if (await rateLimited(request, env, "feedbackrl")) {
+    return json(429, { ok: false, error: "rate_limited" }, headers);
+  }
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+
+  const text = String(body.text || "").trim();
+  if (!text) return json(400, { ok: false, error: "empty_text" }, headers);
+  if (text.length > FEEDBACK_MAX_CHARS) return json(400, { ok: false, error: "too_long" }, headers);
+
+  let rating = null;
+  if (body.rating !== undefined && body.rating !== null && body.rating !== "") {
+    const r = Number(body.rating);
+    if (Number.isInteger(r) && r >= 1 && r <= 5) rating = r;
+  }
+  const pageContext = body.pageContext ? String(body.pageContext).slice(0, 200) : null;
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    "INSERT INTO feedback (id, user_id, text, page_context, rating, created_at) VALUES (?, ?, ?, ?, ?, ?)"
+  ).bind(id, auth.user.id, text, pageContext, rating, now).run();
+
+  return json(200, { ok: true, id }, headers);
+}
+
+async function handleAdminFeedback(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+  const { results } = await env.DB.prepare(
+    `SELECT feedback.id, feedback.text, feedback.page_context, feedback.rating, feedback.created_at,
+            users.email
+     FROM feedback JOIN users ON users.id = feedback.user_id
+     ORDER BY feedback.created_at DESC LIMIT 200`
+  ).all();
+  return json(200, { ok: true, feedback: results }, headers);
+}
+
 // ---- founder admin panel -------------------------------------------------------------
 
 const SESSION_GAP_MS = 20 * 60 * 1000; // consecutive events under this gap count as one continuous session
@@ -399,8 +447,14 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/progress/sync") {
       return handleProgressSync(request, env, headers);
     }
+    if (request.method === "POST" && url.pathname === "/api/feedback") {
+      return handleFeedbackSubmit(request, env, headers);
+    }
     if (request.method === "GET" && url.pathname === "/api/admin/overview") {
       return handleAdminOverview(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/feedback") {
+      return handleAdminFeedback(request, env, headers);
     }
     if (request.method === "GET" && url.pathname === "/api/admin/learners") {
       return handleAdminLearners(request, env, headers);

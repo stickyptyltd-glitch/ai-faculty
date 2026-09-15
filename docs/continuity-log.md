@@ -612,6 +612,44 @@ anything) should happen before this panel is treated as actually access-controll
 functionally gated. See the standing "Cloudflare Email Service" open thread below — the two are
 now the same blocker.
 
+## v0.26 — 2026-09-15 — Founder admin panel Phase C: feedback channel
+
+New session, on a freshly-mounted checkout (`git fetch` confirmed local `master` already matched
+`origin/master` — nothing pending from elsewhere). Caught up from `docs/continuity-log.md` +
+memory, then picked the safest unblocked item: **Phase C** from the admin-panel plan
+(`/home/dayle/.claude/plans/humble-purring-hopper.md`) — deliberately not Phase D (peer review),
+which that same plan flags as needing an explicit founder decision on anonymized-by-default
+before it's built.
+
+- **`workers/api/migrations/0004_feedback.sql`** — `feedback` table (`user_id, text,
+  page_context, rating, created_at`), per the plan's exact shape.
+- **`workers/api/index.js`** — `POST /api/feedback` (`requireAuth`; text required ≤4000 chars,
+  optional 1-5 integer rating silently ignored if out of range rather than rejecting the whole
+  submission, IP-keyed rate limit reusing the existing `rateLimited` helper) and
+  `GET /api/admin/feedback` (`requireFounder`; joins `users` for the email, newest first,
+  capped at 200 rows).
+- **`workers/api/test.mjs`** — new; the API Worker had zero tests before this (only
+  `workers/signup` did). Hand-rolled fake D1 (matches real `prepare()`'s shape: `.first/.run/.all`
+  work both directly and after `.bind()`, matched by SQL substring rather than table-driven, so it
+  tolerates reformatting) + fake KV, same style as `workers/signup/test.mjs`. 17 checks: auth
+  gating, validation, rating clamping, rate limiting, founder-only admin access, newest-first
+  ordering. All pass.
+- **App**: a persistent "Feedback" link in the footer (`index.html`) → `#/feedback` (sign-in
+  gated, textarea + optional 1-5 rating, posts via the existing `AUTH.apiPost` helper) →
+  `#/admin/feedback` tab added to the admin nav. Small router addition along the way:
+  `lastPath` (set at the end of every `router()` call, holding the *previous* page) so the
+  feedback submission can record which page it was sent from without a query-string round-trip.
+- **Deployed and verified live** against production (not just the local D1 shadow): migration
+  applied via `--remote`, Worker + Pages redeployed, then curl end-to-end using the existing
+  dev-mode sign-in path (no real email needed — `DEV_LINKS=true` still, see the open Cloudflare
+  Email Service item) — 401 signed-out → dev-link sign-in → 200 feedback POST → 403 on
+  `/admin/feedback` for that same non-founder account → 400 on empty text. The one test
+  user/feedback row this created was deleted from production immediately after (same hygiene as
+  the v0.25 admin-panel verification: confirmed by `SELECT count(*)` back to 0 before finishing),
+  so production starts from a genuinely empty `feedback` table.
+- **Not done, and deliberately left for the founder**: Phase D (peer review) still needs the
+  anonymized-by-default privacy call confirmed before it's built; Phases E/F depend on D.
+
 ## Open threads
 - **Applied Projects default to unattached** — found in the v0.23 walkthrough. Every challenge/
   checkpoint form's project dropdown defaults to "not attached"; a diligent learner can finish a

@@ -28,14 +28,21 @@
     { test: p => p.startsWith("/pathway/"), view: viewPathwayOverview },
     { test: p => p === "/login", view: viewLogin },
     { test: p => p === "/account", view: viewAccount },
+    { test: p => p === "/feedback", view: viewFeedback },
     { test: p => p.startsWith("/admin/learners/"), view: viewAdminLearnerDetail },
     { test: p => p === "/admin/learners", view: viewAdminLearners },
+    { test: p => p === "/admin/feedback", view: viewAdminFeedback },
     { test: p => p === "/admin", view: viewAdminOverview },
   ];
 
   // "When was this challenge/checkpoint opened" — stamped by viewChallenge/viewCheckpoint,
   // consumed once by the confirm handler below to compute duration_ms for progress sync.
   const taskStarted = {};
+
+  // The path the learner was on before this render — set at the end of router(), so it holds
+  // the *previous* page while the *current* one is rendering. Used by viewFeedback to record
+  // which page feedback was sent from, without needing a query param on the footer link.
+  let lastPath = "/";
 
   function stripMeta(data) {
     const { project, ...rest } = data;
@@ -65,6 +72,7 @@
     window.scrollTo(0, 0);
     syncNav(path);
     wire();
+    if (path !== "/feedback") lastPath = path;
   }
 
   function syncNav(path) {
@@ -84,6 +92,7 @@
     if (path === "/admin") loadAdminOverview();
     else if (path === "/admin/learners") loadAdminLearners();
     else if (path.startsWith("/admin/learners/")) loadAdminLearnerDetail(parseHash().parts[2]);
+    else if (path === "/admin/feedback") loadAdminFeedback();
   }
 
   function handleQopt(e) {
@@ -207,6 +216,26 @@
           ? `<div class="notice">Dev mode — no email sender configured yet, so here's the link
                directly: <a href="${res.dev_link}">${esc(res.dev_link)}</a></div>`
           : `<div class="notice">Check your email for the sign-in link — it expires in 15 minutes.</div>`;
+      });
+      return;
+    }
+
+    if (kind === "feedback") {
+      const text = (data.text || "").trim();
+      const box = document.getElementById("feedbackResult");
+      if (!text) { if (box) box.innerHTML = `<div class="notice" style="border-color:var(--warn)">Say something first.</div>`; return; }
+      if (box) box.innerHTML = `<p class="hint">Sending…</p>`;
+      window.AUTH.apiPost("/feedback", {
+        text, rating: data.rating || null, pageContext: form.dataset.from || "#/",
+      }).then(res => {
+        if (!box) return;
+        if (!res.ok) {
+          const msg = res.status === 429 ? "Too many — try again in a bit." : "Couldn't send that — try again.";
+          box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
+          return;
+        }
+        form.reset();
+        box.innerHTML = `<div class="notice">Thanks — that's on its way to the founder.</div>`;
       });
       return;
     }
@@ -1002,6 +1031,41 @@
     `;
   }
 
+  function viewFeedback(learner) {
+    const auth = window.AUTH.get();
+    const from = "#" + lastPath;
+    if (!auth.checked) return `<h1>Feedback</h1><p class="lead">Checking your sign-in status…</p>`;
+    if (!auth.user) {
+      return `<h1>Feedback</h1>
+        <p class="lead">Sign in first so the founder knows who to follow up with.</p>
+        <a class="btn" data-nav href="#/login">Sign in</a>`;
+    }
+    return `
+      <h1>Feedback</h1>
+      <p class="lead">Found something confusing, broken, or worth changing? Tell the founder
+        directly — this goes straight into the admin panel.</p>
+      <form data-form="feedback" data-from="${esc(from)}">
+        <div class="field">
+          <label for="fbText">What's on your mind?</label>
+          <textarea id="fbText" name="text" required rows="5" placeholder="Be as specific as you can — what page, what happened, what you expected."></textarea>
+        </div>
+        <div class="field">
+          <label for="fbRating">Rating (optional)</label>
+          <select id="fbRating" name="rating">
+            <option value="">— no rating —</option>
+            <option value="5">5 — excellent</option>
+            <option value="4">4 — good</option>
+            <option value="3">3 — okay</option>
+            <option value="2">2 — poor</option>
+            <option value="1">1 — bad</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">Send feedback</button>
+      </form>
+      <div id="feedbackResult"></div>
+    `;
+  }
+
   function renderAuthNav() {
     const el = document.getElementById("authNav");
     if (!el) return;
@@ -1026,7 +1090,7 @@
   function adminTabs(active) {
     const tab = (href, label, key) =>
       `<a data-nav href="${href}" style="margin-right:16px;font-weight:${active === key ? 700 : 400}">${label}</a>`;
-    return `<p style="margin-bottom:16px">${tab("#/admin", "Overview", "overview")}${tab("#/admin/learners", "Learners", "learners")}</p>`;
+    return `<p style="margin-bottom:16px">${tab("#/admin", "Overview", "overview")}${tab("#/admin/learners", "Learners", "learners")}${tab("#/admin/feedback", "Feedback", "feedback")}</p>`;
   }
 
   const TD = 'style="padding:6px 10px;border-bottom:1px solid var(--border)"';
@@ -1054,6 +1118,9 @@
   }
   function viewAdminLearnerDetail() {
     return requireFounderView(() => `<h1>Admin</h1>${adminTabs("learners")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
+  }
+  function viewAdminFeedback() {
+    return requireFounderView(() => `<h1>Admin</h1>${adminTabs("feedback")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
   }
 
   async function loadAdminOverview() {
@@ -1133,6 +1200,22 @@
         </tr></thead>
         <tbody>${subRows}</tbody>
       </table>`;
+  }
+
+  async function loadAdminFeedback() {
+    const box = document.getElementById("adminBody");
+    if (!box || !window.AUTH.get().user) return;
+    const res = await window.AUTH.apiGet("/admin/feedback");
+    if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const items = res.data.feedback;
+    box.innerHTML = items.length ? items.map(f => `
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <strong>${esc(f.email)}</strong>
+          <span class="hint">${f.rating ? "★".repeat(f.rating) + "☆".repeat(5 - f.rating) + " · " : ""}${fmtWhen(f.created_at)}${f.page_context ? ` · ${esc(f.page_context)}` : ""}</span>
+        </div>
+        <p style="margin:8px 0 0;white-space:pre-wrap">${esc(f.text)}</p>
+      </div>`).join("") : `<p class="hint">No feedback yet.</p>`;
   }
 
   document.getElementById("authNav").addEventListener("click", e => {
