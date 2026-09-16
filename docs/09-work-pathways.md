@@ -77,6 +77,8 @@ role sub-tracks, industry variants).
 | **Healthcare & Clinical Support** | clinicians, nurses, medical admin, allied health | what AI can/can't touch clinically · clinical documentation & scribing · summarising records · patient-facing information · governance, safety & the incident path |
 | **Product Management** | product managers, founders wearing the PM hat, product owners | vague ask → real spec · prioritise against named criteria · synthesise research honestly · draft PRDs, facts checked · stakeholder comms that don't overpromise |
 | **Public Sector & Government Services** | civil servants, council officers, policy/grants teams, case workers | draft guidance grounded in real policy · summarise consultations fairly · case processing, decision stays human · records/FOI requests · procurement against explicit criteria |
+| **Design & UX** | product designers, UX researchers, UI designers, design-minded founders | synthesise research honestly · generate & evaluate real design options · accessibility as a real check · interface copy that doesn't overclaim · critique specific enough to act on |
+| **Consulting & Advisory Services** | management/strategy consultants, independent advisors, engagement analysts | scope the real question before analysing · synthesise stakeholder input without inventing facts · build a defensible analysis · deliverables that trace to the analysis · communicate uncertainty honestly |
 
 ### Building AI (technical track)
 
@@ -104,6 +106,6 @@ role sub-tracks, industry variants).
 |---|---|
 | Foundation module fully playable | — |
 | Catalogue grouped **Using AI at work** / **Building AI**; planned pathways show their curriculum outline | Recommendation from diagnostic answer B |
-| **Built & available (18), each with a capstone:** _Using AI at work_ — Software (S1–S5), Content (M1–M4), Operations & Admin (O1–O5), Customer Support (SU1–SU5), Research & Analysis (R1–R5), Education & Training (ED1–ED5), Legal & Contracts (L1–L5), Sales (SL1–SL5), Finance & Accounting (FN1–FN5), HR & People (HR1–HR5), Healthcare & Clinical Support (HC1–HC5), Product Management (PM1–PM5), Public Sector & Government Services (PS1–PS5). _Building AI_ — AI Engineering (E1–E5), Technical Foundations (F1–F5), Machine Learning Practitioner (ML1–ML5), Agentic Systems (AG1–AG5), AI Safety / Evals / Red-teaming (SF1–SF5). 96 competencies total. | — |
-| **Next: more domains** — professional services variants, public sector, education leadership, and industry-specific academies. | Author them |
+| **Built & available (20), each with a capstone:** _Using AI at work_ — Software (S1–S5), Content (M1–M4), Operations & Admin (O1–O5), Customer Support (SU1–SU5), Research & Analysis (R1–R5), Education & Training (ED1–ED5), Legal & Contracts (L1–L5), Sales (SL1–SL5), Finance & Accounting (FN1–FN5), HR & People (HR1–HR5), Healthcare & Clinical Support (HC1–HC5), Product Management (PM1–PM5), Public Sector & Government Services (PS1–PS5), Design & UX (UX1–UX5), Consulting & Advisory Services (CONS1–CONS5). _Building AI_ — AI Engineering (E1–E5), Technical Foundations (F1–F5), Machine Learning Practitioner (ML1–ML5), Agentic Systems (AG1–AG5), AI Safety / Evals / Red-teaming (SF1–SF5). 106 competencies total. | — |
+| **Next: more domains** — professional services variants, education leadership, sales-engineering, and industry-specific academies. | Author them |
 | Founder can skip the foundation to work on pathways | Test-out-by-capstone for real learners |
