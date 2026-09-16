@@ -767,6 +767,37 @@ Deployed same session (`build.sh` + `wrangler pages deploy`, both needed the use
 clear the harness's production-deploy classifier prompt) and verified live via `curl` on
 `aifaculty.org` (`CONSCAP` present in the served `content.js`).
 
+## v0.31 — 2026-09-16 — Add Sales Engineering & Technical Pre-Sales pathway (21st)
+
+Same session, user said "do another pathway domain." Picked the next highest-value gap named in
+the open threads: **Sales Engineering & Technical Pre-Sales** — genuinely distinct from the
+existing Sales pathway (SL1–5, which is account research/outreach/CRM-hygiene) because this one
+is about the technical pre-sales motion: scoping a prospect's real requirement, keeping demos
+honest about current vs. roadmapped capability, and the specific liability shape of an RFP
+response or a client-facing technical proposal.
+
+**SE1–SE5 + SECAP**: technical discovery that scopes the real requirement (the "where's the
+data, who consumes it, what decision it feeds" pattern, so a demo doesn't answer a guessed
+version of the ask); grounded demos that show only current, real capability (a roadmap item
+gets named as roadmap, never staged as live); RFP/RFI responses using precise full/partial/
+roadmapped/not-supported categories instead of a blanket "yes" that becomes a checkable
+contractual claim; solution-proposal technical claims (scalability numbers, integrations) traced
+to a real source rather than an AI-plausible figure; and honest objection-handling under deal
+pressure — a specific, timely follow-up instead of a confident guess when a sales lead wants
+momentum. `recommend: [...]` phrases added. Not a regulated domain.
+
+Validated with the same Node harness pattern as v0.29/v0.30 (extended this time to also check
+QUICK_CHECKS entries have exactly one `ok:true` per question, since those hadn't been checked
+before): caught two more single-word critique signals ("contractually", "liability" in SE3.2),
+tightened to multi-word phrases, re-ran clean — 21 pathways total, no duplicate ids, `SECAP.
+after[]` resolves, guided field/model keys match. `node -c` clean on `content.js` and `main.js`.
+Updated `docs/09-work-pathways.md` (21 pathways, 111 competencies).
+
+Deployed same session — `build.sh` succeeded standalone, but the harness's production-deploy
+classifier blocked `wrangler pages deploy` until the user said "go" to approve it (third time
+this has happened this session; treat it as routine, not a sign of a problem). Verified live via
+`curl` on `aifaculty.org` (`SECAP` present in the served `content.js`).
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
