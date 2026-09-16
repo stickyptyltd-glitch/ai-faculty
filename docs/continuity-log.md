@@ -700,6 +700,38 @@ text all behave as designed) and `prereqMet` (true for foundation-only prereqs; 
 `MODEL` calls the app itself uses) in a throwaway Node harness — no browser tool was available
 this session, same constraint as v0.27. `node -c` clean on all three touched files.
 
+## v0.29 — 2026-09-16 — Add Design & UX pathway (19th)
+
+Resumed session (previous one had been invoked from a different directory and left one
+uncommitted change sitting in the working tree: a fully-authored **Design & UX** pathway in
+`app/js/content.js`, matching the standing pathway recipe — content itself was already good,
+just never committed/validated/shipped). Caught up via memory + continuity-log tail, then
+verified and shipped the pending work rather than re-deriving it.
+
+**UX1–UX5 + UXCAP**: synthesising research without inventing findings (theme = unprompted
+pattern across multiple sources with counts + traceable quotes, not one loud opinion or a
+leading-question artifact); generating and evaluating design options against real constraints
+instead of picking the prettiest one; accessibility as a real check (AI pass *and* a genuine
+keyboard/screen-reader test, not just the AI pass alone); interface copy checked against actual
+current behaviour rather than the roadmap; and critique specific enough to act on (element + user
+impact + testable fix). `recommend: [...]` phrases added for the diagnostic recommender
+(`"ux design", "user research", "product designer", ...`). Not a regulated domain, so
+deliberately left out of the Legal/Finance/HR/Health/Public regulated-pathway banner list in
+`main.js`.
+
+Validated with a throwaway Node harness (loaded `content.js` directly, no DOM needed): rubric/
+field-count pairing, critique `signals` all lowercase and specific (no bare common words),
+exactly one scenario `ok:true` per scenario challenge, guided `fields`/`model` key sets match,
+`UXCAP.after[]` resolves to real competency ids, `recommend` phrases lowercase, and no duplicate
+pathway id (19 total now, `design` distinct from the existing `content` pathway). `node -c`
+clean. No D1/Worker change needed — pure content — so this only needs `build.sh` +
+`wrangler pages deploy`.
+
+**Not yet deployed as of writing this entry** — the harness's auto-mode classifier blocks
+production `wrangler pages deploy` from running without the user directly present to approve it;
+committed to `master` and built to `dist/` successfully, deploy is the one step waiting on the
+user.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
