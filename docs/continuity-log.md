@@ -727,10 +727,45 @@ pathway id (19 total now, `design` distinct from the existing `content` pathway)
 clean. No D1/Worker change needed — pure content — so this only needs `build.sh` +
 `wrangler pages deploy`.
 
-**Not yet deployed as of writing this entry** — the harness's auto-mode classifier blocks
-production `wrangler pages deploy` from running without the user directly present to approve it;
-committed to `master` and built to `dist/` successfully, deploy is the one step waiting on the
-user.
+**Deployed later the same session** once the user was present to approve the harness's
+production-deploy classifier prompt — verified live via `curl` on `aifaculty.org`.
+
+## v0.30 — 2026-09-16 — Add Consulting & Advisory Services pathway (20th)
+
+Same session as v0.29, continuing "up to you" on what's next. Followed
+`docs/expansion-prompt.md`'s exact recipe to pick and build the next highest-value uncovered
+domain: **Consulting & Advisory Services** (management/strategy consultants, independent
+advisors, engagement analysts) — genuinely distinct from the existing Research, PM and Design
+pathways (client-engagement dynamics: scoping a billable engagement, defending an analysis to a
+client, honest uncertainty in a deliverable — not just "verify your sources" restated).
+
+**CONS1–CONS5 + CONSCAP**: scoping the real question before analysing (name the decision it
+feeds and the precise definitions, before AI confidently answers whatever question you typed);
+synthesising stakeholder input without inventing statistics (a false-precision percentage from 5
+qualitative interviews is fabricated, not just optimistic rounding); building a defensible
+analysis (recompute/spot-check the load-bearing calculation, check units and time periods match
+— a persuasive narrative is not evidence the arithmetic is right); drafting deliverables whose
+claims trace exactly to the analysis (a 12–30% range doesn't become a flat "30%" in the client
+slide, and "the analysis shows" stays visibly separate from "we recommend"); and communicating
+uncertainty honestly (a caveat that affects the recommendation sits next to it, not buried in an
+appendix, and the deliverable's tone tracks the analysis's real confidence rather than AI's
+default confident register). `recommend: [...]` phrases added. Not treated as a regulated
+domain — no special-standards banner needed, same bucket as Design/PM/Sales.
+
+Validated with the same throwaway Node harness pattern as v0.29, extended to check lesson-step
+completeness and QUICK_CHECKS presence per competency too: all clean on the first pass except
+several critique `signals` that were single words ("invented", "collapsed", "adoption") —
+technically specific enough not to false-positive in practice, but tightened to multi-word
+phrases anyway to hold the line on the house rule rather than rely on judgement calls about which
+single words are "safe". Re-ran clean: 20 pathways total, no duplicate ids, `CONSCAP.after[]`
+resolves, guided field/model keys match, exactly one scenario `ok:true` throughout. `node -c`
+clean on `content.js` and `main.js`. Updated `docs/09-work-pathways.md`'s catalogue tables and
+prototype-status line for both this pathway and the previously-unlogged-there Design & UX one
+(18→20 pathways, 96→106 competencies).
+
+Deployed same session (`build.sh` + `wrangler pages deploy`, both needed the user present to
+clear the harness's production-deploy classifier prompt) and verified live via `curl` on
+`aifaculty.org` (`CONSCAP` present in the served `content.js`).
 
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
