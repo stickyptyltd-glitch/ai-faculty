@@ -6,6 +6,19 @@
   const F = window.FACULTY;
   const esc = window.PROGRESS.esc;
 
+  // Fisher-Yates on a copy — used to randomise multiple-choice option order so the
+  // correct answer isn't predictably in the same position (e.g. always the 2nd of 3).
+  // Never mutates the source array; callers that need to trace back to the original
+  // index (quick-check) pass in [item, originalIndex] pairs instead of raw items.
+  function shuffled(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   // ---- routing --------------------------------------------------------
   function parseHash() {
     const raw = (location.hash || "#/").replace(/^#/, "");
@@ -579,7 +592,7 @@
           <div class="card__label">Question ${qi + 1} of ${qs.length}</div>
           <p style="margin:6px 0 10px"><strong>${esc(qc.q)}</strong></p>
           <div class="qcheck__opts">
-            ${qc.options.map((o, oi) => `
+            ${shuffled(qc.options.map((o, oi) => [o, oi])).map(([o, oi]) => `
               <button class="qopt" data-qi="${qi}" data-oi="${oi}" data-ok="${!!o.ok}">
                 ${esc(o.label)}
               </button>`).join("")}
@@ -703,7 +716,7 @@
           <div class="hint">${esc(ch.ask.hint || "")}</div>
           <textarea name="critique" required></textarea></div>`;
     } else if (ch.type === "scenario") {
-      const opts = ch.options.map(o => `
+      const opts = shuffled(ch.options).map(o => `
         <label><input type="radio" name="choice" value="${o.id}" required>
           <span>${esc(o.label)}</span></label>`).join("");
       body = `
