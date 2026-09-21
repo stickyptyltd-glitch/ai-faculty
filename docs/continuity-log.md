@@ -877,6 +877,49 @@ duplicate ids, `RECAP.after[]` resolves, guided field/model keys match. `node -c
 Deployed same session with no production-deploy classifier prompt this time either — two in a
 row now without the prompt firing, still no clear read on what actually triggers it.
 
+## v0.34 — 2026-09-22 — Pedagogy review: assess teaching/assessment method, don't build
+
+Founder asked for an assessment of the teaching method's practicality/viability and suggestions
+to make learning faster/better — explicitly an assess-and-suggest request, not an implementation
+one, so nothing in `app/js/` changed this entry. Wrote
+[docs/10-pedagogy-review.md](10-pedagogy-review.md) after reading `faculty.js`, `model.js`,
+`pathway.js`, `progress.js` end to end (not skimmed) and cross-checking the actual implementation
+against the platform's own design docs (04, 08).
+
+**Headline finding:** the assessment engine (`faculty.js` `fieldBand()`) grades free-text answers
+by word count plus a regex for "specificity" (any digit, connector word, or quoted phrase clears
+the top band) — so a padded answer with "because" and a number can score *Exceeds* while a short,
+correct answer scores *Developing*. The "independent second assessment" (`strict:true`) is the
+same regex with a higher word floor, not a different check. Framed this as *not* a newly-
+discovered bug but the exact, already-scoped gap in
+[08-assessment-model.md](08-assessment-model.md) §8, which lists "model-scored rubric behind the
+Control Plane" as a **Later** item — the design was right on paper, the shipped app just never
+moved past the v0.2 "Now" column while the platform grew to 23 pathways on top of it. Every
+downstream artefact (evidence portfolio, free-tier certs, the still-unbuilt Phase D/E/F
+peer-review/rating/recognition features) inherits this ceiling, and closing it needs the
+Control-Plane/LLM seam already in Open Threads, not a bigger regex.
+
+**Also found**, cross-checked against [04-learning-engine.md](04-learning-engine.md)'s own spec
+(which already names a `revisit` pathway action and a `Revisiting` progress state that were never
+implemented): no spaced retrieval at all (`PATHWAY.next()` walks forward only — a finished
+competency never resurfaces, though `taughtAt`/`completedAt` timestamps already exist and are
+unused for this); the guided-practice step is fully skippable (its textareas aren't `required`,
+unlike every challenge form) so the one real retrieval-practice step in the whole lesson has zero
+enforcement; blocked practice throughout with no interleaving (named as a real trade-off against
+the pathway's coherent-course identity, not a strict recommendation); and failure feedback
+("go back to the teaching") doesn't deep-link to the specific lesson step, even though the app
+already has the step keys to do so.
+
+**Recommendations were ranked by buildability**, not just impact — three items need no backend
+(require the guided attempt before reveal; add a spaced revisit action using data already on the
+learner record; deep-link "more"-verdict feedback to the specific step), one is a trade-off
+needing an explicit founder decision (interleaving), and the assessment-engine fix explicitly
+needs the Control Plane and isn't a quick patch.
+
+Also flagged, but deliberately **not fixed this pass** (out of scope for what was asked): the
+`/about` page (`main.js` ~line 1037) still names only 4 of the now-7 regulated-notice pathways and
+repeats a stale "reviewed (2026-09-12)" claim the overview banner itself already dropped in v0.32.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
