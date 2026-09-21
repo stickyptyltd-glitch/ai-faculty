@@ -798,6 +798,55 @@ classifier blocked `wrangler pages deploy` until the user said "go" to approve i
 this has happened this session; treat it as routine, not a sign of a problem). Verified live via
 `curl` on `aifaculty.org` (`SECAP` present in the served `content.js`).
 
+## v0.32 — 2026-09-21 — Add Education Leadership pathway (22nd); randomise MC answer position
+
+New day, session resumed from where a prior one had paused mid-edit (an EDL pathway draft sitting
+unregistered in `content.js` — same "pick up pending work rather than re-derive it" pattern as
+v0.29). Finished wiring it, then the user asked for two more things in one message: deploy, and
+fix multiple-choice answers being guessable by position.
+
+**Education Leadership & Ed-Tech Governance (EDL1–EDL5 + EDLCAP)** — for principals,
+superintendents, district administrators; distinct from the existing Education & Training
+pathway (which is for classroom teachers/L&D authoring material, not adoption/governance
+decisions). Evaluating an AI/ed-tech vendor's claims against the real study behind them and the
+actual data-processing agreement, not the marketing deck; drafting AI-use policy grounded in this
+school's actual tools/data-flows/open questions instead of a generic template; communicating
+adoption decisions to parents/staff honestly (pilot vs. proven, data practices disclosed plainly,
+not buried); staff AI training matched to real, differentiated skill levels with follow-up, not
+one generic session; and treating an AI-detection flag (academic integrity, content moderation)
+as the start of a human-decided investigation, never the verdict — same "stays human" pattern as
+HR5/PS3/EDL5's own sibling competencies. Added to the regulated-domain notice in `main.js`
+(`legal/finance/hr/health/public/edleadership`) since student-data-privacy obligations vary by
+jurisdiction — and while there, **generalised that notice's wording** to drop a hardcoded
+"checked (2026-09-12)" audit-date claim that, on inspection, never actually covered every
+pathway it was attached to (Public Sector was added 3 days after that date and inherited the
+claim anyway back in v0.24) — fixed now rather than compounding it a third time. Validated with
+the same Node structural-sweep pattern as the last three pathways, clean on the first pass.
+Updated `docs/09-work-pathways.md` (22 pathways, 116 competencies). Deployed same session,
+needed the user's "go" to clear the production-deploy classifier prompt as usual; verified live.
+
+**Randomised multiple-choice option order (quick checks + scenario challenges).** The user
+noticed the correct answer was almost always authored in the same position (typically the middle
+of 3) — a learner could pattern-match position instead of actually reasoning, which undermines
+the whole "rubric-assessed with real evidence, not quizzes" premise of the platform. Root cause:
+every pathway across the whole codebase (not just newly-authored ones) had this bias, since
+content was always authored with the correct option in a natural narrative order rather than a
+randomised one. Fixed at the **render layer** in `main.js`, not by rewriting ~22 pathways of
+content: a `shuffled()` Fisher-Yates helper is applied at render time to both the quick-check
+options list and the scenario-challenge options list. This fixes every pathway retroactively, old
+and new, with a one-file change. Scoring is unaffected — verified rather than assumed:
+scenario challenges are graded by each option's stable `id` (`faculty.js` matches
+`submission.choice` against `ch.options` by `id`, not position), and the quick-check click
+handler reads correctness straight off the rendered button's own `data-ok` attribute; the one
+place an original array index still mattered (fetching the clicked option's `.why` feedback
+text) now carries the option's original index through the shuffle as an `[option,
+originalIndex]` pair, so it still resolves correctly regardless of display order. Verified with a
+throwaway Node simulation: 30,000-trial shuffle distribution came back uniform across all
+positions, and every shuffled `oi` resolved back to its correct original option. `node -c` clean.
+Deployed same session — this one didn't trigger the production-deploy classifier prompt at all,
+unlike every other deploy this week; the trigger condition for that prompt still isn't fully
+understood, don't assume either behaviour going in.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
