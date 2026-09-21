@@ -847,6 +847,36 @@ Deployed same session — this one didn't trigger the production-deploy classifi
 unlike every other deploy this week; the trigger condition for that prompt still isn't fully
 understood, don't assume either behaviour going in.
 
+## v0.33 — 2026-09-22 — Add Real Estate pathway (23rd)
+
+New day, user said "continue" with no further specifics — read as continuing the session's
+dominant, well-precedented rhythm (another pathway domain) rather than the open, unresolved
+"what did you mean by improve learning methods more broadly" question from the end of the prior
+session, since that one still needs the user's own answer.
+
+**Real Estate (RE1–RE5 + RECAP)** — for agents, brokers, property managers, listing
+coordinators; a genuinely new professional-services variant, not overlapping the existing
+pathways. Listing descriptions checked against real, current facts for the specific address
+(school assignment, renovation dates) rather than appealing generalisations, with an explicit
+fair-housing-language screen (steering phrases, "ideal for" a type of buyer); CMAs built from
+comps checked for being genuinely representative of the market rather than selected to fit a
+seller's target price, with real recency/condition adjustment; client communication about
+property condition that matches the actual inspection/disclosure document exactly, never a more
+reassuring AI-drafted tone; contract/offer paperwork treated as a binding legal document needing
+a real, qualified review against what the client actually agreed to before submission (a cheap
+catch before submission vs. an expensive, binding problem after acceptance); and jurisdiction-
+specific fair-housing/disclosure questions verified against the actual local rule via a
+broker/attorney, never answered from general real-estate knowledge. Added to the regulated-domain
+notice in `main.js` (`...,"edleadership","realestate"`) for the same reason as Public
+Sector/Education Leadership — real-estate law varies by jurisdiction.
+
+Validated with the same Node structural-sweep pattern as the last four pathways — clean on the
+first pass this time (no signal-strength fixes needed, unlike CONS/SE). 23 pathways total, no
+duplicate ids, `RECAP.after[]` resolves, guided field/model keys match. `node -c` clean on
+`content.js` and `main.js`. Updated `docs/09-work-pathways.md` (23 pathways, 121 competencies).
+Deployed same session with no production-deploy classifier prompt this time either — two in a
+row now without the prompt firing, still no clear read on what actually triggers it.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
