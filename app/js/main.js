@@ -924,7 +924,7 @@
       <h1>${esc(p.title)}</h1>
       <p class="lead">${esc(p.tagline)}</p>
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
-      ${["legal","finance","hr","health","public","edleadership"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
+      ${["legal","finance","hr","health","public","edleadership","realestate"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
         <strong>Reviewed for unverified specifics, not yet signed off by a licensed professional.</strong>
         This pathway teaches AI-workflow judgement, not the law/regulation of your jurisdiction —
         every lesson is written to defer to your own jurisdiction, policy or a qualified
