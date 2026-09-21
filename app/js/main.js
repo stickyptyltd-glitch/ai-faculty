@@ -911,14 +911,14 @@
       <h1>${esc(p.title)}</h1>
       <p class="lead">${esc(p.tagline)}</p>
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
-      ${["legal","finance","hr","health","public"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
+      ${["legal","finance","hr","health","public","edleadership"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
         <strong>Reviewed for unverified specifics, not yet signed off by a licensed professional.</strong>
         This pathway teaches AI-workflow judgement, not the law/regulation of your jurisdiction —
-        every lesson was checked (2026-09-12) to defer to your own jurisdiction, policy or a
-        qualified professional rather than state a specific regulation, threshold or citation as
-        settled fact. Scenario numbers and policies in the examples are illustrative.
-        Still pending formal sign-off by a lawyer/accountant/HR specialist/clinician/legal-policy
-        officer as relevant — check anything you rely on.</div>` : ""}
+        every lesson is written to defer to your own jurisdiction, policy or a qualified
+        professional rather than state a specific regulation, threshold or citation as settled
+        fact. Scenario numbers and policies in the examples are illustrative. Still pending formal
+        sign-off by a lawyer/accountant/HR specialist/clinician/policy officer as relevant — check
+        anything you rely on.</div>` : ""}
       ${(() => {
         if (!p.prereq || p.prereq === "foundation" || !C.pathway(p.prereq)) return "";
         const prereqP = C.pathway(p.prereq);
