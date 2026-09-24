@@ -460,7 +460,12 @@ async function stripeFetch(env, path, params = {}) {
   const body = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (Array.isArray(v)) {
-      v.forEach((item, idx) => { for (const [ik, iv] of Object.entries(item)) body.append(`${k}[${idx}][${ik}]`, iv); });
+      v.forEach((item, idx) => {
+        if (item !== null && typeof item === "object") {
+          for (const [ik, iv] of Object.entries(item)) body.append(`${k}[${idx}][${ik}]`, iv);
+        }
+        else if (item !== undefined && item !== null) body.append(`${k}[${idx}]`, item);
+      });
     }
     else if (v !== null && typeof v === "object") {
       for (const [ik, iv] of Object.entries(v)) if (iv !== undefined && iv !== null) body.append(`${k}[${ik}]`, iv);
@@ -573,6 +578,7 @@ async function handlePaymentsCheckout(request, env, headers) {
   const r = await stripeFetch(env, "/checkout/sessions", {
     mode,
     success_url: `${env.APP_ORIGIN}/app/#/account?plan=${plan}`,
+    payment_method_types: ["card", "paypal"],
     cancel_url: `${env.APP_ORIGIN}/#pricing`,
     customer: customerId,
     customer_email: email && !customerId ? email : undefined,

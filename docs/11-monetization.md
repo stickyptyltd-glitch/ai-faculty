@@ -65,6 +65,8 @@ Free ─────────────── Pro (subscription) ───�
   - `GET  /api/payments/plans` — public plan catalogue for landing/app.
   - `POST /api/payments/checkout` — `{ plan }` → Stripe Checkout URL. Needs no account: the
     webhook matches the email Stripe collects, creates a user if needed, and grants the plan.
+    Checkout accepts **card and PayPal** (`payment_method_types`), handled entirely by Stripe —
+    no separate PayPal merchant needed; enable the wallet in the Stripe Dashboard.
   - `POST /api/payments/billing` — logged-in users → Stripe Customer Portal (cancel/change).
   - `POST /api/payments/webhook` — signature-verified; grants plans on `checkout.session.completed`,
     keeps `plan_status` in sync on subscription events, and records every charge in `payments`.

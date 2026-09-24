@@ -939,7 +939,11 @@ broken before a Stripe account is connected.
   - `GET  /api/payments/plans` — public catalogue + `stripeEnabled`.
   - `POST /api/payments/checkout` — Stripe Checkout session (subscription for Pro, one-time for
     Founding); works signed-out (webhook matches by email, auto-creates the user) or signed-in
-    (reuses the Stripe customer). Nothing creates an account before a payment.
+    (reuses the Stripe customer). Nothing creates an account before a payment. Checkout accepts
+    **card + PayPal** (`payment_method_types` handled entirely by Stripe — no separate PayPal
+    merchant; enable the wallet in the Stripe Dashboard). Note: `stripeFetch` originally encoded
+    string arrays as objects (`payment_method_types[0][0]=c`) — fixed to index plain values
+    (`payment_method_types[0]=card`), caught by the test suite.
   - `POST /api/payments/billing` — authenticated → Customer Portal (manage/cancel).
   - `POST /api/payments/webhook` — HMAC-SHA256 signature-verified (base64url `whsec_` decoding,
     5-min replay window); `checkout.session.completed` grants plans, `customer.subscription.*`
@@ -956,9 +960,10 @@ broken before a Stripe account is connected.
   the choose form; Account view shows the plan with Upgrade-to-Pro / Manage-billing actions.
   Deliberately **soft/client-side** at this stage (content ships in `localStorage`; signed-out
   demo stays fully open; founder bypasses) — documented as such in `11-monetization.md` §5.
-- **Tests** — `workers/api/test.mjs` now 36 checks (was 17): plans endpoint, 501 fallback, checkout
-  session creation + price/mode/metadata, bad-signature 400, founding grant via webhook (user
-  auto-created + revenue recorded once), subscription plan sync, admin revenue overview. 36/36 pass.
+- **Tests** — `workers/api/test.mjs` now 37 checks (was 17): plans endpoint, 501 fallback, checkout
+  session creation + price/mode/metadata + card/PayPal payment methods, bad-signature 400, founding
+  grant via webhook (user auto-created + revenue recorded once), subscription plan sync, admin revenue
+  overview. 37/37 pass.
 - **Wrangler** — `[vars]` docs for the three Stripe price IDs + `wrangler secret put` instructions.
 
 **Open pieces** (founder to do, can't be done from the repo): create the Stripe account + products,
@@ -974,7 +979,8 @@ hidden/graceful until then.
   send for real instead of dev-mode, deploy, verify a real email arrives.
 - **Monetization readiness** (v0.35 built the plumbing; founder must do the account-side): create
   the Stripe account + products/prices, `wrangler secret put` the two keys, fill the three price IDs,
-  apply migration `0005_billing.sql`, deploy, and decide Public-Sector-style next steps (industry
+  apply migration `0005_billing.sql`, deploy, enable the **PayPal** wallet in the Stripe Dashboard,
+  and decide Public-Sector-style next steps (industry
   academies, teams licensing, verified certificates — see `docs/11-monetization.md` §2).
 - **Phases 2–5** of the platform roadmap (learning plans, qualifications, leaderboard — monetization
   now started) — remainder approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.

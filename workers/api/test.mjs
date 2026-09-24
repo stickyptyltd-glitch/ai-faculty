@@ -314,6 +314,7 @@ async function withStripe(handler) {
   const sessionCall = result.calls.find(c => c.url.endsWith("/checkout/sessions"));
   check("stripe session created with payment mode", sessionCall && sessionCall.body.get("mode") === "payment");
   check("founding price id used", sessionCall && sessionCall.body.get("line_items[0][price]") === "price_founding");
+  check("card + paypal payment methods enabled", sessionCall && sessionCall.body.get("payment_method_types[0]") === "card" && sessionCall.body.get("payment_method_types[1]") === "paypal");
   check("plan in metadata", sessionCall && sessionCall.body.get("metadata[plan]") === "founding");
 }
 
