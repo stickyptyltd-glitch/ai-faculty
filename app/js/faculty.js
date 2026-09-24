@@ -217,5 +217,25 @@ window.FACULTY = (function () {
     };
   }
 
-  return { lesson, guidedFeedback, assessChallenge, assessCheckpoint };
+  // Roll-up of a checkpoint/multi-dim result onto the mastery rubric: per-band counts, the
+  // dimensions that fell below Meets, and the banded verdict (08-assessment-model §3). Shared by
+  // the master rubric scoring UI and the Assessment Resolution Protocol's reasoned review.
+  function masterySummary(result) {
+    if (!result || !Array.isArray(result.rubric) || !result.rubric.length) return null;
+    const counts = { "Not yet": 0, "Developing": 0, "Meets": 0, "Exceeds": 0 };
+    const weak = [];
+    result.rubric.forEach(d => {
+      counts[d.band] = (counts[d.band] || 0) + 1;
+      if (bandIndex(d.band) < 2) weak.push(d);
+    });
+    const met = result.rubric.length - weak.length;
+    return {
+      counts, weak, total: result.rubric.length, met,
+      ready: weak.length === 0,
+      verdict: weak.length === 0 ? "ready" : (met * 2 >= result.rubric.length ? "revise" : "more"),
+      weakestBand: weak.length ? weak.reduce((a, b) => bandIndex(a.band) <= bandIndex(b.band) ? a : b).band : null,
+    };
+  }
+
+  return { lesson, guidedFeedback, assessChallenge, assessCheckpoint, masterySummary };
 })();

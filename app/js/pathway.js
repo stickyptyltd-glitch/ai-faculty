@@ -38,6 +38,38 @@ window.PATHWAY = (function () {
     return days >= REVISIT_AFTER_DAYS ? days : null;
   }
 
+  // The covered capability with the weakest current state — the natural target when a checkpoint
+  // hasn't been met, so the engine branches back to that teaching rather than re-running blindly.
+  function weakestCovered(learner, capIds) {
+    const { LEVEL_ORDER } = C;
+    let weak = null, min = Infinity;
+    capIds.forEach(id => {
+      const level = learner.capabilities[id] && learner.capabilities[id].state;
+      const idx = LEVEL_ORDER.indexOf(level);
+      if (idx >= 0 && idx < min) { min = idx; weak = C.competency(id); }
+    });
+    return weak || C.competency(capIds[0]) || { id: capIds[0] || "", name: capIds[0] || "" };
+  }
+
+  function branchOnCheckpoint(learner, cp) {
+    const attempt = learner.checkpointAttempts && learner.checkpointAttempts[cp.id];
+    if (attempt && attempt.verdict !== "ready") {
+      const weak = weakestCovered(learner, cp.after);
+      const dims = (attempt.weak && attempt.weak.length) ? attempt.weak.join(", ") : "deeper specifics";
+      const second = attempt.disagreement
+        ? ` — the independent second assessor disagreed with assessor 1 (reasoned review)`
+        : attempt.assessor === 2 ? " — confirmed against the stricter bar" : "";
+      return {
+        action: "branch", cpId: cp.id, capId: weak.id, capName: weak.name, weakDims: attempt.weak,
+        reason: `${cp.title} isn't met yet (${attempt.verdict}${second}). The rubric wanted more on ${dims} —
+        branch back to ${weak.name} and re-attempt with that in mind. Re-running an unmet assessment cold is
+        the slowest way forward (08-assessment-model §5.4).`,
+        href: `#/learn/${weak.id}/3`,
+      };
+    }
+    return null;
+  }
+
   function walkModule(learner, moduleId) {
     const caps = C.competenciesFor(moduleId);
     const cps = C.checkpointsFor(moduleId);
@@ -79,6 +111,8 @@ window.PATHWAY = (function () {
 
     const cp = cps.find(x => M.checkpointReady(learner, x.id) && !M.checkpointDone(learner, x.id));
     if (cp) {
+      const branch = branchOnCheckpoint(learner, cp);
+      if (branch) return branch;
       return {
         action: "checkpoint", cpId: cp.id, cpTitle: cp.title,
         reason: `${cp.title} — a combined practical assessment across ${cp.after.join(", ")}.`,
@@ -129,6 +163,7 @@ window.PATHWAY = (function () {
       challenge: "Start the challenge",
       revisit: "Quick check — revisit",
       checkpoint: "Start the assessment",
+      branch: "Branch back",
       "choose-pathway": "Choose a work pathway",
       advance: "See work pathways",
     }[a] || "Continue";

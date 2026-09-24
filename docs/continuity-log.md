@@ -1031,6 +1031,41 @@ Phase 2's "export an evidence portfolio" item, plus a roadmap correction.
   graceful empty-portfolio output). `node --check` on both edited files; `./build.sh` clean.
 - **Tests** — `workers/api/test.mjs` unaffected (client-only change).
 
+## v0.38 — 2026-09-24 — ARP, branching, and mastery rubric UI (Phase 2 finish)
+
+The three remaining Phase 2 items, hardest → easiest. All client-side, no backend changes.
+
+- **Assessment Resolution Protocol (docs/08 §5)** — the checkpoint flow now runs the full protocol
+  shape: assessor 1 → optional independent second assessment (stricter bar, no Developing bands,
+  one dimension must Exceed) → **agreement** records evidence with `assessors: "1 + 2 (independent)
+  agree"`; **disagreement** (assessor 1 passed, stricter assessor 2 did not) renders a *reasoned
+  review* panel — exactly which mastery dimensions the second assessor wanted, with the
+  revise-is-normal framing from §5.4 — plus an **escalate** action (§5.5). Escalation appends a
+  `pendingReviews` entry (id, cpId, note, submission snapshot, status) logged as `arp-escalation`,
+  and the Evidence view now shows pending reviews with a link back to the checkpoint. Honest limit:
+  there is no human specialist in this single-learner prototype, so escalation is recorded as a
+  marker for the founder and for the future multi-learner pool — the copy says exactly that.
+- **Pathway branching** — `pathway.js` now **branches back**: every checkpoint attempt (pass or
+  fail, either assessor) is recorded in `learner.checkpointAttempts` (verdict, assessor,
+  disagreement flag, weak dimensions). When a module's checkpoint is ready-but-unmet, the engine
+  returns action `branch` → the weakest covered capability's teaching (`#/learn/{cap}/3`) with the
+  specific dims it wanted, instead of cold re-suggesting the failed checkpoint. Deliberate deferral
+  recorded in docs/04: no blind accelerate/skip of graded challenges — assessment integrity; the
+  checkpoint is the raised challenge, and acceleration-by-prior-evidence is a governance call for
+  when real independent assessors exist.
+- **Mastery rubric scoring UI** — `faculty.js` adds `masterySummary` (per-band counts, weak
+  dimensions, banded verdict per §3, shared with ARP). Every checkpoint result now shows a
+  **Mastery rubric — scoring** card (X of Y at Meets+, banded verdict, what a pass raises the
+  covered capabilities to). Rubric bands are now **persisted on evidence records** (docs/08 §7 —
+  previously only the free-text note was kept), displayed on the Evidence view, and each pathway
+  overview gains a mastery panel: best-recorded band per dimension + coverage count.
+- **Verification** — `/tmp` harness loads real `content.js`/`model.js`/`faculty.js`/`pathway.js`:
+  17/17 checks including masterySummary math on real CP1 dimensions, strict-bar pass, a genuinely
+  reachable disagreement seam (1st `ready` → 2nd `revise`), branch-back targeting the weakest cap,
+  correct href + weak dims + "disagreed" reasoning, assessor-1 failures branching too, and a
+  passing re-attempt returning to the normal checkpoint action. `node --check` clean, `./build.sh`
+  clean. `workers/api/test.mjs` unaffected (37/37).
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

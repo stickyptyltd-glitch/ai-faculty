@@ -25,7 +25,10 @@ window.STORE = (function () {
       checkpoints: {},       // { "CP1": { completedAt, evidenceId } }
       guided: {},            // { "C1": timestamp } — a real attempt made on the guided step
       revisits: {},          // { "C1": timestamp } — last spaced-retrieval quick-check done
-      evidence: [],          // { id, capId, kind, fields, feedback, confidence, createdAt }
+      checkpointAttempts: {},// { "CP1": { at, assessor, verdict, weak, weakestBand } } — every attempt,
+                             //   pass or fail, so the pathway engine can branch back (§5 ARP)
+      pendingReviews: [],    // { id, cpId, at, note, submission, status: "pending" } — ARP escalations
+      evidence: [],          // { id, capId, kind, fields, feedback, confidence, rubric?, createdAt }
       activity: [],          // { ts, kind, detail }
     };
   }

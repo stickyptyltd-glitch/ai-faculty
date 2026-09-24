@@ -41,6 +41,16 @@ The pathway is allowed to change — accelerate on evidence of existing capabili
 gaps, raise challenge on unexpected strength, adapt on a Personal↔Professional switch without
 deleting evidence.
 
+**Deliberate deferral (v0.38):** blind "accelerate/skip" of graded challenges is not implemented.
+Every challenge is assessed evidence under the rubric, and skipping it would sign a capability claim
+without evidence — the checkpoint is the raised challenge. Acceleration through prior evidence stays
+a governance decision ([05](05-governance-decision-rights.md)) for when real independent assessors
+exist. What *is* live: **branch back** — when a checkpoint attempt is not met (either assessor), the
+engine returns a `branch` action to the weakest covered capability (with the specific rubric
+dimension names the attempt wanted), instead of cold re-suggesting a failed checkpoint. Attempts are
+tracked in `learner.checkpointAttempts`; escalation of disputed checkpoints is a pending review on
+the learner record (ARP, §5.5), surfaced on the Evidence view.
+
 ### Teaching Engine
 Nine-step ladder — choose the **minimum effective intervention**:
 Activate → Explain → Demonstrate → Deconstruct → Guide → Challenge → Transfer → Reflect → Evidence.

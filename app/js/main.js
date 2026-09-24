@@ -340,10 +340,51 @@
     if (kind === "second-assessment") {
       const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
       if (!payload || payload.scope !== "checkpoint") { location.hash = "#/"; return; }
+      // ARP §5.4: disagreement is when assessor 1 said "ready" but the independent, stricter
+      // assessor 2 does not. That triggers the reasoned-review path, not a silent re-render.
       const result = F.assessCheckpoint(payload.cp, payload.data, true);
+      const disagreement = payload.result && payload.result.verdict === "ready" && result.verdict !== "ready";
       payload.result = result;
+      payload.disagreement = disagreement;
       sessionStorage.setItem("aifaculty.assess", JSON.stringify(payload));
-      renderResult(result, { scope: "checkpoint", cp: payload.cp });
+      recordCheckpointAttempt(payload.cp, result, disagreement);
+      renderResult(result, { scope: "checkpoint", cp: payload.cp, disagreement });
+      return;
+    }
+
+    if (kind === "escalate") {
+      // ARP §5.5 — unresolved / high-stakes: mark for a specialist or authorised Faculty holder.
+      // No human review exists in this single-learner prototype, so this records the request
+      // honestly on the learner's record + Evidence view rather than pretending someone reviewed it.
+      const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
+      const box = document.getElementById("assessResult");
+      if (!payload || payload.scope !== "checkpoint" || !payload.disagreement) {
+        if (box) box.innerHTML = `<div class="notice">There's no disputed submission open to escalate — re-submit the checkpoint for an assessment first.</div>`;
+        return;
+      }
+      window.STORE.update(l => {
+        if (!l.pendingReviews) l.pendingReviews = [];
+        l.pendingReviews.push({
+          id: "rev_" + Date.now().toString(36),
+          cpId: payload.cp, at: new Date().toISOString(),
+          note: payload.result.summary || "",
+          status: "pending",
+          submission: { fields: stripMeta(payload.data), band: overallBand(payload.result) },
+        });
+      });
+      window.STORE.log("arp-escalation", payload.cp);
+      box.innerHTML = `
+        <h2>Assessment Resolution Protocol — specialist review requested</h2>
+        <div class="card">
+          <div class="card__label">Marked for review (pending)</div>
+          <p>Your disputed <strong>${esc(payload.cp)}</strong> submission is on the open-review list and
+          now shows on your Evidence view. In this single-learner prototype there is no human specialist
+          pool yet — so nobody will review this device automatically. It's recorded here as a first
+          marker for the founder/admin, and this is the mechanism the multi-learner system will use
+          (<a data-nav href="#/about">docs/05 §5 and docs/08 §5.5</a>).</p>
+          <p style="margin:0">Your answers are preserved — revise and resubmit any time; evidence is only
+          recorded once the rubric is met, so you can keep practising in the meantime.</p>
+        </div>`;
       return;
     }
 
@@ -358,6 +399,7 @@
     if (kind === "checkpoint") {
       const { cp } = form.dataset;
       const result = F.assessCheckpoint(cp, data);
+      recordCheckpointAttempt(cp, result);
       sessionStorage.setItem("aifaculty.assess", JSON.stringify({ scope: "checkpoint", cp, data, result }));
       renderResult(result, { scope: "checkpoint", cp });
       return;
@@ -395,6 +437,7 @@
             title: `${payload.cp} · ${cpDef.title}`,
             fields: stripMeta(payload.data), feedback: payload.result.summary,
             confidence: payload.result.confidence,
+            rubric: payload.result.rubric.map(d => ({ label: d.label, band: d.band })),
             assessors: payload.result.assessor === 2 ? "1 + 2 (independent) agree" : "1",
           });
           M.markCheckpointDone(l, payload.cp, ev.id);
@@ -428,6 +471,58 @@
   function pathwayOf(capId) {
     const p = C.PATHWAYS.find(pw => pw.competencies.some(c => c.id === capId));
     return p ? p.id : null; // null = a foundation competency, not a pathway one
+  }
+
+  // Every checkpoint attempt is recorded (pass or fail) so the Pathway Engine can branch the learner
+  // back to the weakest covered capability instead of blindly re-suggesting a failed checkpoint.
+  function recordCheckpointAttempt(cpId, result, disagreement) {
+    const sum = F.masterySummary(result);
+    window.STORE.update(l => {
+      if (!l.checkpointAttempts) l.checkpointAttempts = {};
+      l.checkpointAttempts[cpId] = {
+        at: new Date().toISOString(),
+        assessor: result.assessor || 1,
+        verdict: result.verdict,
+        disagreement: !!disagreement,
+        weak: sum ? sum.weak.map(d => d.label) : [],
+        weakestBand: sum ? sum.weakestBand : null,
+      };
+    });
+  }
+
+  // Best recorded band per mastery dimension across all checkpoint evidence, newest wins ties.
+  const BAND_ORDER = ["Not yet", "Developing", "Meets", "Exceeds"];
+  function bestMasteryBands(learner) {
+    const best = {};
+    (learner.evidence || []).forEach(ev => {
+      (ev.rubric || []).forEach(d => {
+        const i = BAND_ORDER.indexOf(d.band);
+        const cur = best[d.label];
+        if (i >= 0 && (cur === undefined || i > BAND_ORDER.indexOf(cur))) best[d.label] = d.band;
+      });
+    });
+    return best;
+  }
+
+  // Mastery-rubric scoring panel: the capstone's dimensions with the learner's best recorded band
+  // per dimension. Evidence now persists rubric bands on every checkpoint (docs/08 §7).
+  function masteryPanel(learner, cp) {
+    const best = bestMasteryBands(learner);
+    const rows = cp.rubricDims.map(d => {
+      const b = best[d];
+      return `<li style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+        <span>${esc(d)}</span>${b ? bandTag(b) : `<span class="hint" style="font-size:12px">not assessed yet</span>`}</li>`;
+    }).join("");
+    const assessed = cp.rubricDims.filter(d => best[d]).length;
+    return `
+      <h2>Mastery rubric — ${esc(cp.id)} · ${esc(cp.title)}</h2>
+      <div class="card">
+        <p style="margin:0 0 8px">The dimensions this assessment is scored on, with your best recorded band
+        per dimension across all checkpoint evidence. A band records only when an assessment is confirmed;
+        nothing is saved until the rubric is met.</p>
+        <ul style="margin:0;list-style:none">${rows}</ul>
+        <p class="hint" style="margin:8px 0 0">${assessed} of ${cp.rubricDims.length} dimensions assessed.</p>
+      </div>`;
   }
 
   // Best-effort server mirror of a passed submission, for the admin panel — never blocks or
@@ -471,6 +566,40 @@
 
     const canConfirm = result.verdict === "ready";
     const offerSecond = ctx.scope === "checkpoint" && result.verdict === "ready" && result.assessor === 1;
+
+    // Mastery-rubric scoring summary — the banded verdict, dimension tally, and what a pass raises.
+    const mastery = ctx.scope === "checkpoint" ? F.masterySummary(result) : null;
+    let masteryScore = "";
+    if (mastery) {
+      masteryScore = `
+        <div class="card">
+          <div class="card__label">Mastery rubric — scoring</div>
+          <p style="margin:0 0 8px">${mastery.met} of ${mastery.total} dimensions at <strong>Meets</strong> or above ·
+          banded verdict: <strong>${esc(mastery.verdict)}</strong>
+          ${result.verdict === "ready" ? ` — a pass raises the covered capabilities to <strong>${esc(result.stateTarget)}</strong>.` : ""}</p>
+          <div class="hint">${["Not yet","Developing","Meets","Exceeds"].map(b =>
+            mastery.counts[b] ? `${bandTag(b)}×${mastery.counts[b]}` : "").filter(Boolean).join(" · ")}</div>
+        </div>`;
+    }
+
+    // ARP §5.4 reasoned review: when assessor 2 (stricter, independent bar) does not agree with a
+    // "ready" from assessor 1, surface exactly what the second assessor wanted and offer escalation.
+    let arp = "";
+    if (ctx.disagreement && ctx.scope === "checkpoint" && mastery) {
+      arp = `
+        <div class="card" style="border-color:var(--warn)">
+          <div class="card__label">ARP — second assessor disagrees · reasoned review</div>
+          <p style="margin:0 0 8px">Assessor 1 passed this; the independent second assessor applied the
+          stricter bar and wanted more. Here is what the second assessor specifically asked for.
+          <strong>Revising and resubmitting after review is normal, not failure</strong> (docs/08 §5.4);
+          evidence only records once the rubric is met.</p>
+          <ul style="margin:0 0 10px;list-style:none">${mastery.weak.map(d => `
+            <li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(d.label)}</span>${bandTag(d.band)}</li>`).join("")}</ul>
+          <form data-form="escalate" style="margin:0">
+            <button class="btn btn--ghost btn--sm" type="submit">Escalate to a specialist / authorised Faculty holder</button>
+          </form>
+        </div>`;
+    }
 
     // Shown only once the rubric is actually met — reinforcement for a real pass, not a
     // shortcut past one. The fixed{} text is a near-complete answer; revealing it on a
@@ -523,6 +652,8 @@
         <div class="card__label">${rubricTitle}</div>
         <ul style="margin:0;list-style:none">${rubric}</ul>
       </div>
+      ${masteryScore}
+      ${arp}
       ${beforeAfter}
       ${offerSecond
         ? `<form data-form="second-assessment" style="margin-bottom:10px">
@@ -1035,7 +1166,8 @@
         <h2>Capabilities</h2>
         <div class="caplist">${comps}</div>
         ${cap ? `<h2>Work capstone</h2><div class="card"><strong>${esc(cap.title)}</strong>
-          <p style="margin:6px 0 0">${esc(cap.brief)}</p></div>` : ""}
+          <p style="margin:6px 0 0">${esc(cap.brief)}</p></div>
+          ${masteryPanel(learner, cap)}` : ""}
         ${paidLocked ? `<div class="card next" style="margin-top:16px;border-color:var(--warn)">
           <div class="card__label">Pro pathway</div>
           <p style="margin:0 0 10px">This pathway is part of Pro. Your free plan includes the
@@ -1069,8 +1201,14 @@
   }
 
   function viewEvidence(learner) {
+    const pending = (learner.pendingReviews || []).filter(r => r.status === "pending");
+    const pendingNote = pending.length ? `
+      <div class="notice" style="border-color:var(--warn)">
+        <strong>ARP — awaiting specialist review:</strong> ${pending.map(r =>
+          `<a data-nav href="#/checkpoint/${r.cpId}" style="text-decoration:underline">${esc(r.cpId)}</a>`).join(", ")}.
+        These mark disputed second assessments; no evidence is recorded for them until the rubric is met.</div>` : "";
     if (!learner.evidence.length) {
-      return `<h1>Evidence</h1>
+      return `<h1>Evidence</h1>${pendingNote}
         <p class="lead">Nothing recorded yet. Evidence is created when you complete a challenge or a
         practical assessment on a real task of your own and Assessment Faculty confirms it against the rubric.</p>
         <a class="btn" data-nav href="#/">Back to progress</a>`;
@@ -1078,11 +1216,14 @@
     const renderEv = ev => {
       const fieldList = Object.entries(ev.fields).map(([k, v]) =>
         `<p style="margin:4px 0"><strong>${esc(k)}:</strong> ${esc(v)}</p>`).join("");
+      const rub = (ev.rubric || []).map(d =>
+        `<span class="hint">${esc(d.label)} ${bandTag(d.band)}</span>`).join(" ");
       return `<div class="evidence-item">
         <time>${new Date(ev.createdAt).toLocaleString()}</time>
         <h3 style="margin:4px 0;text-transform:none;letter-spacing:0;color:var(--text);font-size:15px">${esc(ev.title)}</h3>
         <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${esc(ev.kind)} · confidence: ${esc(ev.confidence)}${ev.assessors ? ` · assessors: ${esc(ev.assessors)}` : ""}</p>
         ${fieldList}
+        ${rub ? `<p style="margin:6px 0 0">${rub}</p>` : ""}
         <p style="margin:8px 0 0;font-size:14px"><strong>Faculty note:</strong> ${esc(ev.feedback)}</p>
       </div>`;
     };
@@ -1102,6 +1243,7 @@
     return `<h1>Evidence portfolio</h1>
       <p class="lead">${learner.evidence.length} record${learner.evidence.length === 1 ? "" : "s"}.
       Every capability claim links to evidence (see docs/01-architecture.md).</p>
+      ${pendingNote}
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
         <button class="btn" type="button" data-action="export-portfolio" data-format="md">⬇ Export as Markdown</button>
         <button class="btn btn--ghost" type="button" data-action="export-portfolio" data-format="json">Export as JSON</button>
