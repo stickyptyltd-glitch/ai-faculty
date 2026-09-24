@@ -23,6 +23,8 @@ window.STORE = (function () {
       projects: [],          // { id, name, context, goal, createdAt } — Applied Projects
       challenges: {},        // { "C1.1": { completedAt, evidenceId } }
       checkpoints: {},       // { "CP1": { completedAt, evidenceId } }
+      guided: {},            // { "C1": timestamp } — a real attempt made on the guided step
+      revisits: {},          // { "C1": timestamp } — last spaced-retrieval quick-check done
       evidence: [],          // { id, capId, kind, fields, feedback, confidence, createdAt }
       activity: [],          // { ts, kind, detail }
     };
@@ -55,6 +57,8 @@ window.STORE = (function () {
     // forward-compatible defaults for records saved by an earlier version
     if (!l.challenges) l.challenges = {};
     if (!l.checkpoints) l.checkpoints = {};
+    if (!l.guided) l.guided = {};
+    if (!l.revisits) l.revisits = {};
     if (!l.projects) l.projects = [];
     if (!l.module) l.module = "foundation";
     if (l.pathway === undefined) l.pathway = null;

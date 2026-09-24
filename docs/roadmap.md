@@ -21,6 +21,8 @@ competency, in real software, and *see* their progress.
 - [x] Pathway Engine — computes the next best action
 - [x] C1 (Goal Definition): teach → practice task → self/rubric evidence → mastery check
 - [x] Progress view — 8 panels + progress states
+- [x] Pedagogy review done → built its no-backend fixes (v0.36): guided attempt required,
+      spaced "revisit" quick-checks in the Pathway Engine, "more"-verdict deep-links
 - [ ] **Gate:** founder runs the full C1 loop end-to-end and it produces a real evidence record
 
 ## Phase 2 — Complete the first pathway

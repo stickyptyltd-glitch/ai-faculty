@@ -163,6 +163,15 @@
 
     if (el.dataset.action === "lesson-done") {
       const capId = el.dataset.cap;
+      const l = window.STORE.get();
+      if (!l.guided || !l.guided[capId]) {
+        const box = document.getElementById("guidedResult");
+        if (box) {
+          box.innerHTML = `<div class="notice" style="border-color:var(--warn)">Not yet — give the guided practice a real attempt first (fill in at least one field and check it against the model answer). Retrieval is where the skill sticks.</div>`;
+          box.scrollIntoView({ block: "start" });
+        }
+        return;
+      }
       window.STORE.update(l => M.markTaught(l, capId));
       window.STORE.log("lesson-done", capId);
       const ch = M.nextChallenge(window.STORE.get(), capId);
@@ -296,8 +305,16 @@
 
     if (kind === "guided") {
       const capId = form.dataset.cap;
-      const fb = F.guidedFeedback(capId, data);
       const box = document.getElementById("guidedResult");
+      // Retrieval before reveal: the model answer stays hidden until the learner actually
+      // attempts the task. This is the single most valuable practice step in the lesson, so
+      // it's the one thing we won't let be skipped with zero friction (10-pedagogy-review §4.1).
+      if (!Object.values(data).some(v => (v || "").trim())) {
+        box.innerHTML = `<div class="notice" style="border-color:var(--warn)">Have a go first — write at least one field, then check against the model answer. The attempt is where the learning happens.</div>`;
+        return;
+      }
+      window.STORE.update(l => { if (!l.guided) l.guided = {}; l.guided[capId] = new Date().toISOString(); });
+      const fb = F.guidedFeedback(capId, data);
       box.innerHTML = `
         <div class="feedback">
           <p style="margin-bottom:10px">${esc(fb.summary)}</p>
@@ -476,6 +493,19 @@
       }
     }
 
+    let revisit = "";
+    if (result.verdict === "more" && ctx.scope === "challenge") {
+      // Targeted, not generic: "more" means the learner hasn't internalised the lesson's
+      // named moves yet, so deep-link straight to them + the worked example (10-pedagogy-review §4.3).
+      revisit = `
+        <div class="card" style="border-color:var(--warn)">
+          <div class="card__label">Go back to the teaching</div>
+          <p style="margin:0 0 10px">This is the lesson's named moves and its worked example — exactly what the assessment is asking for. Re-read them, then come back and resubmit.</p>
+          <a class="btn btn--ghost btn--sm" data-nav href="#/learn/${ctx.cap}/3">🧩 The moves</a>
+          <a class="btn btn--ghost btn--sm" data-nav href="#/learn/${ctx.cap}/2">▶️ Worked example</a>
+        </div>`;
+    }
+
     box.innerHTML = `
       <h2>Assessment Faculty — formative feedback</h2>
       ${assessorLine}
@@ -483,6 +513,7 @@
         <p style="margin-bottom:10px">${esc(result.summary)}</p>
         ${rows}
       </div>
+      ${revisit}
       <div class="card">
         <div class="card__label">${rubricTitle}</div>
         <ul style="margin:0;list-style:none">${rubric}</ul>
@@ -619,6 +650,9 @@
     }
 
     if (stepKey === "quickcheck") {
+      // Doing the quick-check IS the spaced-revisit: reset the clock so the Pathway Engine
+      // doesn't keep surfacing this competency (10-pedagogy-review §4.2).
+      window.STORE.update(l => { if (!l.revisits) l.revisits = {}; l.revisits[capId] = new Date().toISOString(); });
       const qs = C.quickCheck(capId);
       const blocks = qs.map((qc, qi) => `
         <div class="card qcheck" data-qi="${qi}">
@@ -1085,11 +1119,11 @@
         <li><strong>Applied Projects</strong> + evidence portfolio grouped by project</li>
       </ul>
       <p>Pathway content is an authored first draft. It teaches AI-workflow judgement, not the
-      domain itself — worked examples are illustrative. The regulated-domain pathways (Legal,
-      Finance, HR, Healthcare) were specifically reviewed (2026-09-12) to defer to your own
-      jurisdiction/policy/qualified professional rather than state regulatory specifics as fact;
-      they're still pending formal sign-off by a licensed professional in each field. Their
-      overview page carries the detail.</p>
+      domain itself — worked examples are illustrative. Regulated-adjacent pathways (Legal,
+      Finance, HR, Healthcare, Public Sector, Education Leadership, Real Estate and others) are
+      written to defer to your own jurisdiction/policy/qualified professional rather than state
+      regulatory specifics as fact; they're still pending formal sign-off by a licensed
+      professional in each field. Each such pathway's overview page carries the notice.</p>
       <p>Teaching and assessment run on authored content and transparent rubric heuristics
       (<code>js/faculty.js</code>) — one swappable seam for a real model later.</p>
       <p>Data lives only in this browser (<code>localStorage</code>). “Reset learner” in the footer clears it.</p>

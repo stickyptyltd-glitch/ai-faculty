@@ -8,6 +8,11 @@ requested by the founder, not tied to any single pathway. This is an assessment 
 recommendations, not a build — nothing here has been implemented; every recommendation below is a
 proposal for the founder to prioritise.
 
+**Ship status (v0.36, 2026-09-24):** the three "buildable now" recommendations (§4 items 1–3) and
+the §5 copy fix are now **implemented and deployed** — see `continuity-log.md` v0.36. §4 items 4–5
+(interleaving decision, real reasoning assessment) remain open and are tracked at the end of this
+document.
+
 ---
 
 ## Bottom line

@@ -971,6 +971,42 @@ set the two secrets, fill the price IDs, run migration `0005_billing.sql` on D1,
 founder `plan` row by hand (or founder role already bypasses). Landing/app checkout buttons stay
 hidden/graceful until then.
 
+## v0.36 — 2026-09-24 — Build the pedagogy review's no-backend fixes
+
+Implements the three buildable-now recommendations from `docs/10-pedagogy-review.md` §4,
+plus the small §5 accuracy find. No API/backend or assessment-regex changes — every fix is
+client-side and ships to every existing pathway at once.
+
+- **Guided attempt is now a real forcing function** (`main.js`, `store.js`). The model answer
+  on the `guided` step stays hidden until the learner writes at least one field (was: reveal
+  anytime, with "Not yet" feedback doing nothing). The "I'm ready — do it on my own task"
+  button is also gated on that attempt (was: available with zero friction). Attempts recorded
+  in `learner.guided[capId]` (new, forward-defaulted in `store.js`). Fixes review §4.1.
+- **Spaced "revisit" action in the Pathway Engine** (`pathway.js`, `store.js`). A fully
+  completed competency resurfaces its ungraded quick-check once it's gone
+  `REVISIT_AFTER_DAYS` (3) since last exposure, interleaved at competency boundaries — the
+  `revisit` action the design docs always named and nothing implemented. Non-blocking: forward
+  learning/challenges for in-progress work always take precedence, and a *finished* module
+  never nags (the `moduleComplete` guard). Doing the quick-check resets the timer via
+  `learner.revisits[capId]`. `actionVerb` gained "Quick check — revisit". Fixes review §4.2.
+- **"more" verdict deep-links to the teaching** (`main.js`). A `more` verdict on a challenge
+  now renders a targeted "Go back to the teaching" card linking straight to that lesson's
+  **moves** (`#/learn/{cap}/3`) and **worked example** (`#/learn/{cap}/2`) instead of a vague
+  "go back to the teaching". Fixes review §4.3.
+- **Stale /about copy** (`main.js`) — the regulated-domain list no longer names only
+  "Legal, Finance, HR, Healthcare" or repeats the "specifically reviewed (2026-09-12)" claim;
+  it now mirrors the generalized, date-free notice each regulated pathway's overview banner
+  already carried since v0.32. Fixes review §5.
+- **Verification** — no app test harness exists, so wrote an ad-hoc node harness
+  (`/tmp`-only, not committed) that loads the real `content.js`/`model.js`/`pathway.js` with a
+  stubbed `window`: 7/7 checks (C1 done 4d ago → revisit fires; after revisit → forward
+  resumes; freshly-done → no revisit; fully-done module → no nag; undiagnosed → diagnose).
+  `node --check` on all edited files, `./build.sh` assembles cleanly.
+
+Spaced retrieval and the forced guided attempt work from *today's* data (they read
+`completedAt`/`taughtAt`, which every learner record already carries); only `guided`/`revisits`
+become visible to new saves — and they're forward-defaulted so nothing resets.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
