@@ -183,8 +183,9 @@ async function currentUser(request, env) {
   const tokenHash = await sha256Hex(token);
   const session = await env.DB.prepare("SELECT * FROM sessions WHERE token_hash = ?").bind(tokenHash).first();
   if (!session || new Date(session.expires_at) < new Date()) return null;
-  const user = await env.DB.prepare("SELECT id, email, display_name, created_at, role FROM users WHERE id = ?")
-    .bind(session.user_id).first();
+  const user = await env.DB.prepare(
+    "SELECT id, email, display_name, created_at, role, plan, plan_status, stripe_customer_id FROM users WHERE id = ?"
+  ).bind(session.user_id).first();
   return user || null;
 }
 
@@ -324,11 +325,21 @@ async function handleAdminOverview(request, env, headers) {
   const auth = await requireFounder(request, env, headers);
   if (auth.error) return auth.error;
 
-  const [{ results: users }, { results: subs }, { results: acts }] = await Promise.all([
-    env.DB.prepare("SELECT id, email, created_at FROM users").all(),
+  const [{ results: users }, { results: subs }, { results: acts }, { results: planRows }, { results: payRows }] = await Promise.all([
+    env.DB.prepare("SELECT id, email, created_at, plan FROM users").all(),
     env.DB.prepare("SELECT user_id, pathway_id, cap_id, band, duration_ms, completed_at FROM submissions").all(),
     env.DB.prepare("SELECT user_id, ts FROM activity_log").all(),
+    env.DB.prepare("SELECT plan, COUNT(*) AS n FROM users GROUP BY plan").all(),
+    env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS total, COUNT(*) AS n FROM payments WHERE status = 'succeeded'").all(),
   ]);
+
+  const planCounts = {};
+  for (const r of planRows) planCounts[r.plan || "free"] = r.n;
+  const revenue = {
+    lifetimeCents: Number(payRows[0]?.total || 0),
+    payments: Number(payRows[0]?.n || 0),
+    payingLearners: Object.entries(planCounts).reduce((s, [plan, n]) => s + (plan === "free" ? 0 : n), 0),
+  };
 
   const now = Date.now();
   const day = 24 * 3600 * 1000;
@@ -361,6 +372,8 @@ async function handleAdminOverview(request, env, headers) {
   return json(200, {
     ok: true,
     totals: { learners: users.length, activeToday, activeWeek, submissions: subs.length },
+    planCounts,
+    revenue,
     popularPathways,
     struggle,
   }, headers);
@@ -424,6 +437,217 @@ async function handleAdminLearnerDetail(request, env, headers, userId) {
   }, headers);
 }
 
+// ---- monetization (Phase 1.6: Stripe Checkout + webhooks + plan ledger) ---------------
+// Design: docs/11-monetization.md. Payments are opt-in — until STRIPE_SECRET_KEY is set every
+// payments endpoint returns 501 and the UI degrades to "join the waitlist". No account is ever
+// created before a payment; the webhook matches the payer by email, creates a users row if
+// needed, and grants the plan. The payments ledger is append-only and feeds the founder revenue
+// view (payment must never buy a grade — this is access + a money trail, nothing more).
+
+const PAYMENT_PLANS = {
+  free:    { id: "free",    name: "Free",          priceCents: 0,  cadence: "once",  human: "Free forever" },
+  pro:     { id: "pro",     name: "Pro",           priceCents: 1500, cadence: "monthly", human: "$15/mo · or $120/yr" },
+  annual:  { id: "annual",  name: "Pro (annual)",  priceCents: 12000, cadence: "yearly", human: "$120/yr" },
+  founding: { id: "founding", name: "Founding Member", priceCents: 15000, cadence: "once", human: "$150 one-time · lifetime" },
+};
+
+function stripeConfigured(env) {
+  return !!env.STRIPE_SECRET_KEY;
+}
+
+// Plain fetch to Stripe's REST API (form-encoded) — no SDK dependency in the Worker.
+async function stripeFetch(env, path, params = {}) {
+  const body = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (Array.isArray(v)) {
+      v.forEach((item, idx) => { for (const [ik, iv] of Object.entries(item)) body.append(`${k}[${idx}][${ik}]`, iv); });
+    }
+    else if (v !== null && typeof v === "object") {
+      for (const [ik, iv] of Object.entries(v)) if (iv !== undefined && iv !== null) body.append(`${k}[${ik}]`, iv);
+    }
+    else if (v !== undefined && v !== null) body.append(k, v);
+  }
+  const res = await fetch(`https://api.stripe.com/v1${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  });
+  const data = await res.json().catch(() => null);
+  return data && typeof data.error === "object" ? { error: data.error, status: res.status } : { data, status: res.status };
+}
+
+// Stripe webhook signature: HMAC-SHA256 over "<timestamp>.<raw body>", hex, compared to the
+// v1= value in the Stripe-Signature header. The secret after "whsec_" is base64url.
+function toHex(bytes) { return [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, "0")).join(""); }
+function b64urlToBytes(b64) {
+  return Uint8Array.from(atob(b64.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+}
+async function stripeSignatureOk(env, rawBody, sigHeader) {
+  if (!sigHeader) return false;
+  const parts = {};
+  for (const p of sigHeader.split(",")) {
+    const [k, v] = p.split("=");
+    if (k) parts[k.trim()] = (v || "").trim();
+  }
+  const t = parts.t, v1 = parts.v1;
+  if (!t || !v1) return false;
+  // Reject signatures older than 5 minutes — replay protection.
+  if (Math.abs(Date.now() / 1000 - Number(t)) > 300) return false;
+  const secret = String(env.STRIPE_WEBHOOK_SECRET || "").replace(/^whsec_/, "");
+  const key = await crypto.subtle.importKey(
+    "raw", b64urlToBytes(secret).buffer, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${rawBody}`));
+  const expect = toHex(mac);
+  if (expect.length !== v1.length) return false;
+  let diff = 0;
+  for (let i = 0; i < expect.length; i++) diff |= expect.charCodeAt(i) ^ v1.charCodeAt(i);
+  return diff === 0;
+}
+
+async function upsertUserByEmail(env, email, now) {
+  const lower = String(email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(lower)) return null;
+  let user = await env.DB.prepare("SELECT * FROM users WHERE email = ?").bind(lower).first();
+  if (!user) {
+    const id = crypto.randomUUID();
+    await env.DB.prepare("INSERT INTO users (id, email, display_name, created_at) VALUES (?, ?, NULL, ?)")
+      .bind(id, lower, now.toISOString()).run();
+    user = { id, email: lower };
+  }
+  return user;
+}
+
+async function applyGrant(env, user, plan, planStatus, customerId, amountCents, currency, stripeEventId, eventType) {
+  await env.DB.prepare(
+    "UPDATE users SET plan = ?, plan_status = ?, stripe_customer_id = ? WHERE id = ?"
+  ).bind(plan, planStatus, customerId || null, user.id).run();
+  // Ledger: dedupe on stripe_event_id so a replayed webhook never double-counts revenue.
+  await env.DB.prepare(
+    "INSERT OR IGNORE INTO payments (id, user_id, stripe_event_id, event_type, plan, amount_cents, currency, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).bind(crypto.randomUUID(), user.id, stripeEventId, eventType, plan, amountCents, (currency || "usd").toLowerCase(), "succeeded", new Date().toISOString()).run();
+}
+
+function priceToPlan(env, priceId) {
+  if (priceId && priceId === env.STRIPE_PRICE_FOUNDING) return "founding";
+  return "pro";
+}
+
+async function handlePaymentsPlans(request, env, headers) {
+  return json(200, { ok: true, stripeEnabled: stripeConfigured(env), plans: PAYMENT_PLANS }, headers);
+}
+
+async function handlePaymentsCheckout(request, env, headers) {
+  if (!stripeConfigured(env)) return json(501, { ok: false, error: "payments_not_configured" }, headers);
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+
+  const plan = String(body.plan || "");
+  const cadence = String(body.cadence || "monthly");
+  if (plan === "free") return json(400, { ok: false, error: "invalid_plan" }, headers);
+  if (plan !== "founding" && plan !== "pro") return json(400, { ok: false, error: "invalid_plan" }, headers);
+
+  const auth = await requireAuth(request, env, headers);
+  const user = auth.error ? null : auth.user;
+  const email = user ? user.email : (String(body.email || "").trim().toLowerCase() || undefined);
+  if (!user && email && !EMAIL_RE.test(email)) return json(400, { ok: false, error: "invalid_email" }, headers);
+
+  // Reuse the payer's Stripe customer when we already know it; otherwise Stripe's Checkout
+  // collects (or keeps) the email and the webhook matches it below.
+  let customerId = user && user.stripe_customer_id ? user.stripe_customer_id : null;
+  if (!customerId && email) {
+    const r = await stripeFetch(env, "/customers", { email });
+    if (r.error) return json(502, { ok: false, error: "stripe_error", detail: r.error.message }, headers);
+    customerId = r.data.id;
+  }
+
+  const isPro = plan === "pro";
+  const price = isPro
+    ? (cadence === "annual" ? env.STRIPE_PRICE_PRO_ANNUAL : env.STRIPE_PRICE_PRO_MONTHLY)
+    : env.STRIPE_PRICE_FOUNDING;
+  const mode = isPro ? "subscription" : "payment";
+
+  const r = await stripeFetch(env, "/checkout/sessions", {
+    mode,
+    success_url: `${env.APP_ORIGIN}/app/#/account?plan=${plan}`,
+    cancel_url: `${env.APP_ORIGIN}/#pricing`,
+    customer: customerId,
+    customer_email: email && !customerId ? email : undefined,
+    client_reference_id: user ? user.id : undefined,
+    allow_promotion_codes: "true",
+    line_items: [{ price, quantity: "1" }],
+    metadata: { plan, userId: user ? user.id : "" },
+  });
+  if (r.error) return json(502, { ok: false, error: "stripe_error", detail: r.error.message }, headers);
+  return json(200, { ok: true, url: r.data.url }, headers);
+}
+
+async function handlePaymentsBilling(request, env, headers) {
+  if (!stripeConfigured(env)) return json(501, { ok: false, error: "payments_not_configured" }, headers);
+  const auth = await requireAuth(request, env, headers);
+  if (auth.error) return auth.error;
+  if (!auth.user.stripe_customer_id) return json(400, { ok: false, error: "no_subscription" }, headers);
+  const r = await stripeFetch(env, "/billing_portal/sessions", {
+    customer: auth.user.stripe_customer_id,
+    return_url: `${env.APP_ORIGIN}/app/#/account`,
+  });
+  if (r.error) return json(502, { ok: false, error: "stripe_error", detail: r.error.message }, headers);
+  return json(200, { ok: true, url: r.data.url }, headers);
+}
+
+async function handlePaymentsWebhook(request, env, headers) {
+  if (!stripeConfigured(env) || !env.STRIPE_WEBHOOK_SECRET) {
+    return json(501, { ok: false, error: "payments_not_configured" }, headers);
+  }
+  const rawBody = await request.text();
+  const ok = await stripeSignatureOk(env, rawBody, request.headers.get("Stripe-Signature") || "");
+  if (!ok) return json(400, { ok: false, error: "invalid_signature" }, headers);
+
+  let event;
+  try { event = JSON.parse(rawBody); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+  const type = event.type || "";
+  const obj = event.data && event.data.object;
+
+  if (type === "checkout.session.completed" && obj && obj.payment_status === "paid") {
+    const now = new Date();
+    const sessionEmail = (obj.customer_details && obj.customer_details.email) || obj.customer_email;
+    const user = await upsertUserByEmail(env, sessionEmail, now);
+    if (user) {
+      const plan = (obj.metadata && obj.metadata.plan) || priceToPlan(env, obj.line_items && obj.line_items.data && obj.line_items.data[0] && obj.line_items.data[0].price && obj.line_items.data[0].price.id);
+      await applyGrant(env, user, plan, plan === "pro" ? "active" : "active", obj.customer || null, obj.amount_total || 0, obj.currency || "usd", event.id, "checkout");
+    }
+    return json(200, { ok: true }, headers);
+  }
+
+  if (type.startsWith("customer.subscription.") && obj) {
+    const plan = priceToPlan(env, obj.items && obj.items.data && obj.items.data[0] && obj.items.data[0].price && obj.items.data[0].price.id);
+    const status = type === "customer.subscription.deleted" ? "canceled" : (obj.status || "active");
+    const planField = status === "canceled" || status === "past_due" && plan === "pro" ? "free" : plan;
+    await env.DB.prepare(
+      "UPDATE users SET plan = ?, plan_status = ? WHERE stripe_customer_id = ?"
+    ).bind(planField, status, obj.customer).run();
+    return json(200, { ok: true }, headers);
+  }
+
+  if (type === "invoice.paid" && obj) {
+    const now = new Date();
+    const amount = obj.amount_paid || 0;
+    const currency = obj.currency || "usd";
+    const price = obj.lines && obj.lines.data && obj.lines.data[0] && obj.lines.data[0].price;
+    const plan = priceToPlan(env, price && price.id);
+    const user = await env.DB.prepare("SELECT * FROM users WHERE stripe_customer_id = ?").bind(obj.customer).first();
+    if (user && amount > 0) {
+      await applyGrant(env, user, plan, "active", obj.customer, amount, currency, event.id, "invoice");
+    }
+    return json(200, { ok: true }, headers);
+  }
+
+  return json(200, { ok: true, ignored: type }, headers);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -449,6 +673,18 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/api/feedback") {
       return handleFeedbackSubmit(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/payments/plans") {
+      return handlePaymentsPlans(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/payments/checkout") {
+      return handlePaymentsCheckout(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/payments/billing") {
+      return handlePaymentsBilling(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/payments/webhook") {
+      return handlePaymentsWebhook(request, env, headers);
     }
     if (request.method === "GET" && url.pathname === "/api/admin/overview") {
       return handleAdminOverview(request, env, headers);

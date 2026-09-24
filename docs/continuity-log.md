@@ -920,14 +920,64 @@ Also flagged, but deliberately **not fixed this pass** (out of scope for what wa
 `/about` page (`main.js` ~line 1037) still names only 4 of the now-7 regulated-notice pathways and
 repeats a stale "reviewed (2026-09-12)" claim the overview banner itself already dropped in v0.32.
 
+## v0.35 — 2026-09-24 — Monetization: plans, Stripe payments, plan gate
+
+Founder: "make money of the ai faculty learning platform." Built the first monetization slice —
+strategy + payment plumbing + a client plan gate — per [docs/11-monetization.md](11-monetization.md).
+Payments are **opt-in and off by default**: without Stripe secrets every `/api/payments/*` route
+returns `501 payments_not_configured` and the UI degrades to a waitlist CTA, so nothing ships
+broken before a Stripe account is connected.
+
+- **Design doc** `docs/11-monetization.md` — Free (foundation + first pathway, forever) /
+  Pro ($15/mo or $120/yr, all pathways) / Founding Member ($150 one-time lifetime Pro, pre-launch).
+  Hard rules: payment buys access breadth only, never a grade; compensation rules unchanged; prices
+  founder-approved.
+- **D1 migration** `workers/api/migrations/0005_billing.sql` — `users.plan` (`free|pro|founding`),
+  `users.plan_status`, `users.stripe_customer_id`, plus an append-only `payments` ledger
+  (deduped on `stripe_event_id`) that feeds the admin revenue view.
+- **API Worker** (`workers/api/index.js`):
+  - `GET  /api/payments/plans` — public catalogue + `stripeEnabled`.
+  - `POST /api/payments/checkout` — Stripe Checkout session (subscription for Pro, one-time for
+    Founding); works signed-out (webhook matches by email, auto-creates the user) or signed-in
+    (reuses the Stripe customer). Nothing creates an account before a payment.
+  - `POST /api/payments/billing` — authenticated → Customer Portal (manage/cancel).
+  - `POST /api/payments/webhook` — HMAC-SHA256 signature-verified (base64url `whsec_` decoding,
+    5-min replay window); `checkout.session.completed` grants plans, `customer.subscription.*`
+    syncs `plan`/`plan_status`, `invoice.paid` records recurring revenue. Plain fetch to Stripe,
+    no SDK.
+  - `currentUser`/`/api/auth/me` now return `plan`, `plan_status`, `stripe_customer_id`.
+  - Admin overview now reports `planCounts` + `revenue` (lifetime cents, payment count,
+    paying-learners).
+- **Landing page** — new `#pricing` section (Free / Pro / Founding Member), buy buttons wired to
+  checkout with graceful "opening at launch" fallback; signup copy updated to "keep free access to
+  the Free plan"; CSP `connect-src` extended to the API worker for previews.
+- **App** — new `js/plans.js` tier helper; pathways catalogue shows a **Pro** pill + upgrade banner
+  on paid pathways for signed-in free learners; pathway overview shows an upgrade card instead of
+  the choose form; Account view shows the plan with Upgrade-to-Pro / Manage-billing actions.
+  Deliberately **soft/client-side** at this stage (content ships in `localStorage`; signed-out
+  demo stays fully open; founder bypasses) — documented as such in `11-monetization.md` §5.
+- **Tests** — `workers/api/test.mjs` now 36 checks (was 17): plans endpoint, 501 fallback, checkout
+  session creation + price/mode/metadata, bad-signature 400, founding grant via webhook (user
+  auto-created + revenue recorded once), subscription plan sync, admin revenue overview. 36/36 pass.
+- **Wrangler** — `[vars]` docs for the three Stripe price IDs + `wrangler secret put` instructions.
+
+**Open pieces** (founder to do, can't be done from the repo): create the Stripe account + products,
+set the two secrets, fill the price IDs, run migration `0005_billing.sql` on D1, deploy, and set a
+founder `plan` row by hand (or founder role already bypasses). Landing/app checkout buttons stay
+hidden/graceful until then.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
   it's a billing/payment-method action. Once upgraded: onboard `aifaculty.org` to Email Service,
   add the `send_email` binding to `workers/api/wrangler.toml`, update `handleRequestLink` to
   send for real instead of dev-mode, deploy, verify a real email arrives.
-- **Phases 2–5** of the platform roadmap (monetization, learning plans, qualifications,
-  leaderboard) — plan approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.
+- **Monetization readiness** (v0.35 built the plumbing; founder must do the account-side): create
+  the Stripe account + products/prices, `wrangler secret put` the two keys, fill the three price IDs,
+  apply migration `0005_billing.sql`, deploy, and decide Public-Sector-style next steps (industry
+  academies, teams licensing, verified certificates — see `docs/11-monetization.md` §2).
+- **Phases 2–5** of the platform roadmap (learning plans, qualifications, leaderboard — monetization
+  now started) — remainder approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.
 - **More domains** — professional-services variants, public sector, sales-engineering, product
   management, design/UX, journalism, and industry-specific academies. Now automatable via
   `docs/expansion-prompt.md`.

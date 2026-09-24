@@ -41,7 +41,10 @@ competency, in real software, and *see* their progress.
 
 ## Phase 4 — Scale-ready
 
-- [ ] Multi-learner data model + accounts
+- [x] Multi-learner data model + accounts
+- [x] Monetization foundation (see docs/11-monetization.md): Free/Pro/Founding plans, Stripe
+      Checkout + webhooks, payments ledger, plan gate, admin revenue view — built v0.35; live once
+      the founder connects the Stripe account
 - [ ] Second capability added to the graph
 - [ ] Learner-faculty (mentor / reviewer) scoped roles
 - [ ] Dashboards (learner / curriculum / faculty / institution)

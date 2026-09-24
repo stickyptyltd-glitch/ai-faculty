@@ -19,13 +19,22 @@ async function sha256Hex(input) {
 // whitespace/formatting changes to the SQL in index.js without going out of sync silently.
 function makeFakeDB({ users = [], sessions = [] } = {}) {
   const feedback = [];
+  const payments = [];
+  const usersRows = users.map(u => ({ plan: "free", plan_status: "none", stripe_customer_id: null, ...u }));
 
   async function first(sql, args) {
     if (sql.includes("FROM sessions WHERE token_hash")) {
       return sessions.find(s => s.token_hash === args[0]) || null;
     }
     if (sql.includes("FROM users WHERE id")) {
-      return users.find(u => u.id === args[0]) || null;
+      return usersRows.find(u => u.id === args[0]) || null;
+    }
+    if (sql.includes("FROM users WHERE email")) {
+      const email = String(args[0] || "").toLowerCase();
+      return usersRows.find(u => u.email === email) || null;
+    }
+    if (sql.includes("FROM users WHERE stripe_customer_id")) {
+      return usersRows.find(u => u.stripe_customer_id === args[0]) || null;
     }
     return null;
   }
@@ -33,6 +42,22 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     if (sql.startsWith("INSERT INTO feedback")) {
       const [id, user_id, text, page_context, rating, created_at] = args;
       feedback.push({ id, user_id, text, page_context, rating, created_at });
+    } else if (sql.startsWith("INSERT INTO users")) {
+      const [id, email, display_name, created_at] = args;
+      usersRows.push({ id, email, display_name, created_at, role: "learner", plan: "free", plan_status: "none", stripe_customer_id: null });
+    } else if (sql.includes("WHERE stripe_customer_id = ?")) {
+      const [plan, status, cust] = args; // subscription sync: (plan, status, stripe_customer_id)
+      const u = usersRows.find(u => u.stripe_customer_id === cust);
+      if (u) { u.plan = plan; u.plan_status = status; }
+    } else if (sql.startsWith("UPDATE users SET plan")) {
+      const [plan, planStatus, stripeId, userId] = args; // applyGrant order
+      const u = usersRows.find(u => u.id === userId);
+      if (u) { u.plan = plan; u.plan_status = planStatus; if (stripeId) u.stripe_customer_id = stripeId; }
+    } else if (sql.startsWith("INSERT OR IGNORE INTO payments")) {
+      const [id, user_id, stripe_event_id, event_type, plan, amount, currency, status, created_at] = args;
+      if (!payments.some(p => p.stripe_event_id === stripe_event_id)) {
+        payments.push({ id, user_id, stripe_event_id, event_type, plan, amount_cents: amount, currency, status, created_at });
+      }
     }
     return { success: true };
   }
@@ -43,10 +68,20 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
         .map(f => ({
           id: f.id, text: f.text, page_context: f.page_context, rating: f.rating,
           created_at: f.created_at,
-          email: (users.find(u => u.id === f.user_id) || {}).email,
+          email: (usersRows.find(u => u.id === f.user_id) || {}).email,
         }));
       return { results: rows };
     }
+    if (sql.includes("FROM users GROUP BY plan")) {
+      const m = {};
+      for (const u of usersRows) m[u.plan] = (m[u.plan] || 0) + 1;
+      return { results: Object.entries(m).map(([plan, n]) => ({ plan, n })) };
+    }
+    if (sql.includes("FROM payments WHERE status")) {
+      const paid = payments.filter(p => p.status === "succeeded");
+      return { results: [{ total: paid.reduce((s, p) => s + p.amount_cents, 0), n: paid.length }] };
+    }
+    if (sql.includes("FROM users")) return { results: usersRows };
     return { results: [] };
   }
 
@@ -65,7 +100,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     };
     return stmt;
   }
-  return { prepare, _feedback: feedback };
+  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows };
 }
 
 function makeKV() {
@@ -203,6 +238,160 @@ function check(name, cond) {
   check("2 rows returned", body.feedback.length === 2);
   check("newest first", body.feedback[0].text === "Second (newer)");
   check("email joined from users", body.feedback[0].email === "learner@example.com");
+}
+
+// ---- monetization (Phase 1.6) ------------------------------------------------
+
+function makeStripeEnv() {
+  const keyBytes = new Uint8Array(32).fill(7);
+  const keyB64 = Buffer.from(keyBytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const password = {
+    STRIPE_SECRET_KEY: "sk_test_abcdef",
+    STRIPE_WEBHOOK_SECRET: "whsec_" + keyB64,
+    STRIPE_PRICE_PRO_MONTHLY: "price_pro_monthly",
+    STRIPE_PRICE_PRO_ANNUAL: "price_pro_annual",
+    STRIPE_PRICE_FOUNDING: "price_founding",
+  };
+  return password;
+}
+function stripeSecretFor(env) { return env.STRIPE_WEBHOOK_SECRET; }
+
+async function signStripe(secret, rawBody) {
+  const keyB64 = secret.slice("whsec_".length);
+  const keyBuf = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0)).buffer;
+  const key = await crypto.subtle.importKey("raw", keyBuf, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const t = Math.floor(Date.now() / 1000);
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${rawBody}`));
+  const hex = [...new Uint8Array(mac)].map(b => b.toString(16).padStart(2, "0")).join("");
+  return `t=${t},v1=${hex}`;
+}
+
+// Swap in a Stripe API mock for the duration of fn; original fetch restored afterwards.
+async function withStripe(handler) {
+  const orig = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, opts) => {
+    const u = String(url);
+    if (!u.startsWith("https://api.stripe.com")) return orig(url, opts);
+    const body = new URLSearchParams(opts.body);
+    calls.push({ url: u, body });
+    if (u.endsWith("/customers")) return new Response(JSON.stringify({ id: "cus_test" }), { status: 200 });
+    if (u.endsWith("/checkout/sessions")) return new Response(JSON.stringify({ id: "cs_test", url: "https://checkout.stripe.com/c/pay/test" }), { status: 200 });
+    if (u.endsWith("/billing_portal/sessions")) return new Response(JSON.stringify({ id: "bps_test", url: "https://billing.stripe.com/s/portal" }), { status: 200 });
+    return new Response(JSON.stringify({ error: { message: "unexpected" } }), { status: 500 });
+  };
+  try { const out = await handler(calls); return out; }
+  finally { globalThis.fetch = orig; }
+}
+
+// 12. GET /api/payments/plans is public and lists the catalogue, disabled until Stripe is set
+{
+  const { env } = await makeEnv();
+  const r = await worker.fetch(await req("/api/payments/plans"), env);
+  const body = await r.json();
+  check("200 payments/plans public", r.status === 200 && body.ok === true);
+  check("stripe disabled by default", body.stripeEnabled === false);
+  check("plans include pro + founding", !!body.plans.pro && !!body.plans.founding);
+}
+
+// 13. POST /api/payments/checkout -> 501 until Stripe is configured
+{
+  const { env } = await makeEnv();
+  const r = await worker.fetch(await req("/api/payments/checkout", { method: "POST", body: { plan: "founding" } }), env);
+  check("501 checkout when not configured", r.status === 501 && (await r.json()).error === "payments_not_configured");
+}
+
+// 14. checkout (signed out, with email) creates a Stripe session and returns the URL
+{
+  const { env } = await makeEnv();
+  const password = makeStripeEnv();
+  Object.assign(env, password);
+  const result = await withStripe(async (calls) => {
+    const r = await worker.fetch(await req("/api/payments/checkout", { method: "POST", body: { plan: "founding", email: "buyer@example.com" } }), env);
+    return { body: await r.json(), calls };
+  });
+  check("200 checkout founding signed-out", result.body.ok === true && result.body.url === "https://checkout.stripe.com/c/pay/test");
+  const sessionCall = result.calls.find(c => c.url.endsWith("/checkout/sessions"));
+  check("stripe session created with payment mode", sessionCall && sessionCall.body.get("mode") === "payment");
+  check("founding price id used", sessionCall && sessionCall.body.get("line_items[0][price]") === "price_founding");
+  check("plan in metadata", sessionCall && sessionCall.body.get("metadata[plan]") === "founding");
+}
+
+// 15. webhook with a missing/bad signature -> 400
+{
+  const { env } = await makeEnv();
+  const password = makeStripeEnv();
+  Object.assign(env, password);
+  const payload = JSON.stringify({ type: "checkout.session.completed", data: { object: {} } });
+  const r = await worker.fetch(new Request("https://aifaculty.org/api/payments/webhook", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Stripe-Signature": "t=1,v1=deadbeef" },
+    body: payload,
+  }), env);
+  check("400 webhook bad signature", r.status === 400 && (await r.json()).error === "invalid_signature");
+}
+
+// 16. webhook checkout.session.completed grants a founding plan + records revenue (creates user by email)
+{
+  const { env } = await makeEnv();
+  const password = makeStripeEnv();
+  Object.assign(env, password);
+  const payload = JSON.stringify({
+    id: "evt_founding",
+    type: "checkout.session.completed",
+    data: { object: {
+      id: "cs_f", payment_status: "paid", amount_total: 15000, currency: "usd",
+      customer: "cus_founding", customer_email: "buyer@example.com",
+      customer_details: { email: "buyer@example.com" },
+      metadata: { plan: "founding", userId: "" },
+    } },
+  });
+  const sig = await signStripe(password.STRIPE_WEBHOOK_SECRET, payload);
+  const r = await worker.fetch(new Request("https://aifaculty.org/api/payments/webhook", {
+    method: "POST", headers: { "Content-Type": "application/json", "Stripe-Signature": sig }, body: payload,
+  }), env);
+  const body = await r.json();
+  check("200 webhook valid", r.status === 200 && body.ok === true);
+  const buyer = env.DB._users.find(u => u.email === "buyer@example.com");
+  check("payer created by email", !!buyer);
+  check("payer got founding plan", buyer && buyer.plan === "founding" && buyer.plan_status === "active");
+  check("revenue recorded once", env.DB._payments.length === 1 && env.DB._payments[0].amount_cents === 15000);
+}
+
+// 17. webhook subscription.updated syncs plan for the paying stripe customer
+{
+  const { env } = await makeEnv();
+  const password = makeStripeEnv();
+  Object.assign(env, password);
+  env.DB._users[0].stripe_customer_id = "cus_pro";
+  const payload = JSON.stringify({
+    id: "evt_sub", type: "customer.subscription.updated",
+    data: { object: {
+      id: "sub_1", customer: "cus_pro", status: "active",
+      items: { data: [{ price: { id: "price_pro_monthly" } }] },
+    } },
+  });
+  const sig = await signStripe(password.STRIPE_WEBHOOK_SECRET, payload);
+  const r = await worker.fetch(new Request("https://aifaculty.org/api/payments/webhook", {
+    method: "POST", headers: { "Content-Type": "application/json", "Stripe-Signature": sig }, body: payload,
+  }), env);
+  check("200 webhook subscription", r.status === 200);
+  check("user now pro/active", env.DB._users[0].plan === "pro" && env.DB._users[0].plan_status === "active");
+}
+
+// 18. admin overview reports revenue + plan counts (founder only)
+{
+  const { env, rawToken } = await makeEnv({ role: "founder" });
+  env.DB._payments.push({
+    id: "p1", user_id: "u1", stripe_event_id: "evt_founding", event_type: "checkout",
+    plan: "founding", amount_cents: 15000, currency: "usd", status: "succeeded", created_at: "2026-09-24T00:00:00.000Z",
+  });
+  const r = await worker.fetch(await req("/api/admin/overview", { token: rawToken }), env);
+  const body = await r.json();
+  check("200 overview as founder", r.status === 200 && body.ok === true);
+  check("learners counted", body.totals.learners === 1);
+  check("revenue total", body.revenue.lifetimeCents === 15000 && body.revenue.payments === 1);
+  check("free plan count", body.planCounts.free === 1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

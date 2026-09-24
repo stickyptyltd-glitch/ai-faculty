@@ -146,6 +146,7 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
 .pill--guided { background: #12303a; color: #56b6c2; }
 .pill--independent { background: #12351d; color: var(--good); }
 .pill--transferable, .pill--advanced { background: #1d2b4d; color: var(--accent); }
+.pill--pro { background: #402a12; color: var(--warn); }
 
 .bar { height: 8px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin: 8px 0; }
 .bar > span { display: block; height: 100%; background: var(--accent); }

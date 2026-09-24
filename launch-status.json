@@ -1,6 +1,6 @@
 {
   "countdown_target": "2026-12-01T00:00:00Z",
-  "offer": "Early subscribers get free access",
+  "offer": "Start free (foundation + first pathway). Pro $15/mo or $120/yr opens every pathway. Founding Members: $150 one-time lifetime Pro pre-launch.",
   "domain": "aifaculty.org",
   "domain_cost_per_year_usd": 12,
   "registrar": "Cloudflare Registrar",
@@ -80,6 +80,20 @@
       "status": "todo",
       "cost": 0,
       "notes": "Site is live now but not announced. HTTPS automatic. Review landing copy before any public announcement. Countdown target 2026-12-01."
+    },
+    {
+      "id": "monetization_build",
+      "label": "Monetization foundation (v0.35): Free/Pro/Founding plans, Stripe checkout+webhooks, payments ledger, plan gate, admin revenue",
+      "status": "done",
+      "cost": 0,
+      "notes": "docs/11-monetization.md + migration 0005_billing.sql + /api/payments/{plans,checkout,billing,webhook} + landing #pricing + app plan gating + admin revenue. 36/36 worker tests pass. Payments OFF (501) until founder connects Stripe."
+    },
+    {
+      "id": "stripe_live",
+      "label": "Connect Stripe: products/prices, secrets, migration, deploy (founder action)",
+      "status": "todo",
+      "cost": 0,
+      "notes": "Founder: create Stripe account + prices, wrangler secret put STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET, fill STRIPE_PRICE_PRO_MONTHLY/ANNUAL/FOUNDING in [vars], run migration 0005_billing.sql, deploy workers/api, hand-set founder plan row. Then payments go live."
     }
   ]
 }

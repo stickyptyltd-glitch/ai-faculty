@@ -7,6 +7,11 @@ const SIGNUP_ENDPOINT = /(^|\.)aifaculty\.org$/.test(location.hostname)
   ? "/signup"
   : "https://aifaculty-signup.lecheyne24.workers.dev/signup";
 
+// The accounts/api Worker hosts the payments endpoints (same split as above).
+const API_BASE = /(^|\.)aifaculty\.org$/.test(location.hostname)
+  ? "/api"
+  : "https://aifaculty-api.lecheyne24.workers.dev/api";
+
 const cdD = document.getElementById("cdD");
 const cdH = document.getElementById("cdH");
 const cdM = document.getElementById("cdM");
@@ -77,3 +82,69 @@ form.addEventListener("submit", async (e) => {
     status.textContent = "Network error — please try again.";
   }
 });
+
+// ---- pricing (monetization; degrades cleanly until Stripe is configured) ------------
+
+const pricingStatus = document.getElementById("pricingStatus");
+const buyButtons = Array.from(document.querySelectorAll("[data-buy]"));
+
+function pricingMsg(text, isErr) {
+  if (!pricingStatus) return;
+  pricingStatus.textContent = text;
+  pricingStatus.style.color = isErr ? "var(--bad)" : "var(--good)";
+}
+
+async function loadPricing() {
+  try {
+    const res = await fetch(`${API_BASE}/payments/plans`);
+    const data = await res.json().catch(() => null);
+    if (data && data.ok && data.stripeEnabled) {
+      buyButtons.forEach(b => (b.hidden = false));
+      if (!pricingStatus.innerHTML) pricingMsg("Payments are live. Funds go straight to building the institution.", false);
+      return;
+    }
+  } catch (e) { /* offline or not deployed — fall through */ }
+  buyButtons.forEach(b => {
+    b.hidden = true;
+  });
+  pricingMsg("Payment opening at launch — join the early cohort and we'll email you when it's live.", false);
+}
+
+buyButtons.forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const plan = btn.getAttribute("data-buy");
+    const cadence = btn.getAttribute("data-cadence") || undefined;
+    const email = document.getElementById("email") ? document.getElementById("email").value.trim() : "";
+    btn.disabled = true;
+    pricingMsg("Taking you to checkout…", false);
+    try {
+      const body = { plan, email: email || undefined };
+      if (cadence) body.cadence = cadence;
+      const res = await fetch(`${API_BASE}/payments/checkout`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.url) {
+        pricingMsg("Opening Stripe Checkout…", false);
+        window.location.assign(data.url);
+        return;
+      }
+      if (data && data.error === "payments_not_configured") {
+        pricingMsg("Payments are opening at launch — join the early cohort and we'll email you when it's live.", false);
+      } else if (res.status === 429 || (data && data.error === "rate_limited")) {
+        pricingMsg("A little too fast — try again in a minute.", true);
+      } else {
+        pricingMsg("Something went wrong. Please try again.", true);
+      }
+    } catch (err) {
+      pricingMsg("Network error — please try again.", true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+});
+
+loadPricing();

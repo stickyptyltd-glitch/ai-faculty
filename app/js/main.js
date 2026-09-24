@@ -183,6 +183,39 @@
       }
       return;
     }
+
+    if (el.dataset.action === "checkout-plan") {
+      const box = document.getElementById("planResult");
+      const plan = el.dataset.plan;
+      const cadence = el.dataset.cadence;
+      el.disabled = true;
+      if (box) box.innerHTML = `<p class="hint">Opening checkout…</p>`;
+      const body = { plan };
+      if (cadence) body.cadence = cadence;
+      window.AUTH.apiPost("/payments/checkout", body).then(res => {
+        el.disabled = false;
+        if (!box) return;
+        if (res.ok && res.data && res.data.url) { window.location.assign(res.data.url); return; }
+        const err = res.data && res.data.error;
+        box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${
+          err === "payments_not_configured"
+            ? "Payments are opening at launch. Join the early cohort on the landing page and we'll email you when they're live."
+            : err === "invalid_plan" ? "That plan isn't available yet."
+            : "Couldn't start checkout — try again."}</div>`;
+      });
+      return;
+    }
+
+    if (el.dataset.action === "open-billing") {
+      const box = document.getElementById("planResult");
+      el.disabled = true;
+      window.AUTH.apiPost("/payments/billing", {}).then(res => {
+        el.disabled = false;
+        if (res.ok && res.data && res.data.url) { window.location.assign(res.data.url); return; }
+        if (box) box.innerHTML = `<div class="notice" style="border-color:var(--warn)">Couldn't open billing — try again.</div>`;
+      });
+      return;
+    }
   }
 
   function handleForm(e) {
@@ -860,18 +893,22 @@
       const chosen = learner.pathway === p.id;
       const avail = p.status === "available";
       const locked = avail && fDone && !chosen && !prereqMet(learner, p);
+      const paidLocked = window.PLANS.locked(p.id);
       const nComp = p.competencies.length || (p.outline ? p.outline.length : 0);
       const badge = chosen ? `<span class="pill pill--independent">Your pathway</span>`
         : locked ? `<span class="pill pill--unknown">Locked</span>`
+        : paidLocked ? `<span class="pill pill--pro">Pro</span>`
         : avail ? `<span class="pill pill--guided">Available</span>`
         : `<span class="pill pill--unknown">Planned</span>`;
-      const action = chosen
-        ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Open</a>`
-        : locked
-          ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Locked — see why</a>`
-          : (avail && fDone)
-            ? `<a class="btn btn--sm" data-nav href="#/pathway/${p.id}">View &amp; choose</a>`
-            : `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">See the curriculum</a>`;
+      const action = paidLocked
+        ? `<a class="btn btn--sm" data-nav href="#/pathway/${p.id}">Preview · upgrade to unlock</a>`
+        : chosen
+          ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Open</a>`
+          : locked
+            ? `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">Locked — see why</a>`
+            : (avail && fDone)
+              ? `<a class="btn btn--sm" data-nav href="#/pathway/${p.id}">View &amp; choose</a>`
+              : `<a class="btn btn--ghost btn--sm" data-nav href="#/pathway/${p.id}">See the curriculum</a>`;
       return `<div class="card">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:6px">
           <strong style="font-size:15px">${esc(p.title)}</strong>${badge}
@@ -902,6 +939,13 @@
           goals, <strong>${esc(rec.title)}</strong> looks like a good fit — ${esc(rec.tagline)}</p>
         <a class="btn" data-nav href="#/pathway/${rec.id}">View ${esc(rec.title)}</a>
       </div>` : ""}
+      ${window.PLANS.tier() === "free" ? `<div class="card next" style="margin-bottom:14px;border-color:var(--warn)">
+        <div class="card__label">Free plan</div>
+        <p style="margin:0 0 10px">Your free plan includes the foundation and the
+          <strong>${esc(C.PATHWAYS.find(p => p.id === "software").title)}</strong> pathway. Every
+          other pathway is Pro — payment widens access, it never buys a grade.</p>
+        <a class="btn btn--sm" data-nav href="#/account">Upgrade to Pro</a>
+      </div>` : ""}
       ${group("work", "Using AI at work", "Take the foundation skills into the real tasks of your role.")}
       ${group("build", "Building AI", "The technical track — how models work, and how to build systems on them.")}`;
   }
@@ -918,6 +962,7 @@
           <span style="color:var(--text-dim);font-size:12px">— ${esc(c.canDo)}</span></span>
       </div>`).join("");
     const cap = C.checkpointsFor(p.id)[0];
+    const paidLocked = window.PLANS.locked(p.id);
 
     return `
       <p class="hint" style="margin-bottom:2px"><a data-nav href="#/pathways">← All pathways</a></p>
@@ -952,9 +997,16 @@
         <div class="caplist">${comps}</div>
         ${cap ? `<h2>Work capstone</h2><div class="card"><strong>${esc(cap.title)}</strong>
           <p style="margin:6px 0 0">${esc(cap.brief)}</p></div>` : ""}
+        ${paidLocked ? `<div class="card next" style="margin-top:16px;border-color:var(--warn)">
+          <div class="card__label">Pro pathway</div>
+          <p style="margin:0 0 10px">This pathway is part of Pro. Your free plan includes the
+            foundation and the Software &amp; Product Development pathway — Pro opens this one
+            and every other pathway. Payment widens access, it never buys a grade.</p>
+          <a class="btn btn--sm" data-nav href="#/account">Upgrade to Pro</a>
+        </div>` : ""}
         ${chosen
           ? `<a class="btn" data-nav href="#/" style="margin-top:16px">Continue this pathway</a>`
-          : fDone
+          : fDone && !paidLocked
             ? (prereqMet(learner, p)
                 ? `<form data-form="choose-pathway" data-pathway="${p.id}" style="margin-top:16px">
                      <button class="btn" type="submit">Choose ${esc(p.title)}</button></form>`
@@ -1067,18 +1119,39 @@
     `;
   }
 
-  function viewAccount(learner) {
+  function viewAccount(learner, parts, query) {
     const auth = window.AUTH.get();
     if (!auth.checked) return `<h1>Account</h1><p class="lead">Checking your sign-in status…</p>`;
     if (!auth.user) { location.hash = "#/login"; return ""; }
     const u = auth.user;
+    const paid = ["pro", "founding"].includes(u.plan) && u.plan_status === "active";
+    const planBadge = `<span class="pill pill--${paid ? "independent" : "pro"}">${esc(window.PLANS.label())}${paid ? ` · ${esc(u.plan === "founding" ? "Founding Member" : "Pro")}` : ""}</span>`;
+    const granted = query && query.get("plan")
+      ? `<div class="notice" style="margin-top:14px">Checkout complete. Your plan has been granted —
+           refresh if it hasn't appeared yet.</div>` : "";
+    const planCard = paid
+      ? `<div class="card" style="margin-top:14px">
+           <div class="card__label">Your plan</div>
+           <p style="margin:6px 0 12px">${esc(u.plan === "founding" ? "Founding Member — lifetime Pro." : "Pro — every pathway, current and future.")}</p>
+           <button class="btn btn--ghost" type="button" data-action="open-billing">Manage billing</button>
+         </div>`
+      : `<div class="card" style="margin-top:14px;border-color:var(--warn)">
+           <div class="card__label">Free plan</div>
+           <p style="margin:6px 0 12px">Your free plan includes the foundation module and the
+             Software &amp; Product Development pathway, forever. Pro opens every pathway — payment
+             widens access, it never buys a grade.</p>
+           <button class="btn" type="button" data-action="checkout-plan" data-plan="pro" data-cadence="monthly" style="margin-bottom:8px">Upgrade to Pro · $15/mo</button>
+           <button class="btn btn--ghost" type="button" data-action="checkout-plan" data-plan="founding">Founding Member · $150 lifetime</button>
+           <div id="planResult"></div>
+         </div>`;
     return `
       <h1>Account</h1>
-      <p class="lead">Signed in as <strong>${esc(u.email)}</strong>.</p>
+      <p class="lead">Signed in as <strong>${esc(u.email)}</strong>. ${planBadge}</p>
       <p class="hint">Account created ${esc(new Date(u.created_at).toLocaleDateString())}.</p>
-      <div class="notice" style="margin-top:14px">Subscriptions, learning plans, qualifications
-        and the leaderboard attach to this account as they roll out. Your lesson progress on this
-        device stays in this browser regardless of which account you're signed into.</div>
+      ${granted}
+      ${planCard}
+      <p class="hint" style="margin-top:14px">Your lesson progress on this device stays in this
+        browser regardless of which account you're signed into.</p>
       <button class="btn btn--ghost" type="button" data-action="logout" style="margin-top:16px">Sign out</button>
     `;
   }
@@ -1188,13 +1261,22 @@
       `<tr><td ${TD}>${esc(s.capId)}</td><td ${TD}>${s.attempts}</td><td ${TD}>${s.belowMeetsPct}%</td>
         <td ${TD}>${s.avgDurationMs != null ? fmtDuration(s.avgDurationMs) : "—"}</td></tr>`).join("")
       || `<tr><td colspan="4" class="hint" ${TD}>No submissions yet.</td></tr>`;
+    const planRows = d.planCounts
+      ? Object.entries(d.planCounts).map(([plan, n]) => `<span class="pill pill--${plan === "free" ? "unknown" : "independent"}" style="margin-right:6px">${esc(plan)} ×${n}</span>`).join("")
+      : "";
+    const rev = (d.revenue && d.revenue.lifetimeCents > 0)
+      ? `<div><div class="card__label">Lifetime revenue</div><strong style="font-size:22px">$${(d.revenue.lifetimeCents / 100).toFixed(2)}</strong>
+           <span class="hint"> · ${d.revenue.payments} payment${d.revenue.payments === 1 ? "" : "s"}</span></div>`
+      : `<div><div class="card__label">Lifetime revenue</div><strong style="font-size:22px">$0.00</strong></div>`;
     box.innerHTML = `
       <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">
         <div><div class="card__label">Learners</div><strong style="font-size:22px">${d.totals.learners}</strong></div>
         <div><div class="card__label">Active today</div><strong style="font-size:22px">${d.totals.activeToday}</strong></div>
         <div><div class="card__label">Active this week</div><strong style="font-size:22px">${d.totals.activeWeek}</strong></div>
         <div><div class="card__label">Submissions</div><strong style="font-size:22px">${d.totals.submissions}</strong></div>
+        ${rev}
       </div>
+      ${planRows ? `<p style="margin:0 0 16px">${planRows}</p>` : ""}
       <h2 style="font-size:16px">Pathway popularity</h2>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr><th ${TH}>Pathway</th><th ${TH}>Submissions</th></tr></thead>

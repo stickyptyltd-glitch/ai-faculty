@@ -181,15 +181,31 @@ body {
 }
 .btn:hover { filter: brightness(1.08); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn--ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
 
 /* sections */
-.how, .faculty {
+.how, .faculty, .pricing {
   padding: 34px 0;
   border-top: 1px solid var(--border);
 }
 h2 { font-size: 24px; margin-bottom: 8px; font-weight: 800; }
 .grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
 @media (min-width: 560px) { .grid--2 { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 720px) { .grid--3 { grid-template-columns: 1fr 1fr 1fr; } }
+
+/* pricing */
+.price { display: flex; flex-direction: column; gap: 10px; }
+.price--featured { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-dim); }
+.price__amt { font-size: 30px; font-weight: 800; }
+.price__amt span { font-size: 13px; font-weight: 500; color: var(--text-dim); }
+.price__desc { color: var(--text-dim); font-size: 14px; flex: 1; }
+.price .btn { text-decoration: none; }
+.pricing__status { text-align: center; margin-top: 18px; font-size: 14px; min-height: 20px; }
+.hint { color: var(--text-dim); font-size: 13px; }
 
 .faculty__list {
   display: grid;

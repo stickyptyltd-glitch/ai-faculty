@@ -32,6 +32,15 @@ RESEND_FROM = "AI Faculty <accounts@aifaculty.org>"
 RESEND_API_KEY = ""
 DEV_LINKS = "true"
 
+# Monetization (docs/11-monetization.md). Payments stay OFF until the Stripe secrets are set:
+#   npx wrangler secret put STRIPE_SECRET_KEY      --name aifaculty-api
+#   npx wrangler secret put STRIPE_WEBHOOK_SECRET  --name aifaculty-api
+# then fill the price IDs below (created in the Stripe dashboard). Until then every
+# /api/payments/* endpoint returns 501 payments_not_configured and the UI shows a waitlist CTA.
+STRIPE_PRICE_PRO_MONTHLY = ""
+STRIPE_PRICE_PRO_ANNUAL = ""
+STRIPE_PRICE_FOUNDING = ""
+
 [vars.rate_limit]
 window_seconds = 3600
 max_per_ip = 8
