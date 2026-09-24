@@ -654,6 +654,197 @@ async function handlePaymentsWebhook(request, env, headers) {
   return json(200, { ok: true, ignored: type }, headers);
 }
 
+// ---- Institutional AI Control Plane (Phase 3) --------------------------------------------------
+// docs/01-architecture.md §3: model routing + adapters, policy engine, logging/lineage. v1 ships
+// the full shape with a deterministic "dry-run" adapter (a server-side mirror of the client's strict
+// second-assessment bar, so the independent opinion is genuinely computed off-device) and a swappable
+// openai-compatible adapter behind a secret. Every call is audited to faculty_calls — who asked, with
+// which model/version, under which policy, with what result — before it is answered to the page.
+
+const FACULTY_BANDS = ["Not yet", "Developing", "Meets", "Exceeds"];
+
+// Institutional policy text injected into every faculty call. Drawn from 00-constitution.md and
+// 08-assessment-model.md §3/§5: assess the work not the person, band by rubric, stricter independent
+// bar for second assessments, never assert a jurisdiction's law as settled fact, evidence before claim.
+const FACULTY_POLICIES = {
+  "checkpoint-strict": [
+    "You are Assessment Faculty assessing one practical checkpoint submission for a learner building AI-assisted workflows.",
+    "Assess the WORK, never the person. Band every rubric dimension with exactly one of these bands: Not yet (absent, placeholder or wrong), Developing (present but too thin or unspecific to verify or build on), Meets (concrete and usable — a real answer), Exceeds (specific — names, numbers, dates or explicit trade-offs).",
+    "This is the independent, STRICTER second assessment: a mastery pass requires every dimension at Meets or above, none below Meets, and at least one dimension at Exceeds.",
+    "Never state any jurisdiction's law, regulation or professional standard as settled fact — defer to the learner's own jurisdiction, policy or a qualified professional.",
+    "Reply with nothing but strict JSON: {\"bands\":{\"<dimension>\":\"Meets\"},\"verdict\":\"ready|revise|more\",\"note\":\"one short paragraph naming what is strong or the specific detail wanted\",\"confidence\":\"high|low\"}.",
+  ],
+};
+
+function facultyPolicy(kind) {
+  return (FACULTY_POLICIES[kind] || FACULTY_POLICIES["checkpoint-strict"]).join("\n");
+}
+function facultyConfigured(env) {
+  return !!(env.FACULTY_MODEL_KEY && env.FACULTY_MODEL_BASE_URL && env.FACULTY_MODEL_NAME);
+}
+
+// ---- dry-run scoring: mirrors app/js/faculty.js strict checkpoint banding (fieldBand(..., true)).
+// Kept as the regression oracle + offline fallback; the model adapter replaces it when configured.
+const fwc = s => (s || "").trim().split(/\s+/).filter(Boolean).length;
+const fPlaceholderish = v => /^(n\/?a|none|-|\.|idk|nothing)$/i.test((v || "").trim()) || (v || "").trim().length < 3;
+function fSpecific(val) {
+  return /\d/.test(val) ||
+    /\b(because|so|since|given that|due to|as a result|which means|means that|so that|trade-?off|instead of|whereas|rather than|in order to|for example|for instance|such as|specifically|in practice|as opposed to|in particular)\b/i.test(val) ||
+    /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand)\b/i.test(val) ||
+    /["“][^"”]{3,}["”]/.test(val) ||
+    /\b(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b/.test(val) ||
+    /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(val);
+}
+function fStrictBand(f, val) {
+  if (!val || !val.trim() || fPlaceholderish(val)) return "Not yet";
+  const n = fwc(val);
+  const min = Math.ceil(f.minWords * 1.4);
+  if (n < min) return "Developing";
+  const specific = fSpecific(val);
+  if (n >= min * 2 && specific) return "Exceeds";
+  if (!specific && n < min * 2) return "Developing";
+  return "Meets";
+}
+function verdictFromStrictBands(idx) {
+  if (idx.every(i => i >= 2) && idx.some(i => i >= 3)) return "ready";
+  if (idx.filter(i => i >= 1).length >= Math.ceil(idx.length * 0.6)) return "revise";
+  return "more";
+}
+function dryRunAssess({ fields, rubricDims, submission }) {
+  const reports = fields.map(f => ({ label: f.label || f.key, band: fStrictBand(f, submission[f.key] || "") }));
+  const idx = reports.map(r => FACULTY_BANDS.indexOf(r.band));
+  const minBand = FACULTY_BANDS[Math.min(...idx)];
+  const bands = {};
+  rubricDims.forEach((dim, i) => { bands[dim] = reports[i] ? reports[i].band : minBand; });
+  const dimIdx = rubricDims.map(d => FACULTY_BANDS.indexOf(bands[d]));
+  const verdict = verdictFromStrictBands(dimIdx);
+  const weak = rubricDims.filter(d => FACULTY_BANDS.indexOf(bands[d]) < 2);
+  return {
+    adapter: "dry-run", model: null,
+    verdict,
+    confidence: verdict === "ready" ? "high" : "low",
+    note: verdict === "ready"
+      ? "Second assessment agrees: this meets the mastery rubric on every dimension, specifically. Confirm to record it."
+      : (verdict === "revise"
+          ? `The second assessor wants more here — present but not specific enough for a mastery pass. Wanted more on: ${(weak.join(", ") || "the specifics").toLowerCase()}.`
+          : "Not enough here yet — go back to the teaching, then resubmit on a real task."),
+    bands, weakDims: weak,
+  };
+}
+
+// OpenAI-compatible chat-completions adapter. Throws on failure; the dispatcher falls back to the
+// dry-run result and flags `degraded` so the lineage is honest about what actually happened.
+async function modelAssess(env, { kind, rubricDims, submission }) {
+  const spike = await fetch(`${env.FACULTY_MODEL_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.FACULTY_MODEL_KEY}` },
+    body: JSON.stringify({
+      model: env.FACULTY_MODEL_NAME,
+      temperature: 0,
+      messages: [
+        { role: "system", content: facultyPolicy(kind) },
+        { role: "user", content: JSON.stringify({
+            assessmentKind: kind,
+            rubricDimensions: rubricDims,
+            submission,
+            instruction: "Band each dimension against the policy and return only the strict JSON the policy describes.",
+          }) },
+      ],
+    }),
+  });
+  if (!spike.ok) throw new Error(`model http ${spike.status}`);
+  const data = await spike.json();
+  const text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || "";
+  const block = text.replace(/```(json)?/gi, "").trim();
+  const start = block.indexOf("{");
+  if (start === -1) throw new Error("no json in model output");
+  const parsed = JSON.parse(block.slice(start, block.lastIndexOf("}") + 1));
+  if (!parsed.bands || typeof parsed.bands !== "object") throw new Error("no bands from model");
+  if (!rubricDims.every(d => FACULTY_BANDS.includes(parsed.bands[d]))) throw new Error("invalid bands from model");
+  const idx = rubricDims.map(d => FACULTY_BANDS.indexOf(parsed.bands[d]));
+  const verdict = verdictFromStrictBands(idx);
+  const weak = rubricDims.filter(d => FACULTY_BANDS.indexOf(parsed.bands[d]) < 2);
+  return {
+    adapter: "openai-compatible", model: env.FACULTY_MODEL_NAME,
+    verdict,
+    confidence: verdict === "ready" ? "high" : "low",
+    note: String(parsed.note || "").slice(0, 1200),
+    bands: parsed.bands, weakDims: weak,
+  };
+}
+
+async function facultyAssess(env, body) {
+  let out = dryRunAssess(body);
+  let degraded = false;
+  if (facultyConfigured(env) && env.FACULTY_ADAPTER !== "dry-run") {
+    try { out = await modelAssess(env, body); }
+    catch (e) { degraded = true; } // honest fallback: keep the dry-run result, mark the degradation
+  }
+  return { ...out, degraded };
+}
+
+async function handleFacultyAssess(request, env, headers) {
+  const auth = await requireAuth(request, env, headers);
+  if (auth.error) return auth.error;
+  if (await rateLimited(request, env, "facultyrl")) {
+    return json(429, { ok: false, error: "rate_limited" }, headers);
+  }
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+
+  const cpId = String(body.cpId || "").slice(0, 40);
+  const rubricDims = Array.isArray(body.rubricDims)
+    ? body.rubricDims.map(d => String(d).slice(0, 64)).filter(Boolean) : null;
+  const fields = Array.isArray(body.fields)
+    ? body.fields.map(f => ({
+        key: String(f.key || "").slice(0, 40),
+        label: String(f.label || f.key || "").slice(0, 80),
+        minWords: Number(f.minWords),
+      })) : null;
+  const submission = body.submission && typeof body.submission === "object" ? body.submission : null;
+  if (!rubricDims || !rubricDims.length || !fields || !fields.length || !submission) {
+    return json(400, { ok: false, error: "invalid_rubric" }, headers);
+  }
+  if (!fields.every(f => f.key && Number.isFinite(f.minWords) && f.minWords >= 1)) {
+    return json(400, { ok: false, error: "invalid_fields" }, headers);
+  }
+
+  const kind = body.kind === "challenge" ? "challenge-strict" : "checkpoint-strict";
+  const started = Date.now();
+  const out = await facultyAssess(env, { kind, fields, rubricDims, submission });
+  const lineageId = crypto.randomUUID();
+  await env.DB.prepare(
+    `INSERT INTO faculty_calls
+       (id, kind, user_id, cp_id, rubric_dims, submission_json, policy_id, adapter, model,
+        bands_json, verdict, confidence, degraded, status, latency_ms, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(
+    lineageId, kind, auth.user.id, cpId, JSON.stringify(rubricDims), JSON.stringify(submission),
+    "checkpoint-strict", out.adapter, out.model, JSON.stringify(out.bands), out.verdict,
+    out.confidence, out.degraded ? 1 : 0, "ok", Date.now() - started, new Date().toISOString()
+  ).run();
+
+  return json(200, {
+    ok: true, lineageId, adapter: out.adapter, model: out.model,
+    verdict: out.verdict, confidence: out.confidence, note: out.note,
+    bands: out.bands, weakDims: out.weakDims, degraded: out.degraded,
+  }, headers);
+}
+
+async function handleFacultyLog(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+  const { results } = await env.DB.prepare(
+    `SELECT faculty_calls.id, faculty_calls.kind, faculty_calls.user_id, faculty_calls.cp_id,
+            faculty_calls.policy_id, faculty_calls.adapter, faculty_calls.model, faculty_calls.verdict,
+            faculty_calls.confidence, faculty_calls.degraded, faculty_calls.latency_ms, faculty_calls.created_at,
+            users.email
+     FROM faculty_calls LEFT JOIN users ON users.id = faculty_calls.user_id
+     ORDER BY faculty_calls.created_at DESC LIMIT 200`
+  ).all();
+  return json(200, { ok: true, calls: results }, headers);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -691,6 +882,12 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/api/payments/webhook") {
       return handlePaymentsWebhook(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/faculty/assess") {
+      return handleFacultyAssess(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/faculty/log") {
+      return handleFacultyLog(request, env, headers);
     }
     if (request.method === "GET" && url.pathname === "/api/admin/overview") {
       return handleAdminOverview(request, env, headers);

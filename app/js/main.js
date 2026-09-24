@@ -232,7 +232,7 @@
     }
   }
 
-  function handleForm(e) {
+  async function handleForm(e) {
     e.preventDefault();
     const form = e.currentTarget;
     const kind = form.dataset.form;
@@ -340,12 +340,18 @@
     if (kind === "second-assessment") {
       const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
       if (!payload || payload.scope !== "checkpoint") { location.hash = "#/"; return; }
-      // ARP §5.4: disagreement is when assessor 1 said "ready" but the independent, stricter
-      // assessor 2 does not. That triggers the reasoned-review path, not a silent re-render.
-      const result = F.assessCheckpoint(payload.cp, payload.data, true);
+      // Run the independent second assessment through the Institutional AI Control Plane when it's
+      // reachable (signed in) — the lineage id then rides the evidence record. Fall back to the
+      // local heuristic whenever the server is unavailable; the flow must never block on the network.
+      const box = document.getElementById("assessResult");
+      if (box) box.innerHTML = `<div class="notice">Assessment Faculty — independent second assessment running…</div>`;
+      const result = await requestSecondAssessment(payload);
+      if (!result) return; // user navigated away mid-flight
       const disagreement = payload.result && payload.result.verdict === "ready" && result.verdict !== "ready";
       payload.result = result;
       payload.disagreement = disagreement;
+      if (result._lineage) { payload.lineage = result._lineage; payload.adapter = result._adapter; }
+      delete result._lineage; delete result._adapter;
       sessionStorage.setItem("aifaculty.assess", JSON.stringify(payload));
       recordCheckpointAttempt(payload.cp, result, disagreement);
       renderResult(result, { scope: "checkpoint", cp: payload.cp, disagreement });
@@ -438,7 +444,11 @@
             fields: stripMeta(payload.data), feedback: payload.result.summary,
             confidence: payload.result.confidence,
             rubric: payload.result.rubric.map(d => ({ label: d.label, band: d.band })),
-            assessors: payload.result.assessor === 2 ? "1 + 2 (independent) agree" : "1",
+            assessors: payload.result.assessor === 2
+              ? (payload.lineage ? "1 + 2 (independent) agree — Control Plane" : "1 + 2 (independent) agree")
+              : "1",
+            lineage: payload.lineage || null,
+            model: payload.adapter || null,
           });
           M.markCheckpointDone(l, payload.cp, ev.id);
           cpDef.after.forEach(capId => M.raise(l, capId, payload.result.stateTarget, "medium"));
@@ -488,6 +498,50 @@
         weakestBand: sum ? sum.weakestBand : null,
       };
     });
+  }
+
+  // Run the independent second assessment through the Control Plane when signed in; never let the
+  // network block the flow — any failure falls back to the local strict heuristic.
+  async function requestSecondAssessment(payload) {
+    const cp = C.checkpoint(payload.cp);
+    if (!cp) return F.assessCheckpoint(payload.cp, payload.data, true);
+    const body = {
+      kind: "checkpoint",
+      cpId: payload.cp,
+      fields: cp.fields.map(f => ({ key: f.key, label: f.label, minWords: f.minWords })),
+      rubricDims: cp.rubricDims,
+      raisesTo: cp.raisesTo,
+      submission: stripMeta(payload.data),
+    };
+    if (window.AUTH.get().user) {
+      const server = await window.AUTH.apiPost("/faculty/assess", body);
+      if (server.ok && server.data && server.data.ok
+          && cp.rubricDims.every(d => server.data.bands && server.data.bands[d])) {
+        return serverSecondResult(cp, server.data);
+      }
+    }
+    return F.assessCheckpoint(payload.cp, payload.data, true);
+  }
+
+  // Rebuild a client-shaped second-assessment result from the Control Plane's per-dimension bands.
+  // The trailing _lineage/_adapter are consumed by the second-assessment handler before storing.
+  function serverSecondResult(cp, s) {
+    const dimReports = cp.rubricDims.map(d => {
+      const band = s.bands[d];
+      return { key: d, label: d, band, ok: BAND_ORDER.indexOf(band) >= 2, note: "" };
+    });
+    return {
+      kind: "checkpoint",
+      assessor: 2,
+      verdict: s.verdict,
+      confidence: s.confidence || "low",
+      summary: String(s.note || "").trim() || "Second assessment complete.",
+      stateTarget: s.verdict === "ready" ? cp.raisesTo : (s.verdict === "revise" ? "independent" : "guided"),
+      fieldReports: dimReports,
+      rubric: dimReports.map(r => ({ label: r.label, band: r.band, ok: r.ok })),
+      _lineage: s.lineageId,
+      _adapter: `${s.adapter}${s.model ? " · " + s.model : ""}`,
+    };
   }
 
   // Best recorded band per mastery dimension across all checkpoint evidence, newest wins ties.
@@ -546,6 +600,7 @@
 
   function renderResult(result, ctx) {
     const box = document.getElementById("assessResult");
+    if (!box) return; // page changed while an async assessment was in flight
     if (!result) { box.innerHTML = `<div class="notice">Could not assess — try again.</div>`; return; }
 
     const rows = result.fieldReports.map(r => `
@@ -1221,7 +1276,7 @@
       return `<div class="evidence-item">
         <time>${new Date(ev.createdAt).toLocaleString()}</time>
         <h3 style="margin:4px 0;text-transform:none;letter-spacing:0;color:var(--text);font-size:15px">${esc(ev.title)}</h3>
-        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${esc(ev.kind)} · confidence: ${esc(ev.confidence)}${ev.assessors ? ` · assessors: ${esc(ev.assessors)}` : ""}</p>
+        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${esc(ev.kind)} · confidence: ${esc(ev.confidence)}${ev.assessors ? ` · assessors: ${esc(ev.assessors)}` : ""}${ev.model ? ` · ${esc(ev.model)}` : ""}${ev.lineage ? ` · lineage: ${esc(ev.lineage)}` : ""}</p>
         ${fieldList}
         ${rub ? `<p style="margin:6px 0 0">${rub}</p>` : ""}
         <p style="margin:8px 0 0;font-size:14px"><strong>Faculty note:</strong> ${esc(ev.feedback)}</p>

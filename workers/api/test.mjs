@@ -20,6 +20,7 @@ async function sha256Hex(input) {
 function makeFakeDB({ users = [], sessions = [] } = {}) {
   const feedback = [];
   const payments = [];
+  const facultyCalls = [];
   const usersRows = users.map(u => ({ plan: "free", plan_status: "none", stripe_customer_id: null, ...u }));
 
   async function first(sql, args) {
@@ -58,6 +59,11 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
       if (!payments.some(p => p.stripe_event_id === stripe_event_id)) {
         payments.push({ id, user_id, stripe_event_id, event_type, plan, amount_cents: amount, currency, status, created_at });
       }
+    } else if (sql.startsWith("INSERT INTO faculty_calls")) {
+      const [id, kind, user_id, cp_id, rubric_dims, submission_json, policy_id, adapter, model,
+        bands_json, verdict, confidence, degraded, status, latency_ms, created_at] = args;
+      facultyCalls.push({ id, kind, user_id, cp_id, rubric_dims, submission_json, policy_id, adapter,
+        model, bands_json, verdict, confidence, degraded, status, latency_ms, created_at });
     }
     return { success: true };
   }
@@ -81,7 +87,18 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
       const paid = payments.filter(p => p.status === "succeeded");
       return { results: [{ total: paid.reduce((s, p) => s + p.amount_cents, 0), n: paid.length }] };
     }
-    if (sql.includes("FROM users")) return { results: usersRows };
+    if (sql.includes("FROM users") && !sql.includes("LEFT JOIN")) return { results: usersRows };
+    if (sql.includes("FROM faculty_calls LEFT JOIN users")) {
+      const rows = facultyCalls.slice()
+        .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+        .map(fc => ({
+          id: fc.id, kind: fc.kind, user_id: fc.user_id, cp_id: fc.cp_id, policy_id: fc.policy_id,
+          adapter: fc.adapter, model: fc.model, verdict: fc.verdict, confidence: fc.confidence,
+          degraded: fc.degraded, latency_ms: fc.latency_ms, created_at: fc.created_at,
+          email: (usersRows.find(u => u.id === fc.user_id) || {}).email,
+        }));
+      return { results: rows };
+    }
     return { results: [] };
   }
 
@@ -100,7 +117,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     };
     return stmt;
   }
-  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows };
+  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows, _faculty: facultyCalls };
 }
 
 function makeKV() {
@@ -393,6 +410,104 @@ async function withStripe(handler) {
   check("learners counted", body.totals.learners === 1);
   check("revenue total", body.revenue.lifetimeCents === 15000 && body.revenue.payments === 1);
   check("free plan count", body.planCounts.free === 1);
+}
+
+// 19. Control Plane — assess requires auth
+const cpRubric = { cpId: "CP1", rubricDims: ["Clarity", "Structure", "Reasoning", "Safety"] };
+function cpFields() {
+  return [
+    { key: "goal", label: "Goal", minWords: 15 },
+    { key: "steps", label: "Steps", minWords: 15 },
+    { key: "verify", label: "Verification", minWords: 15 },
+    { key: "safe", label: "Safety", minWords: 15 },
+  ];
+}
+function strongSubmission() {
+  const s = {};
+  cpFields().forEach(f => { s[f.key] = "because the goal is a repeatable workflow, for example the weekly 4-step planning loop every Monday morning, with two specific deliverables, instead of a vague statement".repeat(3); });
+  return s;
+}
+{
+  const { env } = await makeEnv(); // no token sent
+  const r = await worker.fetch(await req("/api/faculty/assess", { method: "POST", body: { ...cpRubric, fields: cpFields(), submission: strongSubmission() } }), env);
+  check("401 assess without auth", r.status === 401);
+}
+
+// 20. Control Plane — dry-run strict pass + lineage recorded
+{
+  const { env, rawToken } = await makeEnv();
+  const r = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken,
+    body: { ...cpRubric, fields: cpFields(), submission: strongSubmission() },
+  }), env);
+  const body = await r.json();
+  check("200 assess signed-in", r.status === 200 && body.ok === true);
+  check("dry-run adapter by default", body.adapter === "dry-run");
+  check("strict verdict ready on strong answer", body.verdict === "ready" && body.confidence === "high");
+  check("every dimension banded", ["Clarity", "Structure", "Reasoning", "Safety"].every(d => body.bands && body.bands[d]));
+  check("lineage id returned", typeof body.lineageId === "string" && body.lineageId.length > 0);
+  check("call audited", env.DB._faculty.length === 1 && env.DB._faculty[0].verdict === "ready"
+    && env.DB._faculty[0].user_id === "u1" && env.DB._faculty[0].policy_id === "checkpoint-strict"
+    && env.DB._faculty[0].degraded === 0);
+  check("audit keeps submission snapshot", env.DB._faculty[0].submission_json.includes("week") || env.DB._faculty[0].submission_json.length > 10);
+}
+
+// 21. Control Plane — thin answer is not a strict pass (disagreement seam is reachable)
+{
+  const { env, rawToken } = await makeEnv();
+  const thin = {};
+  cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
+  const r = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken,
+    body: { ...cpRubric, fields: cpFields(), submission: thin },
+  }), env);
+  const body = await r.json();
+  check("thin answer not ready under strict bar", r.status === 200 && body.ok === true && body.verdict !== "ready");
+  check("revise note names wanted dims", body.verdict === "revise" ? (body.weakDims.length > 0 && body.note.toLowerCase().includes("wanted more on")) : true);
+}
+
+// 22. Control Plane — bad rubric payload rejected
+{
+  const { env, rawToken } = await makeEnv();
+  const r = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken,
+    body: { cpId: "CP1", rubricDims: ["Clarity"], fields: [{ key: "x", label: "X", minWords: "not-a-number" }], submission: { x: "y" } },
+  }), env);
+  check("400 invalid fields", r.status === 400);
+}
+
+// 23. Control Plane — must match submitted fields against every rubric dim added beyond fields
+{
+  const { env, rawToken } = await makeEnv();
+  const r = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken,
+    body: { cpId: "CP1", rubricDims: ["Clarity", "Structure", "Reasoning", "Safety", "Evidence"],
+            fields: cpFields(), submission: strongSubmission() },
+  }), env);
+  const body = await r.json();
+  check("extra dim beyond fields inherits weakest band", r.status === 200 && body.bands && body.bands.Evidence
+    && ["Not yet", "Developing", "Meets", "Exceeds"].includes(body.bands.Evidence));
+}
+
+// 24. Control Plane — admin lineage log is founder-only and lists calls
+{
+  const { env, rawToken } = await makeEnv(); // role: learner
+  const rLearner = await worker.fetch(await req("/api/faculty/log", { token: rawToken }), env);
+  check("403 log as learner", rLearner.status === 403);
+
+  const envF = await makeEnv({ role: "founder" });
+  const founderToken = (envF.rawToken);
+  const res = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: founderToken,
+    body: { ...cpRubric, fields: cpFields(), submission: strongSubmission() },
+  }), envF.env);
+  const body = await res.json();
+  const log = await worker.fetch(await req("/api/faculty/log", { token: founderToken }), envF.env);
+  const logBody = await log.json();
+  check("200 log as founder", log.status === 200 && logBody.ok === true && Array.isArray(logBody.calls));
+  check("log carries the audited call with email", logBody.calls.length === 1
+    && logBody.calls[0].id === body.lineageId && logBody.calls[0].email === "learner@example.com"
+    && logBody.calls[0].adapter === "dry-run");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

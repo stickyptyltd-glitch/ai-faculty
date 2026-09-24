@@ -41,6 +41,16 @@ STRIPE_PRICE_PRO_MONTHLY = ""
 STRIPE_PRICE_PRO_ANNUAL = ""
 STRIPE_PRICE_FOUNDING = ""
 
+# Phase 3 — Institutional AI Control Plane (docs/01-architecture.md §3). Assessments run on the
+# deterministic "dry-run" adapter until a model is configured; the same /api/faculty/assess endpoint
+# then uses the model and every call is audited to faculty_calls. To turn the model on:
+#   npx wrangler secret put FACULTY_MODEL_KEY --name aifaculty-api
+# then set FACULTY_ADAPTER="openai-compatible" and the base URL + model name below. The secret is
+# set this way (never in this file) and kept out of the repo.
+FACULTY_ADAPTER = "dry-run"
+FACULTY_MODEL_BASE_URL = ""
+FACULTY_MODEL_NAME = ""
+
 [vars.rate_limit]
 window_seconds = 3600
 max_per_ip = 8
