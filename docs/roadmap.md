@@ -27,11 +27,12 @@ competency, in real software, and *see* their progress.
 
 ## Phase 2 — Complete the first pathway
 
-- [ ] Authored content + practice tasks for C2–C7
+- [x] Authored content + practice tasks for C2–C7 (foundation = C1–C7 + software pathway S1–S5,
+      authored since v0.4–v0.7 and walked end-to-end in v0.23; checkbox kept stale — corrected here)
 - [ ] Assessment Resolution Protocol implemented (multi-assessor, blind, reasoned review)
 - [ ] Mastery rubric scoring UI
 - [ ] Pathway branching (accelerate / branch back / raise challenge)
-- [ ] Export an evidence portfolio
+- [x] Export an evidence portfolio (v0.37: Markdown + JSON download from the Evidence view)
 - [ ] **Gate:** one learner reaches mastery of "AI-Assisted Workflow Designer" with an evidence trail
 
 ## Phase 3 — Faculty intelligence

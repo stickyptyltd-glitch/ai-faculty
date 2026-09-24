@@ -179,6 +179,11 @@
       return;
     }
 
+    if (el.dataset.action === "export-portfolio") {
+      window.EXPORT.exportPortfolio(window.STORE.get(), el.dataset.format || "md");
+      return;
+    }
+
     if (el.dataset.action === "logout") {
       window.AUTH.logout().then(() => { renderAuthNav(); location.hash = "#/"; });
       return;
@@ -1096,7 +1101,11 @@
 
     return `<h1>Evidence portfolio</h1>
       <p class="lead">${learner.evidence.length} record${learner.evidence.length === 1 ? "" : "s"}.
-      Every capability claim links to evidence (see docs/01-architecture.md).</p>${body}`;
+      Every capability claim links to evidence (see docs/01-architecture.md).</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+        <button class="btn" type="button" data-action="export-portfolio" data-format="md">⬇ Export as Markdown</button>
+        <button class="btn btn--ghost" type="button" data-action="export-portfolio" data-format="json">Export as JSON</button>
+      </div>${body}`;
   }
 
   function viewAbout() {

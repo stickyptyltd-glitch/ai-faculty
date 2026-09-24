@@ -1007,6 +1007,30 @@ Spaced retrieval and the forced guided attempt work from *today's* data (they re
 `completedAt`/`taughtAt`, which every learner record already carries); only `guided`/`revisits`
 become visible to new saves — and they're forward-defaulted so nothing resets.
 
+## v0.37 — 2026-09-24 — Evidence portfolio export (Phase 2 milestone)
+
+Phase 2's "export an evidence portfolio" item, plus a roadmap correction.
+
+- **Roadmap correction:** the "authored content + practice tasks for C2–C7" checkbox was stale —
+  the foundation module (C1–C7) and the *software* pathway (S1–S5) have been fully authored since
+  v0.4–v0.7 and were walked end-to-end in v0.23 (every competency has activate/explain/
+  demonstrate/deconstruct, 2 quick-checks, a full guided task, and 2–3 rubric'd challenges).
+  Marked done with a note. The working branch of work-paths (Content, Operations, Design, etc.)
+  is authored too; only pathway *variants* still expand via `docs/expansion-prompt.md`.
+- **Export an evidence portfolio** — new `app/js/export.js` (`window.EXPORT`), wired into the
+  Evidence view (`#/evidence`) with two buttons: **Export as Markdown** (human-readable portfolio:
+  generated date, assessed capability states, evidence grouped by Applied Project with
+  **Demonstrated** badges, per-record fields + faculty note) and **Export as JSON** (machine-readable
+  backup: format tag + version, capabilities, projects, challenges, checkpoints, evidence).
+  Downloads via a plain Blob+objectURL — fully local, no backend call, works signed-out, and
+  deliberately excludes the activity log (noise). Uses the same `projectDemonstrated` logic as the
+  in-app view (`activeModuleOf` mirrors main.js).
+- **Verification** — `/tmp` harness loads real `content.js`/`model.js`/`export.js` with a stubbed
+  `window`: 12/12 checks (title, capability summary, project grouping, field/feedback rendering,
+  no false "Demonstrated" badge, deterministic Markdown, parseable JSON with format tag + data,
+  graceful empty-portfolio output). `node --check` on both edited files; `./build.sh` clean.
+- **Tests** — `workers/api/test.mjs` unaffected (client-only change).
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
