@@ -1066,6 +1066,44 @@ The three remaining Phase 2 items, hardest → easiest. All client-side, no back
   passing re-attempt returning to the normal checkpoint action. `node --check` clean, `./build.sh`
   clean. `workers/api/test.mjs` unaffected (37/37).
 
+## v0.39 — 2026-09-24 — Institutional AI Control Plane v1 + reviewer role (Phase 3 start, Phase 4 slot)
+
+Phase 3 kickoff with the first real piece of the Control Plane, plus the Phase 4 learner‑faculty
+role that closes the ARP loop end-to-end. Also fixed remote D1 migration bookkeeping that had
+silently stopped being authoritative.
+
+- **Control Plane v1 (server)** — `workers/api` gains an Institutional AI policy engine
+  (`FACULTY_POLICIES`, docs/01 §3 + docs/08 §3/§5) and two adapters: a deterministic **dry-run**
+  (exact server-side mirror of the client's strict second-assessment bar — the independent opinion
+  is genuinely computed off-device) and a swappable **openai-compatible** adapter behind a secret.
+  Every faculty call is **audited to `faculty_calls` before the page is answered** — who asked, with
+  which model/version (or dry-run), under which policy, with what bands/verdict/confidence —
+  and a `degraded` flag keeps lineage honest when a model call is intended but falls back.
+  Routes: `POST /api/faculty/assess` (signed-in, rate limited), `GET /api/faculty/log`
+  (founder-only lineage log). Config lives in `wrangler.toml` (`FACULTY_ADAPTER`, base URL/name) +
+  secret `FACULTY_MODEL_KEY`; switching the model on is a founder action, no code change.
+- **App routing through the plane** — the independent second assessment now posts to the Control
+  Plane when signed in (never blocking; any failure falls back to the local strict heuristic), and
+  the evidence record carries `lineage` (the audited call id) + `model` (adapter/model tag).
+- **Reviewer scoped role (Phase 4 roll-in)** — ARP resolution becomes real: a founder grants the
+  `reviewer` role (`POST /api/admin/role`); reviewers see disputed calls (`GET /api/faculty/reviews`),
+  decide them (`uphold | override | dismiss` + a reasoned note, one decision per call, upserted), and
+  learners pull their own resolutions (`GET /api/faculty/reviews/me`). Escalation now confirms the
+  dispute sits on the server's open-review list (`POST /api/faculty/reviews/escalate` → `callId`)
+  when the second assessment reached the plane; disputes that never left the device stay honestly
+  **local-only** (no server review implied). Evidence view pulls resolutions live after render and
+  reconciles matching `pendingReviews` to `resolved`, showing the decision + note.
+- **Remote D1 migration repair** — remote bookkeeping recorded only 0001–0002 while 0003–0005
+  objects already existed, so `migrations apply --remote` was wedged (0006/0007 had never landed).
+  Added `0008_faculty_catchup.sql` (idempotent mirror of 0006+0007 DDL), applied it remotely,
+  and backfilled `d1_migrations` to 0001–0008. `migrations apply --remote` → clean.
+- **Verification** — `workers/api/test.mjs` extended to 66/66: role guard (learner 403, invalid
+  role 400, grant 200, no-such-user 404), reviewer list/decide/re-decision on the disputed seam,
+  reviewer blocked from the founder lineage log, learner's own resolution, escalate
+  local-only vs open, plus the existing 52 Control Plane/auth/billing/admin checks. Client JS
+  syntax-checked; `./build.sh` clean; ARP/branching harness still 17/17. Live smoke: all six new
+  endpoints gate 401 unauthenticated on `aifaculty.org/api/*` (worker deploy `6acb3641`).
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
@@ -1089,4 +1127,5 @@ The three remaining Phase 2 items, hardest → easiest. All client-side, no back
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.
 - Faculty role full specs (mission/scope/boundaries/…) still to be written.
 - Authored content for C2–C7 still to be written.
-- LLM/Control-Plane integration for live faculty responses not yet built.
+- Control Plane v1 ships the dry-run adapter live; the real model lives behind `FACULTY_MODEL_KEY`
+  (founder sets `wrangler secret put` + `FACULTY_ADAPTER`/base URL/name in `wrangler.toml`).

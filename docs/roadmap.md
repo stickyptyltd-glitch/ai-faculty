@@ -49,8 +49,11 @@ competency, in real software, and *see* their progress.
 
 ## Phase 3 — Faculty intelligence
 
-- [ ] Institutional AI Control Plane: model adapter + policy engine + logging/lineage
-- [ ] Live faculty responses via a model, replacing authored stubs
+- [x] Institutional AI Control Plane: policy engine + logging/lineage + dual adapters — dry-run
+      (deterministic server-side mirror of the strict bar) ships live; openai-compatible model
+      adapter is built and behind a secret (`FACULTY_MODEL_KEY`) — v0.39
+- [ ] Live faculty responses via a model, replacing authored stubs (founder set the secret + base
+      URL + model name in `wrangler.toml`; calibrate and compare against dry-run on real data)
 - [ ] Calibration + faculty evaluation
 - [ ] **Gate:** live faculty measurably at least as good as authored content, with full audit trail
 
@@ -61,7 +64,8 @@ competency, in real software, and *see* their progress.
       Checkout + webhooks, payments ledger, plan gate, admin revenue view — built v0.35; live once
       the founder connects the Stripe account
 - [ ] Second capability added to the graph
-- [ ] Learner-faculty (mentor / reviewer) scoped roles
+- [x] Learner-faculty (mentor / reviewer) scoped roles — founder-granted `reviewer` role, open-review
+      list, reasoned uphold/override/dismiss decisions, learner sees resolutions on Evidence — v0.39
 - [ ] Dashboards (learner / curriculum / faculty / institution)
 - [ ] **Gate:** 10 learners, quality metrics hold
 

@@ -30,7 +30,7 @@
   const routes = [
     { test: p => p === "/", view: viewProgress },
     { test: p => p === "/diagnostic", view: viewDiagnostic },
-    { test: p => p === "/evidence", view: viewEvidence },
+    { test: p => p === "/evidence", view: viewEvidence, after: loadMyReviews },
     { test: p => p === "/about", view: viewAbout },
     { test: p => p.startsWith("/learn/"), view: viewLearn },
     { test: p => p.startsWith("/competency/"), view: viewCompetency },
@@ -93,6 +93,7 @@
     window.scrollTo(0, 0);
     syncNav(path);
     wire();
+    if (route.after) route.after();
     if (path !== "/feedback") lastPath = path;
   }
 
@@ -360,33 +361,57 @@
 
     if (kind === "escalate") {
       // ARP §5.5 — unresolved / high-stakes: mark for a specialist or authorised Faculty holder.
-      // No human review exists in this single-learner prototype, so this records the request
-      // honestly on the learner's record + Evidence view rather than pretending someone reviewed it.
+      // When the dispute lives on the Control Plane (a signed-in second assessment reached the
+      // server), this confirms it is on the open-review list and records the call id; otherwise it
+      // is recorded honestly as local-only — no server review is implied (docs/05 §5, docs/08 §5.5).
       const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
       const box = document.getElementById("assessResult");
       if (!payload || payload.scope !== "checkpoint" || !payload.disagreement) {
         if (box) box.innerHTML = `<div class="notice">There's no disputed submission open to escalate — re-submit the checkpoint for an assessment first.</div>`;
         return;
       }
+      const entry = {
+        id: "rev_" + Date.now().toString(36),
+        cpId: payload.cp, at: new Date().toISOString(),
+        note: payload.result.summary || "",
+        status: "pending",
+        submission: { fields: stripMeta(payload.data), band: overallBand(payload.result) },
+      };
       window.STORE.update(l => {
         if (!l.pendingReviews) l.pendingReviews = [];
-        l.pendingReviews.push({
-          id: "rev_" + Date.now().toString(36),
-          cpId: payload.cp, at: new Date().toISOString(),
-          note: payload.result.summary || "",
-          status: "pending",
-          submission: { fields: stripMeta(payload.data), band: overallBand(payload.result) },
-        });
+        l.pendingReviews.push(entry);
       });
       window.STORE.log("arp-escalation", payload.cp);
-      box.innerHTML = `
+      // Confirm the dispute sits on the server's open-review list (candidate for a specialist).
+      let serverCall = false;
+      if (window.AUTH.get().user) {
+        const esc = await window.AUTH.apiPost("/faculty/reviews/escalate", { cpId: payload.cp });
+        if (esc.ok && esc.data && esc.data.ok === true && typeof esc.data.callId === "string") {
+          window.STORE.update(l => {
+            const e = (l.pendingReviews || []).find(r => r.id === entry.id);
+            if (e) { e.callId = esc.data.callId; e.source = "server"; e.open = true; }
+          });
+          serverCall = true;
+        }
+      }
+      box.innerHTML = serverCall ? `
+        <h2>Assessment Resolution Protocol — specialist review opened</h2>
+        <div class="card">
+          <div class="card__label">On the open-review list (open)</div>
+          <p>Your disputed <strong>${esc(payload.cp)}</strong> submission is confirmed on the specialist
+          open-review list, tied to the originating Control-Plane call. A specialist resolution
+          (or confirmation it is real) appears on your <a data-nav href="#/evidence">Evidence view</a>
+          as soon as a reviewer decides.</p>
+          <p style="margin:0">Your answers are preserved — revise and resubmit any time; evidence is only
+          recorded once the rubric is met, so you can keep practising in the meantime.</p>
+        </div>` : `
         <h2>Assessment Resolution Protocol — specialist review requested</h2>
         <div class="card">
-          <div class="card__label">Marked for review (pending)</div>
-          <p>Your disputed <strong>${esc(payload.cp)}</strong> submission is on the open-review list and
-          now shows on your Evidence view. In this single-learner prototype there is no human specialist
-          pool yet — so nobody will review this device automatically. It's recorded here as a first
-          marker for the founder/admin, and this is the mechanism the multi-learner system will use
+          <div class="card__label">Marked for review (pending — local only)</div>
+          <p>Your disputed <strong>${esc(payload.cp)}</strong> submission is on your own open-review
+          record and now shows on your Evidence view. This dispute never reached the Control Plane (no
+          server-side call for this checkpoint), so no server review is implied — it's recorded here as
+          a first marker. In this single-learner prototype there is no human specialist pool yet
           (<a data-nav href="#/about">docs/05 §5 and docs/08 §5.5</a>).</p>
           <p style="margin:0">Your answers are preserved — revise and resubmit any time; evidence is only
           recorded once the rubric is met, so you can keep practising in the meantime.</p>
@@ -1262,8 +1287,9 @@
         <strong>ARP — awaiting specialist review:</strong> ${pending.map(r =>
           `<a data-nav href="#/checkpoint/${r.cpId}" style="text-decoration:underline">${esc(r.cpId)}</a>`).join(", ")}.
         These mark disputed second assessments; no evidence is recorded for them until the rubric is met.</div>` : "";
+    const reviewsBox = window.AUTH.get().user ? `<div id="reviewsBox"></div>` : "";
     if (!learner.evidence.length) {
-      return `<h1>Evidence</h1>${pendingNote}
+      return `<h1>Evidence</h1>${pendingNote}${reviewsBox}
         <p class="lead">Nothing recorded yet. Evidence is created when you complete a challenge or a
         practical assessment on a real task of your own and Assessment Faculty confirms it against the rubric.</p>
         <a class="btn" data-nav href="#/">Back to progress</a>`;
@@ -1298,11 +1324,56 @@
     return `<h1>Evidence portfolio</h1>
       <p class="lead">${learner.evidence.length} record${learner.evidence.length === 1 ? "" : "s"}.
       Every capability claim links to evidence (see docs/01-architecture.md).</p>
-      ${pendingNote}
+      ${pendingNote}${reviewsBox}
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
         <button class="btn" type="button" data-action="export-portfolio" data-format="md">⬇ Export as Markdown</button>
         <button class="btn btn--ghost" type="button" data-action="export-portfolio" data-format="json">Export as JSON</button>
       </div>${body}`;
+  }
+
+  // Pull the learner's own specialist resolutions from the Control Plane (faculty_reviews/me) after
+  // the Evidence view renders. Reconciles matching local pendingReviews to "resolved" and shows every
+  // open or decided dispute — so what the learner sees is the same record a reviewer acts on.
+  async function loadMyReviews() {
+    if (!window.AUTH.get().user) return;
+    const box = document.getElementById("reviewsBox");
+    if (!box) return;
+    const res = await window.AUTH.apiGet("/faculty/reviews/me");
+    if (!res.ok || !res.data || !Array.isArray(res.data.reviews)) return;
+    const rows = res.data.reviews;
+    const learner = window.STORE.get();
+    const pend = learner.pendingReviews || [];
+    const open = rows.filter(r => !r.decision);
+    const resolved = rows.filter(r => r.decision);
+    window.STORE.update(l => {
+      (l.pendingReviews || []).forEach(entry => {
+        if (entry.status !== "pending") return;
+        const hit = rows.find(r => (entry.callId && r.call_id === entry.callId)
+          || (!entry.callId && r.cp_id === entry.cp_id && r.decision));
+        if (hit && hit.decision) {
+          entry.status = "resolved";
+          entry.resolution = { decision: hit.decision, note: hit.note || "", at: hit.reviewed_at || "" };
+        }
+      });
+    });
+    const decisionText = {
+      uphold: "Specialist upheld the independent second assessment — the dispute stands as raised.",
+      override: "Specialist overrode the second assessment — your point was real and is recorded.",
+      dismiss: "Specialist dismissed the dispute — no change to the assessment.",
+    };
+    const cards = resolved.map(r => `
+      <div class="card" style="border-color:var(--good)">
+        <div class="card__label">Specialist resolution · ${esc(r.cp_id)}</div>
+        <p style="margin:4px 0"><strong>${esc(r.decision)}</strong>${r.reviewed_at ? ` · ${new Date(r.reviewed_at).toLocaleString()}` : ""}</p>
+        <p style="margin:4px 0">${esc(decisionText[r.decision] || "Reviewed by the specialist.")}</p>
+        ${r.note ? `<p style="margin:4px 0;font-size:14px"><strong>Note:</strong> ${esc(r.note)}</p>` : ""}
+      </div>`).join("");
+    const openNote = open.length ? `
+      <div class="notice">${open.length} dispute${open.length === 1 ? "" : "s"} on the specialist open-review list${pend.length ? "" : " for this device"}.</div>` : "";
+    const localOnly = pend.filter(p => p.status === "pending" && !p.source).length;
+    const localNote = localOnly ? `
+      <div class="notice" style="border-color:var(--warn)">${localOnly} dispute${localOnly === 1 ? "" : "s"} recorded here only — they never reached the Control Plane, so they're not on any specialist's list.</div>` : "";
+    box.innerHTML = openNote + localNote + cards;
   }
 
   function viewAbout() {

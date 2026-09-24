@@ -102,10 +102,14 @@ is equal). Nothing is deleted — superseded attempts are versioned.
 
 ## 8. What the prototype implements today vs. later
 
-| Now (v0.2 app) | Later |
+| Now (v0.39) | Later |
 |---|---|
 | Challenges (fields / critique / scenario), gated, per competency | Optimise-tier challenges; adaptive difficulty |
-| Banded rubric scoring, transparent feedback | Model-scored rubric behind the Control Plane |
-| CP1 + CP2 checkpoints | Full blind multi-assessor pool + specialist escalation |
-| Second-assessment pass on checkpoints | Real independent assessors (human + AI) |
+| Banded rubric scoring, transparent feedback. Control Plane v1 live: policy engine + audited
+  `faculty_calls` + dry-run adapter (server-side strict bar) | Model-scored rubric behind the Control
+  Plane (openai-compatible adapter built, behind `FACULTY_MODEL_KEY`) |
+| CP1 + CP2 checkpoints; disagreeing second assessment → reasoned review + escalation | Full blind multi-assessor pool |
+| Reviewer scoped role (v0.39): founder grants `reviewer`, open-review list, reasoned
+  uphold/override/dismiss, learners see resolutions | Specialist pool + appeal ladder (docs/05 §6) |
+| Second-assessment pass on checkpoints (Control Plane dry-run when signed in) | Real independent assessors (human + AI) |
 | Applied Projects: register, attach evidence, portfolio, "Demonstrated" | Project templates per industry; peer review of projects |

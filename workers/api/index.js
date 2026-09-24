@@ -845,6 +845,116 @@ async function handleFacultyLog(request, env, headers) {
   return json(200, { ok: true, calls: results }, headers);
 }
 
+// ---- ARP resolution: mentor / reviewer scoped role (Phase 4) ---------------------------------
+// docs/08 §5.5 + docs/05 §5: disputed assessments escalate to a specialist or authorised Faculty
+// holder. Reviews are recorded against the originating Control-Plane call; someone with the
+// 'reviewer' role (granted by the founder) can decide them. What the learner sees is the reasoned
+// decision + note — the same deliberative framing the ARP is built around.
+
+const REVIEWER_DECISIONS = ["uphold", "override", "dismiss"];
+const REVIEWER_SCOPED_ROLES = { learner: "learner", reviewer: "reviewer", founder: "founder" };
+const FACULTY_REVIEWS_LIST_SQL =
+  `SELECT faculty_calls.id AS call_id, faculty_calls.cp_id, faculty_calls.adapter, faculty_calls.model,
+          faculty_calls.verdict, faculty_calls.created_at AS call_at, users.email AS learner_email,
+          faculty_reviews.id AS review_id, faculty_reviews.decision, faculty_reviews.note,
+          faculty_reviews.created_at AS reviewed_at, reviewer.email AS reviewer_email
+   FROM faculty_calls
+   LEFT JOIN users ON users.id = faculty_calls.user_id
+   LEFT JOIN faculty_reviews ON faculty_reviews.call_id = faculty_calls.id
+   LEFT JOIN users AS reviewer ON reviewer.id = faculty_reviews.reviewer_user_id
+   WHERE faculty_calls.verdict != 'ready'
+   ORDER BY faculty_calls.created_at DESC LIMIT 200`;
+
+async function requireReviewer(request, env, headers) {
+  const r = await requireAuth(request, env, headers);
+  if (r.error) return r;
+  if (r.user.role !== "founder" && r.user.role !== "reviewer") {
+    return { error: json(403, { ok: false, error: "forbidden" }, headers) };
+  }
+  return r;
+}
+
+async function handleAdminSetRole(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+  const email = String(body.email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return json(400, { ok: false, error: "invalid_email" }, headers);
+  const role = REVIEWER_SCOPED_ROLES[body.role];
+  if (!role) return json(400, { ok: false, error: "invalid_role" }, headers);
+  const exists = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first();
+  if (!exists) return json(404, { ok: false, error: "no_such_user" }, headers);
+  await env.DB.prepare("UPDATE users SET role = ? WHERE id = ?").bind(role, exists.id).run();
+  return json(200, { ok: true, email, role }, headers);
+}
+
+// Open reviews = disputed Control-Plane calls (assessor 2 did not pass) with the reviewer's
+// current decision (null when nothing has been decided yet).
+async function handleFacultyReviewsList(request, env, headers) {
+  const auth = await requireReviewer(request, env, headers);
+  if (auth.error) return auth.error;
+  const { results } = await env.DB.prepare(FACULTY_REVIEWS_LIST_SQL).all();
+  return json(200, { ok: true, reviews: results }, headers);
+}
+
+async function handleFacultyReviewSubmit(request, env, headers) {
+  const auth = await requireReviewer(request, env, headers);
+  if (auth.error) return auth.error;
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+  const callId = String(body.callId || "");
+  const decision = REVIEWER_DECISIONS.includes(body.decision) ? body.decision : null;
+  const note = body.note ? String(body.note).slice(0, 2000) : null;
+  if (!callId || !decision) return json(400, { ok: false, error: "invalid_review" }, headers);
+  const call = await env.DB.prepare("SELECT id FROM faculty_calls WHERE id = ?").bind(callId).first();
+  if (!call) return json(404, { ok: false, error: "call_not_found" }, headers);
+  const now = new Date().toISOString();
+  await env.DB.prepare(
+    `INSERT INTO faculty_reviews (id, call_id, reviewer_user_id, decision, note, created_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(call_id) DO UPDATE SET
+       decision = excluded.decision, note = excluded.note,
+       reviewer_user_id = excluded.reviewer_user_id, created_at = excluded.created_at`
+  ).bind(crypto.randomUUID(), callId, auth.user.id, decision, note, now).run();
+  return json(200, { ok: true, callId, decision, note }, headers);
+}
+
+// A learner's own disputed assessments and any decisions a reviewer has reached on them.
+async function handleFacultyReviewsMine(request, env, headers) {
+  const auth = await requireAuth(request, env, headers);
+  if (auth.error) return auth.error;
+  const { results } = await env.DB.prepare(
+    `SELECT faculty_calls.id AS call_id, faculty_calls.cp_id, faculty_calls.verdict, faculty_calls.created_at AS call_at,
+            faculty_reviews.id AS review_id, faculty_reviews.decision, faculty_reviews.note,
+            faculty_reviews.created_at AS reviewed_at
+     FROM faculty_calls
+     LEFT JOIN faculty_reviews ON faculty_reviews.call_id = faculty_calls.id
+     WHERE faculty_calls.user_id = ? AND faculty_calls.verdict != 'ready'
+     ORDER BY faculty_calls.created_at DESC LIMIT 50`
+  ).bind(auth.user.id).all();
+  return json(200, { ok: true, reviews: results }, headers);
+}
+
+// Confirm a disputed assessment is on the open-review list (a candidate for a reviewer). Exists so
+// the app can mark an escalation honestly — only real Control-Plane disputes are open; disputes that
+// happened entirely on-device (no server call) stay local-only and no server review is implied.
+async function handleFacultyEscalate(request, env, headers) {
+  const auth = await requireAuth(request, env, headers);
+  if (auth.error) return auth.error;
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+  const cpId = String(body.cpId || "").slice(0, 40);
+  if (!cpId) return json(400, { ok: false, error: "invalid_cp" }, headers);
+  const call = await env.DB.prepare(
+    `SELECT id, created_at FROM faculty_calls
+     WHERE user_id = ? AND cp_id = ? AND verdict != 'ready'
+     ORDER BY created_at DESC LIMIT 1`
+  ).bind(auth.user.id, cpId).first();
+  if (!call) return json(200, { ok: false, local_only: true, error: "no_disputed_call" }, headers);
+  return json(200, { ok: true, callId: call.id, status: "open" }, headers);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -888,6 +998,21 @@ export default {
     }
     if (request.method === "GET" && url.pathname === "/api/faculty/log") {
       return handleFacultyLog(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/role") {
+      return handleAdminSetRole(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/faculty/reviews") {
+      return handleFacultyReviewsList(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/faculty/reviews") {
+      return handleFacultyReviewSubmit(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/faculty/reviews/me") {
+      return handleFacultyReviewsMine(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/faculty/reviews/escalate") {
+      return handleFacultyEscalate(request, env, headers);
     }
     if (request.method === "GET" && url.pathname === "/api/admin/overview") {
       return handleAdminOverview(request, env, headers);

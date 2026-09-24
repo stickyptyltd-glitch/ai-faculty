@@ -21,21 +21,32 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
   const feedback = [];
   const payments = [];
   const facultyCalls = [];
+  const facultyReviews = [];
   const usersRows = users.map(u => ({ plan: "free", plan_status: "none", stripe_customer_id: null, ...u }));
 
   async function first(sql, args) {
-    if (sql.includes("FROM sessions WHERE token_hash")) {
+    const flat = sql.replace(/\s+/g, " ");
+    if (flat.includes("FROM sessions WHERE token_hash")) {
       return sessions.find(s => s.token_hash === args[0]) || null;
     }
-    if (sql.includes("FROM users WHERE id")) {
+    if (flat.includes("FROM users WHERE id")) {
       return usersRows.find(u => u.id === args[0]) || null;
     }
-    if (sql.includes("FROM users WHERE email")) {
+    if (flat.includes("FROM users WHERE email")) {
       const email = String(args[0] || "").toLowerCase();
       return usersRows.find(u => u.email === email) || null;
     }
-    if (sql.includes("FROM users WHERE stripe_customer_id")) {
+    if (flat.includes("FROM users WHERE stripe_customer_id")) {
       return usersRows.find(u => u.stripe_customer_id === args[0]) || null;
+    }
+    if (flat.includes("SELECT id FROM faculty_calls WHERE id")) {
+      return facultyCalls.find(c => c.id === args[0]) || null;
+    }
+    if (flat.includes("FROM faculty_calls WHERE user_id = ? AND cp_id")) {
+      const ls = facultyCalls
+        .filter(c => c.user_id === args[0] && c.cp_id === args[1] && c.verdict !== "ready")
+        .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+      return ls[0] || null;
     }
     return null;
   }
@@ -50,6 +61,10 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
       const [plan, status, cust] = args; // subscription sync: (plan, status, stripe_customer_id)
       const u = usersRows.find(u => u.stripe_customer_id === cust);
       if (u) { u.plan = plan; u.plan_status = status; }
+    } else if (sql.startsWith("UPDATE users SET role")) {
+      const [role, id] = args;
+      const u = usersRows.find(u => u.id === id);
+      if (u) u.role = role;
     } else if (sql.startsWith("UPDATE users SET plan")) {
       const [plan, planStatus, stripeId, userId] = args; // applyGrant order
       const u = usersRows.find(u => u.id === userId);
@@ -64,10 +79,15 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
         bands_json, verdict, confidence, degraded, status, latency_ms, created_at] = args;
       facultyCalls.push({ id, kind, user_id, cp_id, rubric_dims, submission_json, policy_id, adapter,
         model, bands_json, verdict, confidence, degraded, status, latency_ms, created_at });
+    } else if (sql.startsWith("INSERT INTO faculty_reviews")) {
+      const [id, call_id, reviewer_user_id, decision, note, created_at] = args;
+      const existing = facultyReviews.find(r => r.call_id === call_id);
+      if (existing) { Object.assign(existing, { reviewer_user_id, decision, note, created_at }); }
+      else facultyReviews.push({ id, call_id, reviewer_user_id, decision, note, created_at });
     }
     return { success: true };
   }
-  async function all(sql) {
+  async function all(sql, args = []) {
     if (sql.includes("FROM feedback JOIN users")) {
       const rows = feedback.slice()
         .sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -88,6 +108,36 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
       return { results: [{ total: paid.reduce((s, p) => s + p.amount_cents, 0), n: paid.length }] };
     }
     if (sql.includes("FROM users") && !sql.includes("LEFT JOIN")) return { results: usersRows };
+    if (sql.includes("LEFT JOIN faculty_reviews") && sql.includes("reviewer.email")) {
+      const rows = facultyCalls
+        .filter(c => c.verdict !== "ready")
+        .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
+        .map(c => {
+          const r = facultyReviews.find(r2 => r2.call_id === c.id) || null;
+          return {
+            call_id: c.id, cp_id: c.cp_id, adapter: c.adapter, model: c.model, verdict: c.verdict,
+            call_at: c.created_at,
+            learner_email: (usersRows.find(u => u.id === c.user_id) || {}).email,
+            review_id: r ? r.id : null, decision: r ? r.decision : null, note: r ? r.note : null,
+            reviewed_at: r ? r.created_at : null,
+            reviewer_email: r ? (usersRows.find(u => u.id === r.reviewer_user_id) || {}).email : null,
+          };
+        });
+      return { results: rows };
+    }
+    if (sql.includes("LEFT JOIN faculty_reviews") && sql.includes("user_id = ?")) {
+      const rows = facultyCalls
+        .filter(c => c.user_id === args[0] && c.verdict !== "ready")
+        .map(c => {
+          const r = facultyReviews.find(r2 => r2.call_id === c.id) || null;
+          return {
+            call_id: c.id, cp_id: c.cp_id, verdict: c.verdict, call_at: c.created_at,
+            review_id: r ? r.id : null, decision: r ? r.decision : null, note: r ? r.note : null,
+            reviewed_at: r ? r.created_at : null,
+          };
+        });
+      return { results: rows };
+    }
     if (sql.includes("FROM faculty_calls LEFT JOIN users")) {
       const rows = facultyCalls.slice()
         .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""))
@@ -117,7 +167,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     };
     return stmt;
   }
-  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows, _faculty: facultyCalls };
+  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows, _faculty: facultyCalls, _reviews: facultyReviews };
 }
 
 function makeKV() {
@@ -508,6 +558,99 @@ function strongSubmission() {
   check("log carries the audited call with email", logBody.calls.length === 1
     && logBody.calls[0].id === body.lineageId && logBody.calls[0].email === "learner@example.com"
     && logBody.calls[0].adapter === "dry-run");
+}
+
+// 25. founder may not be downgraded by anyone except themselves; role endpoint is founder-only
+{
+  const { env, rawToken } = await makeEnv(); // learner
+  const r = await worker.fetch(await req("/api/admin/role", {
+    method: "POST", token: rawToken, body: { email: "learner@example.com", role: "reviewer" },
+  }), env);
+  check("403 role change as learner", r.status === 403);
+
+  const envF = await makeEnv({ role: "founder" });
+  const founderToken = envF.rawToken;
+  envF.env.DB._users.push({ id: "u2", email: "peer@example.com", display_name: null,
+    created_at: "2026-01-02T00:00:00.000Z", role: "learner", plan: "free", plan_status: "none",
+    stripe_customer_id: null });
+  const bad = await worker.fetch(await req("/api/admin/role", {
+    method: "POST", token: founderToken, body: { email: "peer@example.com", role: "superuser" },
+  }), envF.env);
+  check("400 invalid role", bad.status === 400);
+  const ok = await worker.fetch(await req("/api/admin/role", {
+    method: "POST", token: founderToken, body: { email: "peer@example.com", role: "reviewer" },
+  }), envF.env);
+  check("200 grant reviewer", ok.status === 200 && envF.env.DB._users.find(u => u.id === "u2").role === "reviewer");
+  const missing = await worker.fetch(await req("/api/admin/role", {
+    method: "POST", token: founderToken, body: { email: "nobody@example.com", role: "reviewer" },
+  }), envF.env);
+  check("404 no such user", missing.status === 404);
+}
+
+// 26. reviewer sees disputed calls but not founder log; learner's own escalation is honest
+{
+  // learner with a disputed (revise) call on the plane
+  const learnerE = await makeEnv(); // u1 learner
+  const call = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: learnerE.rawToken,
+    body: { ...cpRubric, fields: cpFields(), submission: (() => {
+      const thin = {}; cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
+      return thin;
+    })() },
+  }), learnerE.env);
+  const callBody = await call.json();
+  check("disputed call produced", call.status === 200 && callBody.verdict !== "ready" && typeof callBody.lineageId === "string");
+
+  // reviewer (role granted by the founder — the grant endpoint itself is covered in block 25)
+  learnerE.env.DB._users[0].role = "reviewer";
+  const list = await worker.fetch(await req("/api/faculty/reviews", { token: learnerE.rawToken }), learnerE.env);
+  const listBody = await list.json();
+  check("reviewer lists disputed call", list.status === 200 && listBody.ok === true
+    && listBody.reviews.length === 1 && listBody.reviews[0].call_id === callBody.lineageId
+    && listBody.reviews[0].learner_email === "learner@example.com" && listBody.reviews[0].decision === null);
+
+  const decide = await worker.fetch(await req("/api/faculty/reviews", {
+    method: "POST", token: learnerE.rawToken,
+    body: { callId: callBody.lineageId, decision: "override", note: "Trail is thin; rework the verification step with named checks." },
+  }), learnerE.env);
+  check("reviewer records decision", decide.status === 200 && (await decide.json()).ok === true);
+  check("decision persisted", learnerE.env.DB._reviews.length === 1 && learnerE.env.DB._reviews[0].decision === "override");
+
+  const again = await worker.fetch(await req("/api/faculty/reviews", {
+    method: "POST", token: learnerE.rawToken,
+    body: { callId: callBody.lineageId, decision: "dismiss", note: "Second look: not enough here at all." },
+  }), learnerE.env);
+  check("re-decision overrides single row", again.status === 200 && learnerE.env.DB._reviews.length === 1
+    && learnerE.env.DB._reviews[0].decision === "dismiss");
+
+  // reviewer list now reflects the decision (one row, updated)
+  const list2 = await worker.fetch(await req("/api/faculty/reviews", { token: learnerE.rawToken }), learnerE.env);
+  const list2Body = await list2.json();
+  check("list shows reviewer decision", list2Body.reviews[0].decision === "dismiss" && list2Body.reviews[0].reviewer_email === "learner@example.com");
+
+  // the learner (original escalation flow) sees the decision on their own record
+  const mine = await worker.fetch(await req("/api/faculty/reviews/me", { token: learnerE.rawToken }), learnerE.env);
+  const mineBody = await mine.json();
+  check("learner sees own resolution", mine.status === 200 && mineBody.ok === true
+    && mineBody.reviews.length === 1 && mineBody.reviews[0].decision === "dismiss"
+    && mineBody.reviews[0].cp_id === "CP1");
+
+  // reviewer cannot read the founder-only audit log
+  const log403 = await worker.fetch(await req("/api/faculty/log", { token: learnerE.rawToken }), learnerE.env);
+  check("403 lineage log as reviewer", log403.status === 403);
+
+  // a learner-disputed entry where the second assessment never hit the server stays local-only
+  const fresh = await makeEnv();
+  const esc = await worker.fetch(await req("/api/faculty/reviews/escalate", {
+    method: "POST", token: fresh.rawToken, body: { cpId: "CP1" },
+  }), fresh.env);
+  const escBody = await esc.json();
+  check("escalate with no server call is local_only", esc.status === 200 && escBody.ok === false && escBody.local_only === true);
+  const esc2 = await worker.fetch(await req("/api/faculty/reviews/escalate", {
+    method: "POST", token: learnerE.rawToken, body: { cpId: "CP1" },
+  }), learnerE.env);
+  const esc2Body = await esc2.json();
+  check("escalate with a disputed call opens it", esc2.status === 200 && esc2Body.ok === true && esc2Body.status === "open" && typeof esc2Body.callId === "string");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
