@@ -1219,7 +1219,7 @@
       <h1>${esc(p.title)}</h1>
       <p class="lead">${esc(p.tagline)}</p>
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
-      ${["legal","finance","hr","health","public","edleadership","realestate"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
+      ${["legal","finance","hr","health","public","edleadership","realestate","journalism"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
         <strong>Reviewed for unverified specifics, not yet signed off by a licensed professional.</strong>
         This pathway teaches AI-workflow judgement, not the law/regulation of your jurisdiction —
         every lesson is written to defer to your own jurisdiction, policy or a qualified
@@ -1559,11 +1559,49 @@
     return requireFounderView(() => `<h1>Admin</h1>${adminTabs("feedback")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
   }
 
+  function readinessState(ready) {
+    if (!ready) return "";
+    const item = (label, done, value) => `
+      <div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+        <span style="color:${done ? "#2e7d32" : "#b3261e"};font-weight:700">${done ? "✓" : "✗"}</span>
+        <span style="font-weight:600">${esc(label)}</span>
+        <span class="hint">${esc(value)}</span>
+      </div>`;
+    const c = ready.controls, l = ready.loop;
+    const emailDone = !c.email.devMode;
+    const emailValue = emailDone ? "live (dev links off)"
+      : "dev links (" + (c.email.resendConfigured ? "Resend key set, DEV_LINKS still on" : "no Resend key yet") + ")";
+    const items = [
+      item("Sign-in email", emailDone, emailValue),
+      item("Payments", c.stripe.configured, c.stripe.configured ? "Stripe live" : "waitlist — Stripe not connected"),
+      item("Faculty plane", c.faculty.modelConfigured,
+        c.faculty.modelConfigured ? "model live (" + c.faculty.adapter + ")" : "dry-run live — model behind FACULTY_MODEL_KEY"),
+    ];
+    const open = l.openReviews;
+    const loopLine = open > 0
+      ? `<div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+           <span style="color:#b3261e;font-weight:700">!</span>
+           <span style="font-weight:600">ARP loop</span>
+           <span class="hint">${open} open review${open === 1 ? "" : "s"} awaiting a founder/reviewer decision</span>
+         </div>`
+      : `<div style="display:flex;align-items:center;gap:8px;margin:6px 0">
+           <span style="color:#2e7d32;font-weight:700">✓</span>
+           <span style="font-weight:600">ARP loop</span>
+           <span class="hint">no open reviews · ${l.facultyCalls} calls audited, ${l.decidedReviews} decided, ${l.migrationsApplied} migrations</span>
+         </div>`;
+    return `<div class="card" style="margin-bottom:16px">
+      <div class="card__label">Launch readiness</div>
+      ${items.join("")}
+      ${loopLine}
+    </div>`;
+  }
+
   async function loadAdminOverview() {
     const box = document.getElementById("adminBody");
     if (!box || !window.AUTH.get().user) return;
     const res = await window.AUTH.apiGet("/admin/overview");
     if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const readyRes = await window.AUTH.apiGet("/admin/readiness");
     const d = res.data;
     const pathwayRows = d.popularPathways.map(p =>
       `<tr><td ${TD}>${esc(p.pathwayId)}</td><td ${TD}>${p.submissions}</td></tr>`).join("")
@@ -1587,6 +1625,7 @@
         <div><div class="card__label">Submissions</div><strong style="font-size:22px">${d.totals.submissions}</strong></div>
         ${rev}
       </div>
+      ${readinessState(readyRes.ok ? readyRes.data : null)}
       ${planRows ? `<p style="margin:0 0 16px">${planRows}</p>` : ""}
       <h2 style="font-size:16px">Pathway popularity</h2>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">

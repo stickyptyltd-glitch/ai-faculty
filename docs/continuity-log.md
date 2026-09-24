@@ -1104,6 +1104,38 @@ silently stopped being authoritative.
   syntax-checked; `./build.sh` clean; ARP/branching harness still 17/17. Live smoke: all six new
   endpoints gate 401 unauthenticated on `aifaculty.org/api/*` (worker deploy `6acb3641`).
 
+## v0.40 — 2026-09-24 — Launch readiness in the admin panel + Journalism & Media pathway
+
+Two follow-on halves from the v0.39 ship: founder-facing ops hardening, and a full new pathway
+(Journalism & Media) grown to the expansion-prompt pattern.
+
+- **Launch readiness (admin/ops hardening)** — new founder-only `GET /api/admin/readiness`
+  aggregate (workers/api) reports the founder-owned switches in one checklist: Stripe connected
+  (Plans gate live vs waitlist), email delivery (dev-links vs real Resend key), and the Faculty
+  plane (dry-run live vs model behind `FACULTY_MODEL_KEY`) — alongside the live loop status:
+  disputed calls, open vs decided reviews, faculty calls audited, migrations applied. The admin
+  Overview renders it as a ✓/✗ card with an amber line when open reviews await a decision.
+  `test.mjs` extended to 73/73 (shape, controls, counts moving after a disputed call + decision,
+  learner 403). Deployed `bb3a302c`; verified live with a real founder session on
+  `aifaculty.org/api/admin/readiness` (then cleaned up the smoke account) — `migrationsApplied: 8`
+  confirms the v0.39 repair end-to-end.
+- **Journalism & Media pathway (content expansion)** — new work pathway id `journalism`,
+  competencies J1–J5 built to the exact legal-pathway depth (full lessons, 14 fields/critique +
+  scenario challenges, quick checks, `JOURNCAP` work capstone): J1 what AI can and can't do in the
+  newsroom; J2 grounded claims (every fact traces to a source, absence claims checked by hand);
+  J3 sourcing, attribution & provenance; J4 corrections, disclosure & integrity under pressure;
+  J5 the produce → verify → decide workflow. Regulated/professional-standards notice extended to
+  this pathway in the overview. Validation: `node --check`, plus a full-file structural sweep (all
+  24 pathways: checkpoints present, guided field/model keys match, scenario exactly one `ok:true`,
+  critique ≥3 with lowercase+specific signals, fields rubric ≤ fields) — clean.
+- **Docs** — `docs/09-work-pathways.md` catalogue gains the Journalism row + prototype-status
+  line (24 built, 126 competencies). `docs/roadmap.md` ticks Phase 3 (Control Plane v1) and the
+  Phase 4 learner-faculty scoped role; `docs/08-assessment-model.md` §8 "now vs later" is updated
+  to the v0.39/v0.40 reality.
+- **Catalogue drift note** — the expansion-prompt said "16 pathways as of 2026-09"; ground truth
+  was 23 (content.js `PATHWAYS`). Now 24. The prompt's example gap names (journalism, K-12) were
+  still the honest highest-value picks to check first.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
