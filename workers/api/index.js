@@ -379,6 +379,57 @@ async function handleAdminOverview(request, env, headers) {
   }, headers);
 }
 
+// Launch readiness: a single founder-only snapshot of what the Control Plane ships live vs. the
+// founder-owned switches (plan docs/11-monetization + Phase 3 var comments in wrangler.toml). The
+// admin panel renders this as a checklist. Counts come from the same D1 tables the ARP loop uses;
+// null-tolerant so the local fake DB in test.mjs (which only knows the tables the strings match)
+// degrades to zeros instead of throwing.
+async function handleAdminReadiness(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+
+  const count = async (sql) => {
+    const row = await env.DB.prepare(sql).first();
+    return row ? Number(row.n || 0) : 0;
+  };
+  const [disputed, open, decided, migrations, facultyCalls] = await Promise.all([
+    count(
+      "SELECT COUNT(*) AS n FROM faculty_calls WHERE verdict != 'ready'"
+    ),
+    count(
+      `SELECT COUNT(*) AS n FROM faculty_calls fc
+       LEFT JOIN faculty_reviews fr ON fr.call_id = fc.id
+       WHERE fc.verdict != 'ready' AND fr.id IS NULL`
+    ),
+    count("SELECT COUNT(*) AS n FROM faculty_reviews"),
+    count("SELECT COUNT(*) AS n FROM d1_migrations"),
+    count("SELECT COUNT(*) AS n FROM faculty_calls"),
+  ]);
+
+  return json(200, {
+    ok: true,
+    isFounder: true,
+    controls: {
+      stripe: { configured: stripeConfigured(env) },
+      faculty: {
+        adapter: env.FACULTY_ADAPTER || "dry-run",
+        modelConfigured: facultyConfigured(env),
+      },
+      email: {
+        devMode: String(env.DEV_LINKS) === "true",
+        resendConfigured: Boolean(env.RESEND_API_KEY),
+      },
+    },
+    loop: {
+      disputedCalls: disputed,
+      openReviews: open,
+      decidedReviews: decided,
+      facultyCalls: facultyCalls,
+      migrationsApplied: migrations,
+    },
+  }, headers);
+}
+
 async function handleAdminLearners(request, env, headers) {
   const auth = await requireFounder(request, env, headers);
   if (auth.error) return auth.error;
@@ -1016,6 +1067,9 @@ export default {
     }
     if (request.method === "GET" && url.pathname === "/api/admin/overview") {
       return handleAdminOverview(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/readiness") {
+      return handleAdminReadiness(request, env, headers);
     }
     if (request.method === "GET" && url.pathname === "/api/admin/feedback") {
       return handleAdminFeedback(request, env, headers);

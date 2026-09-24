@@ -48,6 +48,21 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
         .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
       return ls[0] || null;
     }
+    if (flat.includes("COUNT(*") && flat.includes("LEFT JOIN faculty_reviews")) {
+      return { n: facultyCalls.filter(c => c.verdict !== "ready" && !facultyReviews.some(r => r.call_id === c.id)).length };
+    }
+    if (flat.includes("COUNT(*") && flat.includes("FROM faculty_calls WHERE verdict")) {
+      return { n: facultyCalls.filter(c => c.verdict !== "ready").length };
+    }
+    if (flat.includes("COUNT(*") && flat.includes("FROM faculty_reviews")) {
+      return { n: facultyReviews.length };
+    }
+    if (flat.includes("COUNT(*") && flat.includes("FROM d1_migrations")) {
+      return { n: 0 };
+    }
+    if (flat.includes("COUNT(*") && flat.includes("FROM faculty_calls")) {
+      return { n: facultyCalls.length };
+    }
     return null;
   }
   async function run(sql, args) {
@@ -651,6 +666,45 @@ function strongSubmission() {
   }), learnerE.env);
   const esc2Body = await esc2.json();
   check("escalate with a disputed call opens it", esc2.status === 200 && esc2Body.ok === true && esc2Body.status === "open" && typeof esc2Body.callId === "string");
+}
+
+// 27. founder readiness snapshot; the admin panel turns it into a launch checklist
+{
+  const founderE = await makeEnv({ role: "founder" });
+  const ready = await worker.fetch(await req("/api/admin/readiness", { token: founderE.rawToken }), founderE.env);
+  const readyBody = await ready.json();
+  check("founder reads readiness", ready.status === 200 && readyBody.ok === true && readyBody.isFounder === true);
+  check("controls surfaced", readyBody.controls.stripe.configured === false
+    && readyBody.controls.faculty.adapter === "dry-run" && readyBody.controls.faculty.modelConfigured === false
+    && readyBody.controls.email.devMode === true && readyBody.controls.email.resendConfigured === false);
+  check("empty loop counts", readyBody.loop.disputedCalls === 0 && readyBody.loop.openReviews === 0
+    && readyBody.loop.decidedReviews === 0 && readyBody.loop.facultyCalls === 0 && readyBody.loop.migrationsApplied === 0);
+
+  // a disputed call + a decided review move the numbers the panel shows; the founder is
+  // reviewer-capable, so the decision can be recorded from the same env
+  const call = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: founderE.rawToken,
+    body: { ...cpRubric, fields: cpFields(), submission: (() => {
+      const thin = {}; cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
+      return thin;
+    })() },
+  }), founderE.env);
+  const callBody = await call.json();
+  check("founder disputed call produced", call.status === 200 && callBody.verdict !== "ready");
+  const decide = await worker.fetch(await req("/api/faculty/reviews", {
+    method: "POST", token: founderE.rawToken,
+    body: { callId: callBody.lineageId, decision: "dismiss", note: "Empty check marks; see the trail." },
+  }), founderE.env);
+  check("founder (reviewer-capable) records decision", decide.status === 200);
+
+  const ready2 = await worker.fetch(await req("/api/admin/readiness", { token: founderE.rawToken }), founderE.env);
+  const ready2Body = await ready2.json();
+  check("readiness counts move", ready2Body.loop.disputedCalls === 1 && ready2Body.loop.decidedReviews === 1
+    && ready2Body.loop.openReviews === 0 && ready2Body.loop.facultyCalls === 1);
+
+  const learnerE = await makeEnv();
+  const forbidden = await worker.fetch(await req("/api/admin/readiness", { token: learnerE.rawToken }), learnerE.env);
+  check("403 readiness as learner", forbidden.status === 403);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
