@@ -1334,6 +1334,39 @@ Smoke-test data removed afterwards (user `smoke-arp-v041@example.com` and its ca
 rows), so the first real learner's dispute will be the first thing on the review list. The review
 list is now empty and `faculty_calls` is back to 0.
 
+## v0.47 — 2026-09-25 — Password is now the primary sign-in; rate limits say how long to wait
+
+Password was buried inside a collapsed "Sign in with a password instead" disclosure, under copy
+that said "No password to remember or leak" — both wrong now that passwords exist and are the
+normal way in. The login page leads with email + password, and the magic link moved into an
+"Email me a sign-in link instead" disclosure, so it stays one click away for anyone who needs it
+and nobody trips over it.
+
+**A second thing fell out of testing this.** With password as the main path, the rate limiter stops
+being an edge case, and the message it produced was wrong. Both caps return the same bare
+`rate_limited`, and the client hardcoded "this account is locked for 15 minutes" for all of them —
+so being throttled for the 8-per-hour per-IP cap told you to wait for a 15-minute account lockout
+that did not exist. Meanwhile the server sent no `Retry-After` at all.
+
+- `rateLimited()` now returns seconds-to-wait (0 when clear) instead of a boolean. Every existing
+  `if (await rateLimited(...))` guard keeps working untouched, because `0` is falsy — the change is
+  purely additive at the call sites that want the number.
+- 429s carry `Retry-After` plus a `reason` of `ip_rate` or `account_locked` and a `retryAfter` in
+  the body, computed from the real bucket reset or `locked_until` rather than a guess.
+- The client formats the actual wait: "Too many sign-in attempts from this connection. Try again in
+  17 minutes." versus "This account is locked for 15 minutes."
+
+Verified in a browser against the live site while the per-IP cap was genuinely exhausted (this
+machine had spent its 8/hour through testing — the 429 was real, not simulated): the page returned
+`retry-after: 1019` and rendered "Try again in 17 minutes", matching to the minute.
+
+Tests 112 → 116, covering the reason codes, the seconds-remaining bounds, and the `Retry-After`
+header on both the lockout and per-IP paths.
+
+**Still open:** the successful sign-in could not be re-verified in a browser inside this change,
+because the per-IP cap was already spent. It was confirmed working by `curl` earlier and by the full
+browser run in v0.46; it is re-checked below once the window rolls over.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

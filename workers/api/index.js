@@ -135,17 +135,29 @@ async function rateLimited(request, env, bucketPrefix) {
   // incrementing forever (the old version kept sliding expirationTtl forward on every hit,
   // so a sustained stream of requests never actually got blocked once the window "expired").
   if (!rl || now >= rl.reset) rl = { count: 0, reset: now + window * 1000 };
-  if (rl.count >= max) return true;
+  // Seconds until the cap clears, or 0 when the request may proceed. Returning a number rather
+  // than a boolean keeps every existing `if (await rateLimited(...))` guard working unchanged,
+  // while letting the caller tell the client how long it actually has to wait.
+  if (rl.count >= max) return Math.max(1, Math.ceil((rl.reset - now) / 1000));
   rl.count += 1;
   await KV.put(bucket, JSON.stringify(rl), { expirationTtl: Math.ceil(window) });
-  return false;
+  return 0;
+}
+
+function withRetryAfter(headers, seconds) {
+  return { ...headers, "Retry-After": String(Math.max(1, Math.ceil(seconds))) };
+}
+
+function rateLimitedJson(seconds, reason) {
+  return { ok: false, error: "rate_limited", reason, retryAfter: Math.max(1, Math.ceil(seconds)) };
 }
 
 // ---- handlers -------------------------------------------------------
 
 async function handleRequestLink(request, env, headers) {
-  if (await rateLimited(request, env, "authrl")) {
-    return json(429, { ok: false, error: "rate_limited" }, headers);
+  const wait = await rateLimited(request, env, "authrl");
+  if (wait) {
+    return json(429, rateLimitedJson(wait, "ip_rate"), withRetryAfter(headers, wait));
   }
   let body;
   try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
@@ -266,8 +278,9 @@ async function handleLogout(request, env, headers) {
 }
 
 async function handlePasswordLogin(request, env, headers) {
-  if (await rateLimited(request, env, "pwrl")) {
-    return json(429, { ok: false, error: "rate_limited" }, headers);
+  const ipWait = await rateLimited(request, env, "pwrl");
+  if (ipWait) {
+    return json(429, rateLimitedJson(ipWait, "ip_rate"), withRetryAfter(headers, ipWait));
   }
   let body;
   try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
@@ -293,7 +306,8 @@ async function handlePasswordLogin(request, env, headers) {
   const failRow = await env.DB.prepare("SELECT * FROM password_failures WHERE user_id = ?").bind(user.id).first();
   if (failRow && failRow.locked_until && new Date(failRow.locked_until) > now) {
     await pbkdf2Hex(password, cred.salt, cred.iterations);
-    return json(429, { ok: false, error: "rate_limited" }, headers);
+    const wait = Math.max(1, Math.ceil((new Date(failRow.locked_until).getTime() - now.getTime()) / 1000));
+    return json(429, rateLimitedJson(wait, "account_locked"), withRetryAfter(headers, wait));
   }
 
   const hash = await pbkdf2Hex(password, cred.salt, cred.iterations);

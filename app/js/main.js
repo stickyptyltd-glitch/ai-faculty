@@ -6,6 +6,18 @@
   const F = window.FACULTY;
   const esc = window.PROGRESS.esc;
 
+  // The server sends retryAfter (seconds) plus which cap was hit, so "too many attempts" can
+  // tell the person whether to wait out a lockout or just back off a little.
+  function rateLimitMessage(res) {
+    const secs = Number(res.data && res.data.retryAfter) || 0;
+    const mins = Math.ceil(secs / 60);
+    const wait = mins <= 1 ? "less than a minute" : mins === 1 ? "about a minute" : `${mins} minutes`;
+    const locked = res.data && res.data.reason === "account_locked";
+    return locked
+      ? `Too many failed attempts. This account is locked for ${wait}.`
+      : `Too many sign-in attempts from this connection. Try again in ${wait}.`;
+  }
+
   // Fisher-Yates on a copy — used to randomise multiple-choice option order so the
   // correct answer isn't predictably in the same position (e.g. always the 2nd of 3).
   // Never mutates the source array; callers that need to trace back to the original
@@ -327,8 +339,7 @@
       window.AUTH.apiPost("/auth/login", { email, password }).then(res => {
         if (!box) return;
         if (!res.ok) {
-          const msg = res.status === 429
-            ? "Too many failed attempts — this account is locked for 15 minutes."
+          const msg = res.status === 429 ? rateLimitMessage(res)
             : res.status === 400 ? "Enter your email and password."
             : "That email and password don't match.";
           box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
@@ -1513,26 +1524,27 @@
     const err = query && query.get("error");
     return `
       <h1>Sign in</h1>
-      <p class="lead">Enter your email — we'll send a one-click sign-in link. No password to
-        remember or leak.</p>
+      <p class="lead">Sign in with your email and password.</p>
       ${err ? `<div class="notice" style="border-color:var(--warn);margin-bottom:14px">
         That link was invalid or has expired. Request a new one below.</div>` : ""}
-      <form data-form="login-request" class="field">
-        <label for="loginEmail">Email</label>
-        <input id="loginEmail" type="email" name="email" required placeholder="you@example.com" />
-        <button class="btn" type="submit" style="margin-top:10px">Send sign-in link</button>
+      <form data-form="login-password" class="field">
+        <label for="pwEmail">Email</label>
+        <input id="pwEmail" type="email" name="email" required placeholder="you@example.com" autocomplete="username" />
+        <label for="pwPassword" style="margin-top:10px">Password</label>
+        <input id="pwPassword" type="password" name="password" required autocomplete="current-password" />
+        <button class="btn" type="submit" style="margin-top:10px">Sign in</button>
       </form>
-      <div id="loginResult"></div>
+      <div id="passwordResult"></div>
       <details style="margin-top:20px">
-        <summary style="cursor:pointer">Sign in with a password instead</summary>
-        <form data-form="login-password" class="field" style="margin-top:12px">
-          <label for="pwEmail">Email</label>
-          <input id="pwEmail" type="email" name="email" required placeholder="you@example.com" />
-          <label for="pwPassword" style="margin-top:10px">Password</label>
-          <input id="pwPassword" type="password" name="password" required autocomplete="current-password" />
-          <button class="btn" type="submit" style="margin-top:10px">Sign in</button>
+        <summary style="cursor:pointer">Email me a sign-in link instead</summary>
+        <p class="hint" style="margin-top:10px">No password to hand — we'll email you a one-click
+          link that expires in 15 minutes.</p>
+        <form data-form="login-request" class="field" style="margin-top:12px">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" name="email" required placeholder="you@example.com" autocomplete="email" />
+          <button class="btn btn--ghost" type="submit" style="margin-top:10px">Send sign-in link</button>
         </form>
-        <div id="passwordResult"></div>
+        <div id="loginResult"></div>
       </details>
       <p class="hint" style="margin-top:18px">Signing in doesn't move or affect the lesson
         progress on this device — that stays exactly as it is, in this browser. Accounts are for

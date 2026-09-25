@@ -817,6 +817,10 @@ function strongSubmission() {
 
   let r = await post("/api/auth/login", { email: "learner@example.com", password: PW });
   check("429 correct password refused while locked", r.status === 429);
+  const lockBody = await r.json();
+  const lockRetry = Number(lockBody.retryAfter);
+  check("lockout says how long is left", lockBody.reason === "account_locked" && lockRetry > 0 && lockRetry <= 900);
+  check("lockout sends Retry-After", Number(r.headers.get("Retry-After")) === lockRetry);
   r = await post("/api/auth/login", { email: "learner@example.com", password: PW }, "7.7.7.7");
   check("lock is per-account, not per-IP", r.status === 429);
 
@@ -857,6 +861,10 @@ function strongSubmission() {
     last = await worker.fetch(await req("/api/auth/login", { method: "POST", body, ip: "6.6.6.6" }), env);
   }
   check("429 once the per-IP login cap is hit", last.status === 429);
+  const ipBody = await last.json();
+  const ipRetry = Number(ipBody.retryAfter);
+  check("per-IP cap is distinct from an account lockout", ipBody.reason === "ip_rate" && ipRetry > 0);
+  check("per-IP cap sends Retry-After", Number(last.headers.get("Retry-After")) === ipRetry);
   const other = await worker.fetch(await req("/api/auth/login", { method: "POST", body, ip: "6.6.6.7" }), env);
   check("per-IP bucket is per address", other.status === 401);
 }
