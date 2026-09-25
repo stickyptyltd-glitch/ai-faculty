@@ -177,8 +177,8 @@ test("the exported portfolio cannot launder formative evidence", async t => {
   const json = JSON.parse(E.portfolioJSON(g));
 
   await t.test("markdown does not present a challenge-only project as assessed", () => {
-    assert.ok(md.includes("Demonstrated (formative evidence only)"), "missing formative-only qualifier");
-    assert.ok(!/## Some real task — \*\*Demonstrated\*\*/.test(md), "project reads plain Demonstrated");
+    assert.ok(md.includes("Covered by challenge evidence only"), "missing unassessed-coverage qualifier");
+    assert.ok(!/## Some real task — \*\*Demonstrated\*\*/.test(md), "challenge-only project reads Demonstrated");
     assert.ok(md.includes("not an independent judgement"), "challenge records not labelled formative");
   });
 
@@ -222,7 +222,7 @@ test("the assessed path stays legible", async t => {
 
   await t.test("a checkpoint-backed project reads plain Demonstrated", () => {
     assert.ok(md.includes("## Some real task — **Demonstrated**"));
-    assert.ok(!md.includes("Demonstrated (formative evidence only)"), "over-corrected: hides real assessment");
+    assert.ok(!md.includes("Covered by challenge evidence only"), "over-corrected: hides real assessment");
   });
 
   await t.test("capabilities name their checkpoints", () => {
@@ -240,12 +240,55 @@ test("the assessed path stays legible", async t => {
   });
 });
 
-test("known internal disagreement, still open for the founder", async t => {
-  await t.test("projectDemonstrated disagrees with moduleComplete on challenge-only evidence", () => {
+test("resolved in v0.63: projectDemonstrated no longer contradicts moduleComplete", async t => {
+  await t.test("challenge-only evidence never demonstrates a project", () => {
     const l = gameableProfile();
     C.COMPETENCIES.forEach(c => answerChallenge(l, c.id, 1));
     assert.equal(M.moduleComplete(l, "foundation"), false);
+    assert.equal(M.projectDemonstrated(l, "pr1", "foundation"), false,
+      "formative evidence alone must not demonstrate a project");
+  });
+
+  await t.test("assessed evidence does demonstrate it", () => {
+    const l = gameableProfile();
+    passCheckpoint(l, "CP2", "pr1");
     assert.equal(M.projectDemonstrated(l, "pr1", "foundation"), true);
+  });
+
+  await t.test("partial coverage never demonstrates it", () => {
+    const l = newLearner();
+    l.projects = [{ id: "pr1", name: "P", context: "c", goal: "g" }];
+    const ev = answerChallenge(l, "C1", 0);
+    ev.projectId = "pr1";
+    passCheckpoint(l, "CP1", "pr1"); // covers C1-C3 only
+    assert.equal(M.projectDemonstrated(l, "pr1", "foundation"), false, "CP1 covers 3 of 7");
+  });
+});
+
+test("the progress bar rewards evidence, not exposure", async t => {
+  await t.test("being taught with no evidence scores zero", () => {
+    const l = newLearner();
+    C.COMPETENCIES.forEach(c => M.markTaught(l, c.id));
+    assert.equal(l.evidence.length, 0);
+    assert.equal(M.overallPct(l, "foundation"), 0, "browsing every lesson must not manufacture progress");
+  });
+
+  await t.test("challenge practice raises the level but never the assessed share", () => {
+    const l = gameableProfile();
+    assert.ok(M.overallPct(l, "foundation") > 0, "practice should register");
+    assert.equal(M.assessedPct(l, "foundation"), 0, "practice is not assessment");
+  });
+
+  await t.test("a passed checkpoint moves the assessed share", () => {
+    const l = fullyAssessedProfile();
+    assert.equal(M.assessedPct(l, "foundation"), 100);
+    assert.equal(M.overallPct(l, "foundation"), 100);
+  });
+
+  await t.test("CP1 alone assesses only its own competencies", () => {
+    const l = gameableProfile();
+    passCheckpoint(l, "CP1", "pr1");
+    assert.equal(M.assessedPct(l, "foundation"), 43, "3 of 7 = 43%");
   });
 });
 
@@ -335,7 +378,7 @@ test("the progress view does not overclaim", async t => {
     assert.match(html, /0<\/strong> assessed/, "assessed count must be visible and zero");
     assert.match(html, /7<\/strong> formative/, "formative count must be shown separately");
     assert.match(html, /Nothing assessed yet/, "must say plainly that nothing is assessed");
-    assert.match(html, /<strong>0\/2<\/strong>\s*checkpoints passed/);
+    assert.match(html, /<strong>0% assessed<\/strong>\s*\(0\/2 checkpoints\)/);
     assert.ok(!/\b\d+<\/strong> evidenced?\b/.test(html), "must not present a raw record count as proof");
   });
 
@@ -348,14 +391,14 @@ test("the progress view does not overclaim", async t => {
 
   await t.test("challenge-only learner: the bar is labelled as level, not completion", () => {
     const html = P.render(gameableProfile());
-    assert.match(html, /average capability level/);
+    assert.match(html, /average demonstrated level/);
     assert.ok(!/competencies complete/.test(html), "still frames challenge count as competencies complete");
   });
 
   await t.test("fully assessed learner: assessed counts and plain Demonstrated are correct", () => {
     const html = P.render(fullyAssessedProfile());
     assert.match(html, /2<\/strong> assessed/);
-    assert.match(html, /<strong>2\/2<\/strong>\s*checkpoints passed/);
+    assert.match(html, /<strong>100% assessed<\/strong>\s*\(2\/2 checkpoints\)/);
     assert.match(html, /pill--independent">Demonstrated</, "a genuinely assessed project should say Demonstrated");
     assert.ok(!/Nothing assessed yet/.test(html), "over-corrected: hides real assessment");
   });
@@ -398,5 +441,31 @@ test("records saved by earlier builds cannot keep claiming independence", async 
     assert.doesNotMatch(json, claim, "export json still carries the old claim");
     assert.match(md, /not an independent judgement/, "the honest disclaimer must remain");
     assert.match(md, /stricter second pass/);
+  });
+});
+
+test("learner-facing copy matches v0.63 semantics", async t => {
+  const { readFileSync } = await import("node:fs");
+  const { join, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const jsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "js");
+  const read = f => readFileSync(join(jsDir, f), "utf8");
+
+  await t.test("no copy defines 'Demonstrated' as mere coverage", () => {
+    const banned = [
+      /confirmed evidence across/i,          // v0.6x phrasing: implies verification
+      /Demonstrated<\/strong> once it has\s*$/, // the old "once it has..." definition
+      /or a passed capstone/i,               // assessment is required, not an alternative
+    ];
+    for (const f of ["main.js", "progress.js", "export.js"]) {
+      for (const re of banned) {
+        assert.ok(!re.test(read(f)), `${f} still defines Demonstrated as coverage: ${re}`);
+      }
+    }
+  });
+
+  await t.test("the projects page states the assessed requirement", () => {
+    assert.match(read("main.js"), /assessed<\/em> evidence — a passed checkpoint — across/);
+    assert.match(read("main.js"), /Challenge\s+evidence alone leaves it covered, not demonstrated/);
   });
 });

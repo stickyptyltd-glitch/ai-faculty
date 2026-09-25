@@ -50,6 +50,15 @@ window.EXPORT = (function () {
     return "foundation";
   }
 
+  function projectBadge(learner, projectId, moduleId) {
+    const pv = M.projectProvenance(learner, projectId);
+    const total = C.competenciesFor(moduleId || "foundation").length;
+    return Object.assign({}, pv, {
+      covered: M.projectCoverage(learner, projectId, moduleId).length,
+      total,
+    });
+  }
+
   function portfolioMarkdown(learner) {
     const moduleId = activeModuleOf(learner);
     const backing = M.checkpointBacking(learner);
@@ -90,15 +99,18 @@ window.EXPORT = (function () {
       md.push("_Nothing confirmed yet._");
     } else {
       groups.forEach(g => {
+        // Three honest states, keyed on coverage then assessment:
+        //   demonstrated | covered but unassessed | partial
+        const complete = g.pv ? g.pv.covered === g.pv.total : false;
+        const assessed = !!(g.pv && g.pv.assessed);
         let suffix = "";
-        if (g.demonstrated) suffix = g.pv && g.pv.formativeOnly
-          ? " — **Demonstrated (formative evidence only)**"
-          : " — **Demonstrated**";
+        if (g.demonstrated) suffix = " — **Demonstrated**";
+        else if (complete) suffix = " — **Covered by challenge evidence only**";
         md.push("## " + g.name + suffix);
         md.push("");
-        if (g.demonstrated && g.pv && g.pv.formativeOnly) {
+        if (complete && !assessed) {
           md.push("_Every competency in this module has evidence on this project, but none of it has "
-            + "been independently assessed. This is practice, not a verified outcome._");
+            + "been assessed. This is practice, not a verified outcome._");
           md.push("");
         }
         md.push(g.evs.map(ev => recordMd(ev, 3)).join("\n"));

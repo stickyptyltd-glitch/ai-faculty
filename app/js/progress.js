@@ -42,11 +42,12 @@ window.PROGRESS = (function () {
     const caps = M.summary(learner, moduleId);
     const done = caps.filter(c => c.complete).length;
     const mp = M.moduleProvenance(learner, moduleId);
+    const apct = M.assessedPct(learner, moduleId);
     // The bar is average ladder attainment, not completion, and it moves when you are taught as
     // well as when you are assessed. Say so, and never let it stand in for "done".
     const caveat = mp.challengedOnly
-      ? `<p class="hint" style="margin:6px 0 0">Nothing here has been assessed yet. This bar reflects
-           challenge practice and what you have been taught — <strong>not</strong> a verified outcome.</p>`
+      ? `<p class="hint" style="margin:6px 0 0">Nothing here has been assessed yet, so nothing here is
+           verified. The bar reflects challenge practice only.</p>`
       : (mp.fullyAssessed
         ? `<p class="hint" style="margin:6px 0 0">All ${mp.checkpointsTotal} checkpoints passed on the mastery rubric.</p>`
         : "");
@@ -54,8 +55,9 @@ window.PROGRESS = (function () {
       <div class="card card--tight" style="margin-bottom:10px">
         <div class="card__label">${esc(title)}</div>
         <div class="bar"><span style="width:${pct}%"></span></div>
-        <p style="margin:0">${pct}% average capability level · <strong>${done}/${caps.length}</strong>
-          challenges complete · <strong>${mp.checkpointsPassed}/${mp.checkpointsTotal}</strong> checkpoints passed</p>
+        <p style="margin:0">${pct}% average demonstrated level ·
+          <strong>${apct}% assessed</strong> (${mp.checkpointsPassed}/${mp.checkpointsTotal} checkpoints) ·
+          <strong>${done}/${caps.length}</strong> challenges complete</p>
         ${caveat}
       </div>
       <div class="caplist">${capList(learner, moduleId)}</div>
@@ -112,8 +114,8 @@ window.PROGRESS = (function () {
             <span class="caprow__id">▷</span>
             <span class="caprow__name">${esc(p.name)}
               <span style="color:var(--text-dim);font-size:12px">· ${cov}/${tot} covered</span></span>
-            ${pill(dem ? (pv.formativeOnly ? "guided" : "independent") : "guided",
-                    dem ? (pv.formativeOnly ? "Covered (formative)" : "Demonstrated") : "In progress")}</a>`;
+            ${pill(cov === tot && pv.assessed ? "independent" : "guided",
+                    cov === tot ? (pv.assessed ? "Demonstrated" : "Covered (formative)") : "In progress")}</a>`;
         }).join("") + `</div>`
       : `<div class="notice">Register a real task to apply the course to — <a data-nav href="#/projects">add a project</a>.</div>`;
 

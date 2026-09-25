@@ -2286,6 +2286,73 @@ number honestly instead of changing what it computes, because both are product d
 "60% from being taught" bar is a defensible product choice only if it is a choice, and right now
 nobody has made it deliberately.
 
+## v0.63 — the two open product decisions, made
+
+v0.62 closed with two things I had deliberately left to the founder, on the grounds that both change
+what learners see. Decision taken: **make them honest, and make the reasoning visible rather than
+buried in a diff.**
+
+**1. "Demonstrated" now means demonstrated.** `projectDemonstrated` required only that every
+competency in the module had *some* record against a project. One challenge per competency was
+enough, so it returned `true` on evidence that had never been assessed — and contradicted
+`moduleComplete` in the same run, which is the disagreement v0.53 identified and I had been
+carrying as an explicit "this is yours to call" since v0.60.
+
+```js
+if (projectCoverage(learner, projectId, moduleId).length !== total) return false;
+return projectProvenance(learner, projectId).assessed;   // <- the new requirement
+```
+
+Covered *and* assessed. The learner-visible consequence is real and intended: a project you have
+only practised on stops reading **Demonstrated**. To keep that from being a downgrade, the badge is
+now three states instead of two — **Demonstrated** / **Covered (formative)** / *N/M covered* — keyed
+on coverage first, then assessment, in the progress view, the projects view and the export. A
+learner who did the work can still see that they did the work; they just can't call it verified.
+
+The test that pinned the old contradiction is now a test of the fix, and asserts the resolution
+rather than the bug: formative-only never demonstrates, assessed does, and **CP1 alone still does
+not** (it covers 3 of 7). The projects page copy that used to say *"Demonstrated once it has
+confirmed evidence across the current module's competencies (or a passed capstone)"* was the same
+laundering in prose, and the "or" was wrong — assessment is required, not an alternative. It now
+states the assessed requirement outright, and a test greps the learner-facing sources to stop that
+definition coming back.
+
+**2. The progress bar no longer rewards being taught.** `markTaught` fires when a learner opens a
+competency, raising it to `emerging`. `overallPct` averaged ladder levels, so **browsing all seven
+lessons produced 20% with zero evidence recorded.** Now a competency only contributes once it has
+evidence:
+
+```
+taught only   →  0%   ·  0% assessed
+7 challenges  → 60%   ·  0% assessed
++ CP2 passed  → 100%  · 100% assessed
+```
+
+The 60% for a challenge-only learner is *not* a bug and I want to be clear about why: those
+challenges really did put them at `independent`, so it is their actual level. What was wrong was
+having no way to see it was unverified. So the caption now leads with the assessed share —
+**"60% average demonstrated level · 0% assessed (0/2 checkpoints) · 0/7 challenges complete"** —
+and the caveat under the bar says nothing here is verified. I also added `assessedPct`, because
+"how much of this is actually verified" was a question the model could answer and nothing could
+display.
+
+**Verified in the browser, both learner shapes.** Fully assessed (2 checkpoints): 100% / 100%
+assessed / 2-of-2, project **Demonstrated**. Challenge-only (7 records, 0 checkpoints): "0 assessed
+· 7 formative records", "Nothing assessed yet — every record so far is a challenge you
+self-confirmed", 60% demonstrated level · **0% assessed**, badge **Covered (formative)**, and the
+projects hint "practice, not a verified outcome". 0 console errors either way.
+
+**Tests 43 → 53, both decisions mutation-checked.** Reverting `projectDemonstrated` to
+coverage-only fails 4; putting exposure back into `overallPct` fails 2; restoring the old copy
+definition fails 3. I also had to fix my own harness twice — the assertions were matching the old
+caption shape and the old export wording, which is the failure mode where a test encodes the
+previous answer rather than the intended one.
+
+**What I did not do.** I did not touch `moduleComplete` (all challenges *and* all checkpoints for
+the module — already correct), and I did not change what a learner has to *do*. Passing CP2 is still
+the only route to the top state, and it is still one capstone. Every change here is about what the
+system is willing to *say*, except the two functions, which now say the true thing.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

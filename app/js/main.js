@@ -1214,13 +1214,13 @@
       return `<div class="card">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:start">
           <strong style="font-size:15px">${esc(p.name)}</strong>
-          <span class="pill pill--${done && !pv.formativeOnly ? "independent" : "guided"}">${
-            done ? (pv.formativeOnly ? "Covered (formative)" : "Demonstrated") : `${cov.length}/${total} covered`}</span>
+          <span class="pill pill--${cov.length === total && pv.assessed ? "independent" : "guided"}">${
+            cov.length === total ? (pv.assessed ? "Demonstrated" : "Covered (formative)") : `${cov.length}/${total} covered`}</span>
         </div>
         <p style="margin:6px 0 4px;color:var(--text-dim);font-size:13px">${esc(p.context)} · ${evc} evidence record${evc === 1 ? "" : "s"}</p>
         <p style="margin:0;font-size:14px">${esc(p.goal)}</p>
         ${cov.length ? `<p class="hint" style="margin:8px 0 0">Covered: ${cov.join(", ")}</p>` : ""}
-        ${done && pv.formativeOnly ? `<p class="hint" style="margin:6px 0 0">Every competency in this module has evidence here,
+        ${cov.length === total && !pv.assessed ? `<p class="hint" style="margin:6px 0 0">Every competency in this module has evidence here,
           but none of it has been assessed. This is practice, not a verified outcome.</p>` : ""}
       </div>`;
     }).join("");
@@ -1228,8 +1228,9 @@
     return `
       <h1>Applied Projects</h1>
       <p class="lead">Register a real task from your life or work. Do the course's challenges against it,
-      and your evidence builds into a portfolio. A project is <strong>Demonstrated</strong> once it has
-      confirmed evidence across the current module's competencies (or a passed capstone).</p>
+      and your evidence builds into a portfolio. A project becomes <strong>Demonstrated</strong> when it has
+      <em>assessed</em> evidence — a passed checkpoint — across the current module's competencies. Challenge
+      evidence alone leaves it covered, not demonstrated.</p>
       ${list || `<div class="notice" style="margin-bottom:16px">No projects yet. Add your first below.</div>`}
       <h2>Add a project</h2>
       <form data-form="project">

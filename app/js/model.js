@@ -91,7 +91,7 @@ window.MODEL = (function () {
   function evidenceForProject(learner, projectId) {
     return learner.evidence.filter(e => e.projectId === projectId);
   }
-  // which of a module's competencies have a confirmed evidence record against this project
+  // which of a module's competencies have any evidence record against this project
   function projectCoverage(learner, projectId, moduleId) {
     const caps = C.competenciesFor(moduleId || "foundation");
     const seen = new Set();
@@ -103,9 +103,15 @@ window.MODEL = (function () {
     });
     return caps.map(c => c.id).filter(id => seen.has(id));
   }
+  // "Demonstrated" is an assessed claim, so it now requires assessed evidence: every
+  // competency in the module covered on this project, and at least one checkpoint backing
+  // it. Before v0.63 a single challenge per competency was enough, which contradicted
+  // moduleComplete and let a learner badge a project they had only practised on.
   function projectDemonstrated(learner, projectId, moduleId) {
     const total = C.competenciesFor(moduleId || "foundation").length;
-    return total > 0 && projectCoverage(learner, projectId, moduleId).length === total;
+    if (total === 0) return false;
+    if (projectCoverage(learner, projectId, moduleId).length !== total) return false;
+    return projectProvenance(learner, projectId).assessed;
   }
 
   // ---- module rollups -----------------------------------------
@@ -116,12 +122,26 @@ window.MODEL = (function () {
       caps.every(c => competencyComplete(learner, c.id)) &&
       cps.every(cp => checkpointDone(learner, cp.id));
   }
+  // Average demonstrated level across the module's competencies. Being taught is not
+  // attainment, so a competency only contributes once the learner has evidence for it --
+  // otherwise browsing every lesson manufactures 20% with nothing recorded.
   function overallPct(learner, moduleId) {
     const caps = C.competenciesFor(moduleId || "foundation");
     if (!caps.length) return 0;
-    const vals = caps.map(c => levelIndex(learner.capabilities[c.id].state));
+    const vals = caps.map(c =>
+      (evidenceFor(learner, c.id).length ? levelIndex(learner.capabilities[c.id].state) : 0));
     const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
     return Math.round((mean / (LEVELS.length - 1)) * 100);
+  }
+
+  // The share of the module's competencies whose recorded level rests on assessed
+  // (checkpoint) evidence rather than challenge practice alone.
+  function assessedPct(learner, moduleId) {
+    const caps = C.competenciesFor(moduleId || "foundation");
+    if (!caps.length) return 0;
+    const backing = checkpointBacking(learner);
+    const assessed = caps.filter(c => capabilityProvenance(learner, c.id, backing).assessed).length;
+    return Math.round((assessed / caps.length) * 100);
   }
   function isDiagnosed(learner) {
     return !!learner.intake && !!learner.track;
@@ -270,6 +290,6 @@ window.MODEL = (function () {
     challengeDone, nextChallenge, challengeProgress, competencyComplete, markChallengeDone,
     checkpointDone, checkpointReady, markCheckpointDone,
     addProject, project, evidenceForProject, projectCoverage, projectDemonstrated,
-    moduleComplete, overallPct, isDiagnosed, foundationDone, summary,
+    moduleComplete, overallPct, assessedPct, isDiagnosed, foundationDone, summary,
   };
 })();
