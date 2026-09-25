@@ -24,11 +24,15 @@ id = "1764d7ac08d14438aa1179e4a748cbce"
 [vars]
 APP_ORIGIN = "https://aifaculty.org"
 RESEND_FROM = "AI Faculty <accounts@aifaculty.org>"
-# Dev mode requires BOTH of these: RESEND_API_KEY empty AND DEV_LINKS "true" — deliberately two
-# switches, not one, so setting the Resend key alone can't be the only thing standing between
-# this endpoint and "hand out a session for any email typed in". Before real users touch
-# accounts: set RESEND_API_KEY to a real key (real email takes over automatically) AND flip
-# DEV_LINKS to "false" (or delete it). With neither set, sign-in returns 503 rather than a link.
+# Real sign-in by email uses Cloudflare Email Service (founder chose it over Resend; needs Workers
+# Paid). Until that binding exists, RESEND_API_KEY is the fallback sender and stays empty.
+#
+# Dev mode is now gated three ways, not two: RESEND_API_KEY empty AND DEV_LINKS "true" AND the
+# caller already holding a founder session. The third condition is the one that matters — the first
+# two were configuration, which anyone reaching the site could benefit from, but a founder session
+# is a credential, so dev links can no longer be minted for an address you don't already control.
+# That closed a full takeover of the /api/admin/* surface via the founder's own email address.
+# With no sender available, sign-in returns 503 rather than a link.
 RESEND_API_KEY = ""
 DEV_LINKS = "true"
 

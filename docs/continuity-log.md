@@ -1369,6 +1369,54 @@ on `#/account` as `stickyptyltd@gmail.com / founder`, `#/faculty` and `#/account
 afterwards, and the console is clean — zero SEVERE entries. The primary sign-in path is now verified
 end to end in a real browser rather than by inference.
 
+## v0.48 — 2026-09-25 — The sign-in takeover hole is closed
+
+Production sign-in was handing out a working session for **any email address typed by anyone**,
+including the founder's. `handleRequestLink` accepted the address, minted a magic-link token and
+returned it in the response body — and `handleVerify` creates the user row if it doesn't exist, so
+this was not merely reading as someone, it was a complete takeover of the `/api/admin/*` surface.
+Anyone who could reach `aifaculty.org` could become the founder.
+
+It survived 116 passing tests because **there was no test for it at all**. `test.mjs` set
+`DEV_LINKS: "true"` in the fake environment and nothing ever asserted what that flag did. Two
+independent checks had missed it: the API test suite, and every `curl` probe, because both of them
+were exercising the endpoint the way a legitimate founder would.
+
+The fix gates dev links on a credential rather than on configuration. The original two conditions
+(`RESEND_API_KEY` empty **and** `DEV_LINKS="true"`) were both just switches in a public config
+file; adding a third — *the caller must already hold a founder session* — makes the condition
+something an attacker cannot satisfy. The founder signs in by password (v0.47), so their own
+credential is what authorises minting a link. Learners and reviewers, signed in or not, get 503.
+
+Two supporting changes:
+
+- Delivery mode is now decided **before** a token is minted, so a refused request no longer leaves
+  a live-but-undeliverable row in `magic_links`. Confirmed: zero rows for the founder's address
+  after the refused attack.
+- The client had no message for `signin_unavailable` and showed "Something went wrong — try again".
+  It now says "Signing in by email link isn't switched on yet. Use your password above." The
+  rate-limit path here was also still on the old vague copy and now uses the same real-wait
+  formatter as password sign-in.
+
+The email path is deliberately **not** founder-gated. Learners can't hold a founder session, so
+gating it would permanently break self-serve sign-in the moment a real sender is configured. There
+is a test pinning that: with `RESEND_API_KEY` set, an anonymous visitor is emailed normally.
+
+Verified against production, not just in tests:
+
+- anonymous `POST /api/auth/request-link {"email":"stickyptyltd@gmail.com"}` → **503**, no token in
+  the body, no row written to `magic_links`
+- same request carrying a founder session → `dev_link` issued (the dev workflow still works)
+- same request carrying a learner or reviewer session → 503
+- browser: anonymous visitor reads "Signing in by email link isn't switched on yet. Use your
+  password above."
+
+Tests 116 → 124.
+
+**What this costs us until the email sender is live:** nobody but the founder can sign in by link.
+There are no real learner accounts yet, so this costs nothing today — but it is the reason task #2
+(now a two-minute config change, with the code already written) should not sit much longer.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

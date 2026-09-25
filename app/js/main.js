@@ -7,13 +7,14 @@
   const esc = window.PROGRESS.esc;
 
   // The server sends retryAfter (seconds) plus which cap was hit, so "too many attempts" can
-  // tell the person whether to wait out a lockout or just back off a little.
+  // tell the person whether to wait out a lockout or just back off a little. Reads the flat
+  // requestLink() shape as well as the apiPost() {data} wrapper.
   function rateLimitMessage(res) {
-    const secs = Number(res.data && res.data.retryAfter) || 0;
+    const body = (res && res.data) || res || {};
+    const secs = Number(body.retryAfter) || 0;
     const mins = Math.ceil(secs / 60);
     const wait = mins <= 1 ? "less than a minute" : mins === 1 ? "about a minute" : `${mins} minutes`;
-    const locked = res.data && res.data.reason === "account_locked";
-    return locked
+    return body.reason === "account_locked"
       ? `Too many failed attempts. This account is locked for ${wait}.`
       : `Too many sign-in attempts from this connection. Try again in ${wait}.`;
   }
@@ -318,7 +319,8 @@
         if (!box) return;
         if (!res.ok) {
           const msg = res.error === "invalid_email" ? "That doesn't look like a valid email."
-            : res.error === "rate_limited" ? "Too many attempts — try again in a few minutes."
+            : res.error === "rate_limited" ? rateLimitMessage(res)
+            : res.error === "signin_unavailable" ? "Signing in by email link isn't switched on yet. Use your password above."
             : "Something went wrong — try again.";
           box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
           return;

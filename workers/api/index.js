@@ -170,6 +170,23 @@ async function handleRequestLink(request, env, headers) {
   await env.DB.prepare("DELETE FROM magic_links WHERE expires_at < ?").bind(now.toISOString()).run();
   await env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now.toISOString()).run();
 
+  // Decide how this link can be delivered BEFORE minting a token, so a request we're going to
+  // refuse never leaves a live-but-undeliverable row behind in magic_links.
+  //
+  // Real email needs a sender key. Dev mode needs no key AND an explicit DEV_LINKS=true AND an
+  // authenticated founder session. That last condition is the important one: without it, any
+  // anonymous visitor could request a link for the founder's address, verify it, and land with
+  // full /api/admin/* access. The founder signs in by password, so their own credential is what
+  // gates this rather than anything an attacker can satisfy.
+  const apiKey = env.RESEND_API_KEY || "";
+  const devMode = !apiKey && env.DEV_LINKS === "true";
+  const unavailable = () => json(503, { ok: false, error: "signin_unavailable" }, headers);
+  if (!apiKey && !devMode) return unavailable();
+  if (devMode) {
+    const requester = await currentUser(request, env);
+    if (!requester || requester.role !== "founder") return unavailable();
+  }
+
   const token = randomToken();
   const tokenHash = await sha256Hex(token);
   const expires = new Date(now.getTime() + LINK_TTL_MS);
@@ -178,7 +195,6 @@ async function handleRequestLink(request, env, headers) {
   ).bind(tokenHash, email, now.toISOString(), expires.toISOString()).run();
 
   const verifyUrl = `${env.APP_ORIGIN}/api/auth/verify?token=${token}`;
-  const apiKey = env.RESEND_API_KEY || "";
   if (apiKey) {
     await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -192,13 +208,7 @@ async function handleRequestLink(request, env, headers) {
     });
     return json(200, { ok: true, sent: true }, headers);
   }
-  // Dev mode requires BOTH no Resend key AND an explicit DEV_LINKS=true — setting the Resend
-  // key alone isn't what closes this, so it can't be closed by accident. With neither set,
-  // sign-in is simply unavailable rather than handing out a working link for any email typed in.
-  if (env.DEV_LINKS === "true") {
-    return json(200, { ok: true, sent: false, dev_link: verifyUrl }, headers);
-  }
-  return json(503, { ok: false, error: "signin_unavailable" }, headers);
+  return json(200, { ok: true, sent: false, dev_link: verifyUrl }, headers);
 }
 
 async function handleVerify(request, env) {

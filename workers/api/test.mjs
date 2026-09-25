@@ -906,5 +906,53 @@ function strongSubmission() {
   check("re-hash uses a fresh salt each upgrade", env.DB._passwords[0].hash !== before);
 }
 
+// 32. dev sign-in links are founder-only. Regression cover for the hole where DEV_LINKS=true
+// handed a working link to anyone who typed any address, including the founder's — which was a
+// complete takeover of the /api/admin/* surface, and had no test at all until now.
+{
+  const f = await makeEnv({ role: "founder" });
+  const env = f.env;
+  const ask = async (body, token, ip = "9.9.9.9") =>
+    worker.fetch(await req("/api/auth/request-link", { method: "POST", body, token, ip }), env);
+
+  let r = await ask({ email: "stickyptyltd@gmail.com" });
+  const anon = await r.json();
+  check("anonymous visitor gets no link", r.status === 503);
+  check("anonymous response contains no token", anon.error === "signin_unavailable" && !anon.dev_link);
+
+  r = await ask({ email: "stickyptyltd@gmail.com" }, f.rawToken);
+  const owner = await r.json();
+  check("founder session still gets a dev link", r.status === 200 && !!owner.dev_link);
+
+  for (const role of ["learner", "reviewer"]) {
+    const e = await makeEnv({ role });
+    r = await worker.fetch(await req("/api/auth/request-link",
+      { method: "POST", body: { email: "someone@example.com" }, token: e.rawToken }), e.env);
+    check(`a signed-in ${role} cannot mint a link`, r.status === 503);
+  }
+
+  env.DEV_LINKS = "false";
+  r = await ask({ email: "x@example.com" }, f.rawToken);
+  check("DEV_LINKS=false refuses even the founder", r.status === 503);
+
+  // With a real sender configured the founder gate must not apply — learners cannot hold a
+  // founder session, so gating the email path too would permanently break self-serve sign-in.
+  const orig = globalThis.fetch;
+  let sent = 0;
+  globalThis.fetch = async (url) => { if (String(url).startsWith("https://api.resend.com")) sent++; return orig(url); };
+  try {
+    const m = await makeEnv({ role: "learner" });
+    m.env.RESEND_API_KEY = "re_test";
+    m.env.DEV_LINKS = "true";
+    r = await worker.fetch(await req("/api/auth/request-link",
+      { method: "POST", body: { email: "newcomer@example.com" } }), m.env);
+    const mailed = await r.json();
+    check("a real sender emails any visitor without a session", r.status === 200 && mailed.sent === true && !mailed.dev_link);
+    check("the email really was sent", sent === 1);
+  } finally {
+    globalThis.fetch = orig;
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
