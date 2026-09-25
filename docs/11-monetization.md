@@ -33,7 +33,7 @@ Free ─────────────── Pro (subscription) ───�
 |---|---|---|---|
 | **Free** | Foundation module (AI-Assisted Workflow Designer, C1–C7) + the first built pathway (Software & Product Development). Full assessment, evidence portfolio, mastery rubric. | $0 | — |
 | **Pro** | Every pathway (23 built and growing: work + build tracks), all capstones, all future content. | $15/mo or $120/yr | Subscription |
-| **Founding Member** | Lifetime Pro, founding-member recognition (certificate + badge + name in the founding ledger), earliest access to new academies. | **$150 one-time** | One-time, pre-Dec 1 2026 |
+| **Founding Member** | Lifetime Pro, founding-member recognition (certificate + badge + name in the founding ledger), earliest access to new academies. | **$150 one-time** | One-time, original price while we build |
 
 **Future ladder** (documented here, built when evidence justifies):
 - **Industry Academies** — grouped pathways + cohort features for a profession or company.

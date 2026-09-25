@@ -257,7 +257,7 @@
         const err = res.data && res.data.error;
         box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${
           err === "payments_not_configured"
-            ? "Payments are opening at launch. Join the early cohort on the landing page and we'll email you when they're live."
+            ? "Payments aren't open yet. Join the “Stay in touch” list on the landing page and we'll email you when they are."
             : err === "invalid_plan" ? "That plan isn't available yet."
             : "Couldn't start checkout — try again."}</div>`;
       });

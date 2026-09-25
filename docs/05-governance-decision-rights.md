@@ -24,6 +24,12 @@ so the institution can grow and delegate without losing human authority or quali
 | 7 | **Personnel / progression** on the Faculty Growth Ladder | The authority one level above the target role; Founder approves *first-of-kind* entries | Verified capability + reliability + judgement + behaviour + performance | Yes (probation, calibration tracking) |
 | 8 | **Compensation** | Founder approves the framework and each paid arrangement | Qualified work performed | Yes |
 
+> **Ratification note (added v0.51, for founder review).** The three items marked **[M006-C]**,
+> **[M006-D]** and **[M006-E]** below were present in the Mission 006 answers but did not survive
+> the first synthesis into this document. They are the *safeguards* from those answers — the parts
+> that stop a permission becoming an unbounded power — so they are restored here ahead of
+> ratification rather than left implicit. Nothing else in the document has changed.
+
 ## 3. Decision-rights principles
 
 1. Every decision records: **owner class · evidence · rationale · review/appeal path · reversibility note.**
@@ -37,6 +43,10 @@ so the institution can grow and delegate without losing human authority or quali
 7. **Reserved Founder powers:** the Constitution, the mission, protection of human authority, and
    first-of-kind approvals. Each is subject to a periodic *"does this still need the Founder, or has
    trusted expertise emerged to delegate it?"* review, and delegated only by explicit recorded decision.
+8. **[M006-D]** A safety concern triggers the precautionary default when it is **specified** — what
+   harm, to whom, by what mechanism. Specificity is what makes a concern investigable rather than an
+   indefinite veto; equally, a specified concern is not permanent once investigated. One credible
+   specialist raising a specified serious-harm concern is sufficient to trigger it.
 
 ## 4. Tie-break / escalation ladder
 
@@ -70,6 +80,13 @@ For any mastery decision or contested assessment:
 Rounds stay partially blind to avoid groupthink. **Disagreement is an investigation signal.** The
 protocol doubles as a learning process for the assessors (their misses become their own evidence).
 
+**[M006-C] Supervised assessors.** A learner approved for assessment under class 7 may give
+formative feedback and contribute scores to the blind multi-assessor pool, and their work is
+shadowed by an authorised assessor throughout a probation period. They **cannot** make the final
+mastery decision — that stays with an authorised holder. Prior mastery qualifies someone to
+*assist*, never to decide finally. Being an assessor is accountability, not status, and calibration
+is tracked: do their scores hold up after reasoned review?
+
 ## 6. Appeal
 
 A learner or a dissenting assessor may request one re-run of the protocol with a fresh assessor set
@@ -86,3 +103,45 @@ less.
 New models are adopted only after: parallel shadow evaluation on our own rubrics + safety +
 calibration + regression on fixed past tasks → Quality & Safety sign-off → staged rollout
 (Research → assessors → teaching → learners) with rollback → prior model pinned for reproducibility.
+
+## 9. Founder dissent on technical matters **[M006-E]**
+
+The Founder is not the final word on technical fact, and the system must not protect the Founder
+from being wrong. This is the case the architecture exists for.
+
+1. A senior specialist's disagreement is a **formal, logged dissent**, not insubordination —
+   authority follows demonstrated expertise and role, not seniority (§3.3).
+2. It routes through the standard evidence process: the claim, its reasoning and its evidence are
+   stated, and Research Faculty runs an independent multi-source review.
+3. The Founder must **engage with the evidence** and either be persuaded or give a reasoned,
+   recorded response. *"Because I'm the Founder"* is not a valid response.
+4. On a **technical** decision, if the review supports the specialists and the Founder cannot rebut
+   them on the merits, **the institution follows the evidence.** The Founder's job is to protect
+   mission, principles, quality standards and human authority — not to be the last word on facts.
+5. **Constitutional / mission changes and consequential-safety calls remain reserved** to the
+   Founder, and to a future human governance body (§3.7).
+6. Repeated overriding of evidence without reasoning is itself a pattern, and is visible to the
+   governance layer.
+
+The healthy outcome is the Founder being overruled on technical matters, recorded as the system
+working rather than failing.
+
+---
+
+## Ratification
+
+This document is **not yet in force.** It is a draft until the Founder records ratification below.
+
+| Field | Value |
+|---|---|
+| Version | v0.1 (draft) |
+| Status | awaiting founder ratification |
+| Ratified by | — |
+| Date ratified | — |
+| Amendments at ratification | — |
+
+To ratify: set **Version** to `v1.0`, **Status** to `ratified`, and fill in the three fields above.
+Any amendment made during review should be recorded in the last row and reflected in
+[missions/mission-006-founder-response.md](missions/mission-006-founder-response.md), which records the
+answers these rules were synthesised from.
+

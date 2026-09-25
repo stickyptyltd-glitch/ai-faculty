@@ -1504,6 +1504,58 @@ subscriber is still downgraded, and a bad signature is refused.
 8. Redeploy, then buy a real Founding Member ticket and confirm the plan flips and the ledger row
    appears in `/api/admin/overview`.
 
+## v0.51 — 2026-09-25 — Governance gaps closed before ratification; no more launch-date promises
+
+### Mission 006 → `05` ratification pack
+
+`05-governance-decision-rights.md` claimed to be synthesised from the Mission 006 answers, so before
+asking the founder to ratify it I checked whether it actually was. **It wasn't, in three places** —
+and all three were the *safeguards* rather than the permissions, which is the worst way to lose them:
+
+- **C (junior assessor) — missing entirely.** The answers allow a supervised learner to assist with
+  assessment but explicitly bar them from the final mastery decision. `05` said only "probation,
+  calibration tracking" and left the bar implicit. Restored to §5 as **[M006-C]**, stating the limit
+  in words, because a limit that isn't written down isn't a limit.
+- **D (safety) — the specificity test was gone.** The precautionary default survived, but not the
+  condition that a concern must be *specified* (what harm, to whom, by what mechanism) to trigger it.
+  Without that, "precautionary" quietly becomes an indefinite veto anyone can trigger by being
+  worried. Restored to §3.8 as **[M006-D]**, both directions — specificity required, but a specified
+  concern isn't permanent once investigated.
+- **E (Founder wrong on technical matters) — absent.** The sharpest claim in the whole mission: the
+  Founder is not the final word on technical fact, and if the evidence review supports the
+  specialists and the Founder cannot rebut them, the institution follows the evidence. None of that
+  was in `05`. This is the case the architecture was built for, and it was the one missing. Added as
+  a new §9 **[M006-E]**.
+
+All three are marked in place, and `05` now carries a **Ratification** table: version, status,
+who, when, and amendments. Ratifying is setting a version, flipping a status, and filling in three
+fields — the founder is not being asked to re-read a wall of prose to do it. `05` remains explicitly
+**not in force** until that happens; I have not ratified a philosophy on the founder's behalf.
+
+### Pricing and launch promises
+
+Dropped "ends at launch" from the Founding Member card, as chosen. That then surfaced three more
+launch promises, all of which had to go too:
+
+- The monetization doc still said Founding Member was "pre-Dec 1 2026" — a date that no longer exists
+  anywhere in the repo, since the countdown was removed in v0.42.
+- Both the landing page and the app told visitors "Payments are opening at launch — join the early
+  cohort and **we'll email you** when it's live." That is a promise the page cannot keep *from where
+  it was made*: the buy buttons are hidden, and no email is collected anywhere in that interaction.
+  The waitlist itself is real and working (verified: `POST /signup` returns 201 `registered`), so the
+  fix was to point at it — "Join the “Stay in touch” list" — rather than remove the promise.
+
+**A CSS bug fell out of testing that.** The "Become a founder" button was still visible with
+payments off, because `b.hidden = true` does nothing when an author rule sets `display`:
+`.btn { display: inline-flex }` beats the UA stylesheet's `[hidden] { display: none }`. So a dead
+button sat under a $150 price, inviting a click that could only end in an error. Fixed with
+`[hidden] { display: none !important }` in both stylesheets — app too, since the same trap is waiting
+for the first place that uses `el.hidden` there.
+
+Tests unchanged at 139 (no logic changed); verified in a browser that the Founding copy reads
+"Lifetime Pro… Original price while we build.", $150 is intact, Pro and Founding buttons are now
+hidden, and no launch-date phrasing survives anywhere on the page.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

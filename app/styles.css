@@ -249,3 +249,8 @@ details.card summary::-webkit-details-marker { display: revert; }
 
 /* stepline chips wrap nicely with icons */
 .stepline span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* The `hidden` attribute is only `display: none` in the UA stylesheet, so ANY author rule that
+   sets `display` beats it — which silently defeats `el.hidden = true` on anything with a display
+   rule of its own (every .btn here). Keep the attribute authoritative. */
+[hidden] { display: none !important; }

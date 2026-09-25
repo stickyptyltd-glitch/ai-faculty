@@ -83,7 +83,7 @@ async function loadPricing() {
   buyButtons.forEach(b => {
     b.hidden = true;
   });
-  pricingMsg("Payment opening at launch — join the early cohort and we'll email you when it's live.", false);
+  pricingMsg("Payments aren't open yet. Join the “Stay in touch” list and we'll email you when they are.", false);
 }
 
 buyButtons.forEach(btn => {
@@ -109,7 +109,7 @@ buyButtons.forEach(btn => {
         return;
       }
       if (data && data.error === "payments_not_configured") {
-        pricingMsg("Payments are opening at launch — join the early cohort and we'll email you when it's live.", false);
+        pricingMsg("Payments aren't open yet. Join the “Stay in touch” list and we'll email you when they are.", false);
       } else if (res.status === 429 || (data && data.error === "rate_limited")) {
         pricingMsg("A little too fast — try again in a minute.", true);
       } else {

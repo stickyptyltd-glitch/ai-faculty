@@ -6,6 +6,13 @@ draft of the **AI Faculty Governance & Decision Rights Model v0.1**
 
 **Status:** draft written on the founder's behalf — edit freely, this is your philosophy to set.
 
+**Ratification:** pending. These answers are the source for
+[../05-governance-decision-rights.md](../05-governance-decision-rights.md). When they are ratified,
+record it in that document's Ratification table and set **Status** above to `ratified`, with the
+date. Note that answers **C**, **D** and **E** carry safeguards that were missing from the first
+synthesis of `05` and have now been restored there (§3.8, §5, §9, marked `[M006-C]`, `[M006-D]`,
+`[M006-E]`) — check those read the way you intended before signing.
+
 ---
 
 ## A — A dramatically better new model appears. Replace the current one immediately?

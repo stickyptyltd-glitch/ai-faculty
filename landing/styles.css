@@ -224,3 +224,8 @@ h2 { font-size: 24px; margin-bottom: 8px; font-weight: 800; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* The `hidden` attribute is only `display: none` in the UA stylesheet, so ANY author rule that
+   sets `display` beats it — which silently defeats `el.hidden = true` on anything with a display
+   rule of its own (every .btn here). Keep the attribute authoritative. */
+[hidden] { display: none !important; }
