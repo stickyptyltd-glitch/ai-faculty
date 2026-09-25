@@ -1720,8 +1720,8 @@
         <div class="card__label">${esc(r.cp_id)} · ${esc(r.adapter)} / ${esc(r.model)}</div>
         <p style="margin:4px 0">Verdict <strong>${esc(r.verdict)}</strong> · learner <strong>${esc(r.learner_email)}</strong>
           · ${fmtWhen(r.call_at)} · disputed by ${esc(r.learner_email)}</p>
-        <div class="lead">${esc(r.verdict)}** Assessed: read the learner's Control-Plane-sealed second
-          assessment and the specialist record, then decide.</div>
+        <div class="lead">Read the learner's Control-Plane-sealed second assessment and the
+          specialist record, then decide.</div>
         <form data-form="faculty-decide" data-call-id="${esc(r.call_id)}">
           <div class="field">
             <label class="card__label">Decision</label>
@@ -1747,6 +1747,10 @@
       ${pending.length ? `<h2>Open on the review list (${pending.length})</h2>${pendingCards}` :
         `<div class="notice">No disputes on the specialist open-review list right now.</div>`}
       ${decided.length ? `<h2>Decided (${decided.length})</h2>${decidedCards}` : ""}`;
+    // wire() has already run by the time this async fetch resolves, so the cards above are not
+    // covered by it. Without this the "Record decision" button falls back to a native form GET
+    // and the decision is never sent.
+    box.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
   }
 
   function readinessState(ready) {

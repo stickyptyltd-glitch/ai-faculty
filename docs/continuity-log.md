@@ -1271,6 +1271,32 @@ mistake worth recording: with no `robots.txt` in the publish directory, Pages fa
 `index.html` for `/robots.txt`, so the URL returned the landing page's HTML with a 200 — not a valid
 robots file. Keeping a real file that permits everything is the correct end state.
 
+## v0.45 — 2026-09-25 — Fix: the "Record decision" button was never wired
+
+Reported as "I assessed it and nothing changed, it just stayed on the same page". The dispute's
+`decision` was still `null` server-side afterwards, so the click never reached the API.
+
+**Cause.** `loadFacultyWorklist()` is async: `wire()` runs during `router()` and attaches submit
+handlers to whatever is in `app` at that moment, but the worklist cards don't exist yet — they are
+injected later by the `GET /api/faculty/reviews` fetch resolving. The loader set `box.innerHTML` and
+returned without attaching handlers, so the injected `<form data-form="faculty-decide">` had no
+submit listener at all. Clicking "Record decision" fell through to a native form GET, which
+re-rendered the same page and looked like a no-op. Fixed by wiring the injected forms after the
+`innerHTML` assignment, the same pattern `loadPasswordStatus` and `renderResult` already used.
+
+This shipped in v0.41 and the 112-test suite did not catch it, because the suite is server-side only
+and has no DOM. A whole class of this bug is invisible to it: any code path that injects a
+`form[data-form]` *after* `wire()` has run. Audited every function that injects such a form —
+`loadFacultyWorklist` was the only genuinely async injector lacking wiring. The synchronous
+`view*` route functions look identical in a grep but are not affected, because `router()` sets
+`app.innerHTML` and then immediately calls `wire()` over the result. Worth remembering before
+adding another async loader.
+
+Also removed a stray `**` and a duplicated verdict from the pending-card body copy.
+
+**Not fixed here:** whether the learner-side Evidence view renders the decision correctly is still
+unverified end to end, because the decision has never actually been recorded through the UI.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
