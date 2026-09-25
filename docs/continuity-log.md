@@ -1673,6 +1673,88 @@ independent assessors, and until they exist the founder should know the ceiling 
 No production data was touched: every rehearsal ran in an anonymous browser profile, so nothing was
 written to D1 and there is nothing to clean up.
 
+## v0.54 — 2026-09-25 — The 10-learner gate: defined, instrumented, and currently unmeasurable for a fixable reason
+
+The Phase 4 gate is *"10 learners, quality metrics hold"*. Two problems, in order of how much they
+matter.
+
+**1. "Quality metrics hold" is not a testable statement.** It has never been defined, so nobody could
+have passed or failed it, and two of us could have "passed" it meaning different things. It now is.
+The metrics below are chosen against the data that actually exists (`submissions`: `band`, `kind`,
+`cap_id`, `duration_ms`, `confidence`, `fields_json`; `activity_log`: `kind`, `ts`), and each one can
+come back false. Thresholds are deliberately not "everyone passes" — the question at ten learners is
+whether drop-off and scoring look like a real course, not whether every outcome is flattering.
+
+- **M1 · Completion.** ≥6 of 10 reach CP1; ≥3 of 10 reach the foundation checkpoint. Not 10/10: real
+  courses lose people, and a gate that only passes on zero attrition is a gate that teaches you to
+  hide attrition.
+- **M2 · Assessment integrity — the one that matters.** Pull ≥20 submissions *without* the awarded
+  band, re-band them blind, compare. **≥80% agreement.** This is the only real test of the limits in
+  v0.53, and it is testable precisely because `fields_json` stores the learner's answer verbatim. If
+  agreement is much lower, the local rubric is inflating every band and M3–M6 are all worthless
+  downstream. This metric can fail the gate on its own.
+- **M3 · The rubric discriminates.** ≤80% of confirmed submissions are "Exceeds". If nearly everything
+  scores top, the rubric isn't measuring. Note the direct implication of v0.53: my own clean 100% run
+  produced 18 records that were nearly all "Exceeds", so *my* run is evidence the ceiling is real, not
+  evidence the course is easy.
+- **M4 · Time on task is plausible.** Checkpoint submissions land in a plausible human range
+  (order 5–60 min). A 30-second checkpoint means pattern-matching, not designing. Cheap signal, and
+  it catches the keyword-scoring weakness in v0.53 more directly than any other number here.
+- **M5 · Retention.** ≥5 of 10 active on ≥2 distinct days. A course nobody returns to is not working,
+  whatever the completion number says.
+- **M6 · Nothing fails silently.** Zero unresolved escalations in `faculty_reviews`; no learner stuck
+  in an error state. Cheap, and it is the one that catches bugs rather than pedagogy.
+
+**2. The gate is ordered before the thing that measures it.** Roadmap line 69 has the learner,
+curriculum and institution dashboards unchecked, so the instrument for "10 learners" does not exist
+when the gate asks for it. **But the gate is not actually blocked** — the data is in D1 and queryable
+today. All six metrics are below as runnable SQL, validated against production D1 this session
+(7 queries, 46 rows read, 0 written). The dashboards are the pleasant way to read these numbers, not
+the only way, so #8 does not have to wait for #9.
+
+```sql
+-- M1 completion: distinct learners reaching each stage
+SELECT kind, COUNT(DISTINCT user_id) AS learners, COUNT(*) AS submissions
+FROM submissions GROUP BY kind;
+SELECT COUNT(DISTINCT user_id) AS reached_CP1 FROM submissions
+  WHERE checkpoint_id = 'CP1' AND band IN ('Meets','Exceeds');
+
+-- M3 is the rubric discriminating, or just flattering?
+SELECT band, COUNT(*) AS n,
+       ROUND(100.0*COUNT(*)/(SELECT COUNT(*) FROM submissions),1) AS pct
+FROM submissions GROUP BY band ORDER BY n DESC;
+
+-- M4 time on task, checkpoints only (challenges are formative)
+SELECT checkpoint_id, COUNT(*) AS n,
+       ROUND(AVG(duration_ms)/60000.0,1) AS avg_min,
+       MIN(duration_ms)/60000.0 AS min_min, MAX(duration_ms)/60000.0 AS max_min
+FROM submissions WHERE kind='checkpoint' AND duration_ms IS NOT NULL
+GROUP BY checkpoint_id;
+
+-- M5 retention: learners active on 2+ distinct days
+SELECT COUNT(*) AS retained_learners FROM (
+  SELECT user_id FROM activity_log GROUP BY user_id HAVING COUNT(DISTINCT date(ts)) >= 2);
+
+-- M6 unresolved escalations
+SELECT COUNT(*) AS open_reviews FROM faculty_reviews WHERE decision IS NULL;
+
+-- M2 THE IMPORTANT ONE: verbatim answers, awarded band deliberately omitted
+SELECT s.id, s.user_id, s.kind, s.cap_id, s.checkpoint_id, s.fields_json
+FROM submissions s ORDER BY RANDOM() LIMIT 20;
+```
+
+**How to actually run the gate.** Recruit the ten first — it is the long pole and nothing above
+depends on them. Keep them real and varied: a mix of professional and personal tracks, at least one
+who will struggle and say so. Then, once they are through: run the SQL, and do the M2 blind re-band
+*before* reading any band column, because the whole point is that the comparison is honest. Write down
+which metrics failed before deciding whether that is a pedagogy problem, a scoring problem, or a bug —
+they have different fixes and the temptation will be to treat them as one.
+
+Carrying M2's limit forward from v0.53: re-banding is done by whoever conducts it, and there is only
+one of them. Ten learners and one reviewer is enough to catch a rubric that has drifted, and not
+enough to call the assessment validated. Phase 3's gate (live faculty at least as good as authored
+content) is the one that actually needs independent assessors, and it is still open.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
