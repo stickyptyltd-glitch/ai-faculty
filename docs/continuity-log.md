@@ -1228,6 +1228,33 @@ still theirs to set.
 Founder-locked items unchanged and not claimed: Stripe Connect, Workers Paid + Cloudflare Email
 billing, `FACULTY_MODEL_KEY`, Mission-006 ratification, human mastery + 10-learner gate.
 
+## v0.43 — 2026-09-25 — Landing page taken out of pre-launch framing
+
+Removing the countdown (v0.42's follow-up) left the landing page still describing a product that
+hadn't launched, and — the part that actually mattered — with **no link to `/app` anywhere on the
+page**. Every call to action either captured an email or went to checkout, so a visitor arriving at
+`aifaculty.org` had no way into the product at all. The timer had been the least of it.
+
+- **The product is now reachable**: a `Start learning free` hero CTA in the space the countdown left
+  (paired with a `See pricing` ghost button), the nav's "Early access" link now points at `/app`,
+  and the Free plan's "Start free" button goes to `/app` rather than to the waitlist. Three paths in.
+- **Launch-date framing removed**: the `Dec 1, 2026` claim is gone from the meta description, the
+  hero and the footer; the `<title>` is no longer "Early Access".
+- **The signup card was the awkward one.** Its whole pitch was "first subscribers keep free access
+  *when AI Faculty goes live*", which stops making sense the moment it does. Reframed as a plain
+  mailing list — new pathways, launch updates, occasional discount — with the button reading "Keep
+  me posted" instead of "Reserve my spot".
+
+Left alone deliberately: the Founding Member copy still says "Original price while we build; ends at
+launch." That is a commercial commitment, not stale chrome, and shortening or dropping the price
+claim is the founder's call rather than a copy fix.
+
+One thing this does **not** resolve: `build.sh` still labels `/app` "the working prototype" and
+ships `X-Robots-Tag: noindex, nofollow` on `/app/*` plus a `robots.txt` disallow. The app is now
+linked from the landing page, which is what noindex was for — keeping the prototype out of search
+results — but a public release and a deliberately unindexed prototype are two different intentions,
+and only the founder can say which one this is now.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

@@ -154,6 +154,18 @@ body {
   border: 1px solid var(--border);
 }
 
+.hero__cta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+@media (min-width: 560px) {
+  .hero__cta { flex-direction: row; }
+  .hero__cta .btn { width: auto; min-width: 190px; }
+}
+
 /* sections */
 .how, .faculty, .pricing {
   padding: 34px 0;
