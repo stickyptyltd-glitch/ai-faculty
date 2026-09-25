@@ -21,6 +21,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
   const feedback = [];
   const payments = [];
   const facultyCalls = [];
+  const submissions = [];
   const facultyReviews = [];
   const founderPasswords = [];
   const passwordFailures = [];
@@ -74,7 +75,12 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     return null;
   }
   async function run(sql, args) {
-    if (sql.startsWith("INSERT INTO feedback")) {
+    if (sql.startsWith("INSERT INTO submissions")) {
+      const [id, user_id, kind, pathway_id, cap_id, challenge_id, checkpoint_id, band, confidence,
+             fields_json, started_at, completed_at, duration_ms] = args;
+      submissions.push({ id, user_id, kind, pathway_id, cap_id, challenge_id, checkpoint_id, band,
+        confidence, fields_json, started_at, completed_at, duration_ms });
+    } else if (sql.startsWith("INSERT INTO feedback")) {
       const [id, user_id, text, page_context, rating, created_at] = args;
       feedback.push({ id, user_id, text, page_context, rating, created_at });
     } else if (sql.startsWith("INSERT INTO users")) {
@@ -158,6 +164,21 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
       const paid = payments.filter(p => p.status === "succeeded");
       return { results: [{ total: paid.reduce((s, p) => s + p.amount_cents, 0), n: paid.length }] };
     }
+    if (sql.includes("FROM submissions")) {
+      if (sql.includes("WHERE user_id = ?")) {
+        const uid = args[0];
+        return { results: submissions.filter(s => s.user_id === uid)
+          .sort((a, b) => String(b.completed_at || "").localeCompare(String(a.completed_at || ""))) };
+      }
+      return { results: submissions };
+    }
+    if (sql.includes("FROM faculty_reviews") && !sql.includes("JOIN")) {
+      return { results: facultyReviews.map(r => ({ ...r })) };
+    }
+    if (sql.includes("FROM faculty_calls") && !sql.includes("LEFT JOIN") && !sql.includes("WHERE")) {
+      return { results: facultyCalls.slice().sort((a, b) =>
+        String(b.created_at || "").localeCompare(String(a.created_at || ""))) };
+    }
     if (sql.includes("FROM users") && !sql.includes("LEFT JOIN")) return { results: usersRows };
     if (sql.includes("LEFT JOIN faculty_reviews") && sql.includes("reviewer.email")) {
       const rows = facultyCalls
@@ -218,7 +239,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     };
     return stmt;
   }
-  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows, _faculty: facultyCalls, _reviews: facultyReviews, _passwords: founderPasswords, _fails: passwordFailures, _sessions: sessions };
+  return { prepare, _feedback: feedback, _submissions: submissions, _payments: payments, _users: usersRows, _faculty: facultyCalls, _reviews: facultyReviews, _passwords: founderPasswords, _fails: passwordFailures, _sessions: sessions };
 }
 
 function makeKV() {
@@ -1069,6 +1090,111 @@ function strongSubmission() {
   check("webhook refuses a bad signature", (await worker.fetch(new Request("https://aifaculty.org/api/payments/webhook", {
     method: "POST", headers: { "Stripe-Signature": "t=1,v1=deadbeef" }, body: "{}",
   }), env)).status === 400);
+}
+
+
+// 35. GET /api/admin/curriculum — auth gate matches every other admin view
+{
+  const { env, rawToken } = await makeEnv({ role: "learner" });
+  check("403 admin/curriculum as learner", (await worker.fetch(await req("/api/admin/curriculum", { token: rawToken }), env)).status === 403);
+  const { env: env2 } = await makeEnv();
+  check("401 admin/curriculum signed out", (await worker.fetch(await req("/api/admin/curriculum"), env2)).status === 401);
+}
+
+// 36. GET /api/admin/curriculum — band distribution per competency, and hardest-first ordering
+{
+  const { env, rawToken } = await makeEnv({ role: "founder" });
+  env.DB._users.push({ id: "u2", email: "second@example.com", role: "learner" });
+  // C1: 2 learners, one Meets, one below. C2: 1 learner, Exceeds. So C1 must sort first
+  // (100% below Meets) and C2 second (0%).
+  const sub = (o) => ({ id: "s" + Math.random(), user_id: "u1", cap_id: "C1", challenge_id: null,
+    checkpoint_id: null, band: "Meets", confidence: "high", duration_ms: 1000,
+    completed_at: "2026-02-01T00:00:00.000Z", ...o });
+  env.DB._submissions.push(
+    sub({}), sub({ user_id: "u2", band: "Not yet" }),
+    sub({ cap_id: "C2", band: "Exceeds" }),
+  );
+  const r = await worker.fetch(await req("/api/admin/curriculum", { token: rawToken }), env);
+  const b = await r.json();
+  check("200 admin/curriculum as founder", r.status === 200 && b.ok === true);
+  check("learner total counts all users", b.totals.learners === 2);
+  check("hardest competency sorts first", b.competencies[0].capId === "C1" && b.competencies[1].capId === "C2");
+  const c1 = b.competencies[0];
+  check("below-Meets is a share of attempts, not a learner count", c1.belowMeetsPct === 50);
+  check("band counts are kept separately", c1.bands["Meets"] === 1 && c1.bands["Not yet"] === 1);
+  check("reach counts distinct learners, not attempts", c1.learnersReached === 2 && c1.reachPct === 100);
+}
+
+// 37. GET /api/admin/curriculum — empty cohort must not divide by zero
+{
+  const { env, rawToken } = await makeEnv({ role: "founder" });
+  const b = await (await worker.fetch(await req("/api/admin/curriculum", { token: rawToken }), env)).json();
+  check("empty curriculum returns zeroed, not NaN", b.totals.submissions === 0
+    && b.competencies.length === 0 && b.funnel.length === 0 && b.checkpoints.length === 0);
+}
+
+// 38. GET /api/admin/curriculum — checkpoint pass rate counts learners, and is 0-safe
+{
+  const { env, rawToken } = await makeEnv({ role: "founder" });
+  const base = { user_id: "u1", cap_id: "C1", challenge_id: null, band: "Meets", confidence: "high",
+    duration_ms: 1000, completed_at: "2026-02-01T00:00:00.000Z" };
+  // Two attempts at CP1, one per learner: one passed, one did not -> 50%.
+  env.DB._submissions.push(
+    { ...base, id: "p1", checkpoint_id: "CP1" },
+    { ...base, id: "p2", checkpoint_id: "CP1", user_id: "u2", band: "Not yet" },
+  );
+  env.DB._users.push({ id: "u2", email: "second@example.com", role: "learner" });
+  const b = await (await worker.fetch(await req("/api/admin/curriculum", { token: rawToken }), env)).json();
+  const cp1 = b.checkpoints.find((c) => c.checkpointId === "CP1");
+  check("checkpoint pass rate is per learner", cp1 && cp1.learners === 2 && cp1.attempts === 2 && cp1.passRatePct === 50);
+}
+
+// 39. GET /api/admin/institution — auth gate
+{
+  const { env, rawToken } = await makeEnv({ role: "learner" });
+  check("403 admin/institution as learner", (await worker.fetch(await req("/api/admin/institution", { token: rawToken }), env)).status === 403);
+  const { env: env2 } = await makeEnv();
+  check("401 admin/institution signed out", (await worker.fetch(await req("/api/admin/institution"), env2)).status === 401);
+}
+
+// 40. GET /api/admin/institution — an unreviewed escalation is counted, and reviewing it clears the count.
+// This is the M6 "zero unreviewed escalations" gate read through the API.
+{
+  const { env, rawToken } = await makeEnv({ role: "founder" });
+  const call = (id, verdict, degraded, latency, created) => env.DB.prepare(
+    "INSERT INTO faculty_calls (id, kind, user_id, cp_id, rubric_dims, submission_json, policy_id, adapter, model, bands_json, verdict, confidence, degraded, status, latency_ms, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+    .bind(id, "checkpoint", "u1", "CP1", "[]", "{}", "pol-1", "dry-run", "none", "[]", verdict,
+      "high", degraded, "ok", latency, created).run();
+  call("fc1", "ready", 0, 120, "2026-02-01T00:00:00.000Z");
+  call("fc2", "escalate", 1, 900, "2026-02-02T00:00:00.000Z");
+
+  let b = await (await worker.fetch(await req("/api/admin/institution", { token: rawToken }), env)).json();
+  check("200 admin/institution as founder", b.ok === true);
+  check("only the non-'ready' call counts as disputed", b.totals.calls === 2 && b.totals.disputed === 1);
+  check("unreviewed escalation is visible (M6 gate input)", b.totals.unreviewed === 1);
+  check("degraded calls are counted", b.totals.degraded === 1);
+  check("dry-run adapter means no live model call", b.totals.liveModelCalls === 0);
+  check("verdict tally separates ready from escalate", b.byVerdict.find((v) => v.value === "ready").n === 1);
+  check("latency averages across calls", b.avgLatencyMs === 510);
+  check("lineage carries the learner email", b.lineage[0].email === "learner@example.com");
+  check("lineage is newest first", b.lineage[0].id === "fc2" && b.lineage[1].id === "fc1");
+
+  // A human reviews the escalation -> the open count must drop to zero.
+  env.DB.prepare("INSERT INTO faculty_reviews (id, call_id, reviewer_user_id, decision, note, created_at) VALUES (?,?,?,?,?,?)")
+    .bind("fr1", "fc2", "u1", "uphold", "agreed with the escalation", "2026-02-03T00:00:00.000Z").run();
+  b = await (await worker.fetch(await req("/api/admin/institution", { token: rawToken }), env)).json();
+  check("reviewing the escalation clears the unreviewed count", b.totals.unreviewed === 0);
+  check("review is attached to the right call in lineage", b.lineage[0].reviewed === true
+    && b.lineage[0].reviewDecision === "uphold" && b.lineage[1].reviewed === false);
+  check("review decision is tallied", b.reviewDecisions.find((d) => d.value === "uphold").n === 1);
+}
+
+// 41. GET /api/admin/institution — no calls at all must not divide by zero
+{
+  const { env, rawToken } = await makeEnv({ role: "founder" });
+  const b = await (await worker.fetch(await req("/api/admin/institution", { token: rawToken }), env)).json();
+  check("empty institution returns zeroed, not NaN", b.totals.calls === 0
+    && b.totals.unreviewed === 0 && b.avgLatencyMs === null && b.lineage.length === 0);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

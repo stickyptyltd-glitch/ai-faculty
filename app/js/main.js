@@ -57,6 +57,8 @@
     { test: p => p === "/account", view: viewAccount },
     { test: p => p === "/feedback", view: viewFeedback },
     { test: p => p === "/admin/feedback", view: viewAdminFeedback },
+    { test: p => p === "/admin/curriculum", view: viewAdminCurriculum },
+    { test: p => p === "/admin/institution", view: viewAdminInstitution },
     { test: p => p === "/admin", view: viewAdminOverview },
     { test: p => p.startsWith("/admin/learners/"), view: viewAdminLearnerDetail },
     { test: p => p === "/admin/learners", view: viewAdminLearners },
@@ -129,6 +131,8 @@
     else if (path === "/admin/learners") loadAdminLearners();
     else if (path.startsWith("/admin/learners/")) loadAdminLearnerDetail(parseHash().parts[2]);
     else if (path === "/admin/feedback") loadAdminFeedback();
+    else if (path === "/admin/curriculum") loadAdminCurriculum();
+    else if (path === "/admin/institution") loadAdminInstitution();
     else if (path === "/account") loadPasswordStatus();
   }
 
@@ -1658,7 +1662,7 @@
   function adminTabs(active) {
     const tab = (href, label, key) =>
       `<a data-nav href="${href}" style="margin-right:16px;font-weight:${active === key ? 700 : 400}">${label}</a>`;
-    return `<p style="margin-bottom:16px">${tab("#/admin", "Overview", "overview")}${tab("#/admin/learners", "Learners", "learners")}${tab("#/admin/feedback", "Feedback", "feedback")}</p>`;
+    return `<p style="margin-bottom:16px">${tab("#/admin", "Overview", "overview")}${tab("#/admin/learners", "Learners", "learners")}${tab("#/admin/curriculum", "Curriculum", "curriculum")}${tab("#/admin/institution", "Institution", "institution")}${tab("#/admin/feedback", "Feedback", "feedback")}</p>`;
   }
 
   const TD = 'style="padding:6px 10px;border-bottom:1px solid var(--border)"';
@@ -1689,6 +1693,12 @@
   }
   function viewAdminFeedback() {
     return requireFounderView(() => `<h1>Admin</h1>${adminTabs("feedback")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
+  }
+  function viewAdminCurriculum() {
+    return requireFounderView(() => `<h1>Admin</h1>${adminTabs("curriculum")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
+  }
+  function viewAdminInstitution() {
+    return requireFounderView(() => `<h1>Admin</h1>${adminTabs("institution")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
   }
 
   // ---- faculty panel (reviewer|founder; server enforces requireReviewer — this is UX only) -----
@@ -1871,6 +1881,8 @@
       </table>`;
   }
 
+  const BAND_SCORE = { "Not yet": 0, "Developing": 1, "Meets": 2, "Exceeds": 3 };
+
   async function loadAdminLearnerDetail(userId) {
     const box = document.getElementById("adminBody");
     if (!box || !window.AUTH.get().user) return;
@@ -1883,15 +1895,197 @@
         <td ${TD}>${s.duration_ms != null ? fmtDuration(s.duration_ms) : "—"}</td>
         <td ${TD}>${fmtWhen(s.completed_at)}</td>
       </tr>`).join("") || `<tr><td colspan="5" class="hint" ${TD}>No submissions yet.</td></tr>`;
+
+    const byCap = {};
+    for (const s of d.submissions) {
+      if (!s.cap_id) continue;
+      const c = (byCap[s.cap_id] ||= { capId: s.cap_id, attempts: 0, bands: {}, totalMs: 0, timed: 0, lastAt: null });
+      c.attempts++;
+      c.bands[s.band || "—"] = (c.bands[s.band || "—"] || 0) + 1;
+      if (Number.isFinite(s.duration_ms)) { c.totalMs += s.duration_ms; c.timed++; }
+      if (!c.lastAt || s.completed_at > c.lastAt) c.lastAt = s.completed_at;
+    }
+    const capRows = Object.values(byCap).sort((a, b) => a.capId.localeCompare(b.capId)).map(c => {
+      const scored = Object.entries(c.bands).filter(([b]) => b in BAND_SCORE);
+      const avg = scored.length
+        ? (scored.reduce((a, [b, n]) => a + BAND_SCORE[b] * n, 0) / scored.reduce((a, [, n]) => a + n, 0))
+        : null;
+      const top = scored.length
+        ? scored.reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0]
+        : "—";
+      return `<tr>
+        <td ${TD}>${esc(c.capId)}</td><td ${TD}>${c.attempts}</td>
+        <td ${TD}>${avg != null ? avg.toFixed(2) : "—"}</td>
+        <td ${TD}>${bandTag(top === "—" ? null : top)}</td>
+        <td ${TD}>${c.timed ? fmtDuration(Math.round(c.totalMs / c.timed)) : "—"}</td>
+        <td ${TD}>${fmtWhen(c.lastAt)}</td>
+      </tr>`;
+    }).join("") || `<tr><td colspan="6" class="hint" ${TD}>No competency evidence yet.</td></tr>`;
+
+    const cps = d.submissions.filter(s => s.checkpoint_id);
+    const cpPassed = cps.filter(s => s.band === "Meets" || s.band === "Exceeds");
+    const cpSummary = ["CP1", "CP2"].map(id => {
+      const at = cps.find(s => s.checkpoint_id === id);
+      if (!at) return `<span class="pill pill--unknown">${id} not attempted</span>`;
+      const passed = at.band === "Meets" || at.band === "Exceeds";
+      return `<span class="pill pill--${passed ? "transferable" : "unknown"}">${id} ${esc(at.band)}</span>`;
+    }).join(" ");
+
     box.innerHTML = `
       <p class="hint"><a data-nav href="#/admin/learners">← All learners</a></p>
       <h2 style="font-size:16px">${esc(d.user.email)}</h2>
       <p class="hint">Account created ${fmtWhen(d.user.created_at)} · time on platform ${fmtDuration(d.timeOnPlatformMs)}</p>
+      <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin:12px 0 16px">
+        <div><div class="card__label">Submissions</div><strong style="font-size:22px">${d.submissions.length}</strong></div>
+        <div><div class="card__label">Competencies touched</div><strong style="font-size:22px">${Object.keys(byCap).length}</strong></div>
+        <div><div class="card__label">Checkpoint attempts</div><strong style="font-size:22px">${cps.length}</strong></div>
+        <div><div class="card__label">Checkpoints passed</div><strong style="font-size:22px">${cpPassed.length}</strong></div>
+      </div>
+      <p style="margin:0 0 20px">${cpSummary}</p>
+      <h3 style="font-size:15px">Per-competency</h3>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr>
+          <th ${TH}>Competency</th><th ${TH}>Attempts</th><th ${TH}>Avg band (0–3)</th>
+          <th ${TH}>Most common</th><th ${TH}>Avg time</th><th ${TH}>Last attempt</th>
+        </tr></thead>
+        <tbody>${capRows}</tbody>
+      </table>
+      <h3 style="font-size:15px">All submissions</h3>
       <table style="width:100%;border-collapse:collapse;margin-top:12px">
         <thead><tr>
           <th ${TH}>Competency</th><th ${TH}>Kind</th><th ${TH}>Band</th><th ${TH}>Time taken</th><th ${TH}>Completed</th>
         </tr></thead>
         <tbody>${subRows}</tbody>
+      </table>`;
+  }
+
+  function bandBar(bands) {
+    const order = ["Not yet", "Developing", "Meets", "Exceeds"];
+    const total = order.reduce((a, b) => a + (bands[b] || 0), 0);
+    if (!total) return `<span class="hint">—</span>`;
+    const seg = order.map(b => {
+      if (!bands[b]) return "";
+      const pct = Math.round((bands[b] / total) * 100);
+      const tone = b === "Exceeds" ? "var(--accent)" : b === "Meets" ? "var(--good)" : "var(--warn)";
+      return `<span title="${b}: ${bands[b]} (${pct}%)" style="display:inline-block;width:${pct}%;height:8px;background:${tone}"></span>`;
+    }).join("");
+    return `<span style="display:inline-flex;width:90px;gap:1px;vertical-align:middle">${seg}</span>
+      <span class="hint" style="margin-left:6px">${total}</span>`;
+  }
+
+  async function loadAdminCurriculum() {
+    const box = document.getElementById("adminBody");
+    if (!box || !window.AUTH.get().user) return;
+    const res = await window.AUTH.apiGet("/admin/curriculum");
+    if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const d = res.data;
+    const empty = !d.totals.submissions;
+    const funnel = d.funnel.map((f, i) => `
+      <tr>
+        <td ${TD}>${i + 1}. ${esc(f.capId)}</td>
+        <td ${TD}>${f.reached}</td>
+        <td ${TD}><span style="display:inline-block;width:120px;height:8px;background:var(--border);vertical-align:middle">
+          <span style="display:block;width:${f.reachPct}%;height:8px;background:var(--accent)"></span></span>
+          <span class="hint" style="margin-left:6px">${f.reachPct}%</span></td>
+      </tr>`).join("") || `<tr><td colspan="3" class="hint" ${TD}>No submissions yet.</td></tr>`;
+    const cpRows = d.checkpoints.map(c => `
+      <tr><td ${TD}>${esc(c.checkpointId)}</td><td ${TD}>${c.learners}</td><td ${TD}>${c.attempts}</td>
+        <td ${TD}>${c.passed}</td><td ${TD}>${c.passRatePct}%</td></tr>`).join("")
+      || `<tr><td colspan="5" class="hint" ${TD}>No checkpoint attempts yet.</td></tr>`;
+    const compRows = d.competencies.map(c => `
+      <tr>
+        <td ${TD}><a data-nav href="#/competency/${esc(c.capId)}">${esc(c.capId)}</a></td>
+        <td ${TD}>${c.attempts}</td>
+        <td ${TD}>${c.learnersReached} (${c.reachPct}%)</td>
+        <td ${TD}>${c.distinctChallenges}</td>
+        <td ${TD}>${bandBar(c.bands)}</td>
+        <td ${TD}>${c.belowMeetsPct}%</td>
+        <td ${TD}>${c.avgDurationMs != null ? fmtDuration(c.avgDurationMs) : "—"}</td>
+      </tr>`).join("") || `<tr><td colspan="7" class="hint" ${TD}>No submissions yet.</td></tr>`;
+    box.innerHTML = `
+      <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">
+        <div><div class="card__label">Learners</div><strong style="font-size:22px">${d.totals.learners}</strong></div>
+        <div><div class="card__label">Submissions</div><strong style="font-size:22px">${d.totals.submissions}</strong></div>
+        <div><div class="card__label">Competencies seen</div><strong style="font-size:22px">${d.totals.competenciesSeen}</strong></div>
+      </div>
+      ${empty ? `<div class="notice">No learner submissions yet. Every number below is zero because there is nothing to measure, not because the cohort did well.</div>` : ""}
+      <h2 style="font-size:16px">Stage reach (M1 funnel)</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr><th ${TH}>Stage</th><th ${TH}>Learners</th><th ${TH}>Share of cohort</th></tr></thead>
+        <tbody>${funnel}</tbody>
+      </table>
+      <h2 style="font-size:16px">Checkpoint pass rates</h2>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr><th ${TH}>Checkpoint</th><th ${TH}>Learners</th><th ${TH}>Attempts</th>
+          <th ${TH}>Passed</th><th ${TH}>Pass rate</th></tr></thead>
+        <tbody>${cpRows}</tbody>
+      </table>
+      <h2 style="font-size:16px">Competency health (hardest first)</h2>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th ${TH}>Competency</th><th ${TH}>Attempts</th><th ${TH}>Learners reached</th>
+          <th ${TH}>Challenges</th><th ${TH}>Band spread</th><th ${TH}>% below Meets</th><th ${TH}>Avg time</th>
+        </tr></thead>
+        <tbody>${compRows}</tbody>
+      </table>
+      <p class="hint" style="margin-top:12px">Band spread runs Not yet → Exceeds left to right. % below Meets counts
+      Not yet + Developing, so a competency with a flat low spread is a hard content problem, not a stuck cohort —
+      the two need different fixes.</p>`;
+  }
+
+  function tallyPills(tallies) {
+    return tallies.map(t =>
+      `<span class="pill pill--unknown" style="margin-right:6px">${esc(t.value)} ×${t.n}</span>`).join("");
+  }
+
+  async function loadAdminInstitution() {
+    const box = document.getElementById("adminBody");
+    if (!box || !window.AUTH.get().user) return;
+    const res = await window.AUTH.apiGet("/admin/institution");
+    if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const d = res.data;
+    const m6 = d.totals.unreviewed === 0
+      ? `<div class="notice">M6 gate input satisfied: no unreviewed escalations.</div>`
+      : `<div class="notice">${d.totals.unreviewed} escalation${d.totals.unreviewed === 1 ? "" : "s"} awaiting human review. M6 requires zero.</div>`;
+    const dryRun = d.totals.calls > 0 && d.totals.liveModelCalls === 0
+      ? `<div class="notice">Every call so far ran on the dry-run adapter — no live model has judged anything.</div>` : "";
+    const lineageRows = d.lineage.map(c => `
+      <tr>
+        <td ${TD}>${esc(c.email)}</td>
+        <td ${TD}>${esc(c.kind)}</td>
+        <td ${TD}>${esc(c.cpId || "—")}</td>
+        <td ${TD}>${esc(c.policyId || "—")}</td>
+        <td ${TD}>${esc(c.adapter)}${c.model ? ` / ${esc(c.model)}` : ""}</td>
+        <td ${TD}>${esc(c.verdict || "—")}</td>
+        <td ${TD}>${c.degraded ? `<span class="pill pill--guided">degraded</span>` : "—"}</td>
+        <td ${TD}>${c.reviewed ? esc(c.reviewDecision || "reviewed") : `<span class="hint">open</span>`}</td>
+        <td ${TD}>${c.latencyMs != null ? `${c.latencyMs}ms` : "—"}</td>
+        <td ${TD}>${fmtWhen(c.createdAt)}</td>
+      </tr>`).join("") || `<tr><td colspan="10" class="hint" ${TD}>No assessment calls recorded yet.</td></tr>`;
+    box.innerHTML = `
+      <div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">
+        <div><div class="card__label">Assessment calls</div><strong style="font-size:22px">${d.totals.calls}</strong></div>
+        <div><div class="card__label">Disputed</div><strong style="font-size:22px">${d.totals.disputed}</strong></div>
+        <div><div class="card__label">Unreviewed</div><strong style="font-size:22px">${d.totals.unreviewed}</strong></div>
+        <div><div class="card__label">Degraded</div><strong style="font-size:22px">${d.totals.degraded}</strong></div>
+        <div><div class="card__label">Human reviews</div><strong style="font-size:22px">${d.totals.reviews}</strong></div>
+        <div><div class="card__label">Avg latency</div><strong style="font-size:22px">${d.avgLatencyMs != null ? d.avgLatencyMs + "ms" : "—"}</strong></div>
+      </div>
+      ${m6}${dryRun}
+      <h2 style="font-size:16px">What answered</h2>
+      <p style="margin:0 0 6px"><strong class="hint">Adapter</strong><br>${tallyPills(d.byAdapter) || `<span class="hint">—</span>`}</p>
+      <p style="margin:0 0 6px"><strong class="hint">Policy</strong><br>${tallyPills(d.byPolicy) || `<span class="hint">—</span>`}</p>
+      <p style="margin:0 0 6px"><strong class="hint">Verdict</strong><br>${tallyPills(d.byVerdict) || `<span class="hint">—</span>`}</p>
+      <p style="margin:0 0 6px"><strong class="hint">Kind</strong><br>${tallyPills(d.byKind) || `<span class="hint">—</span>`}</p>
+      <p style="margin:0 0 16px"><strong class="hint">Model</strong><br>${tallyPills(d.byModel) || `<span class="hint">—</span>`}</p>
+      <h2 style="font-size:16px">Lineage (newest first)</h2>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th ${TH}>Learner</th><th ${TH}>Kind</th><th ${TH}>Checkpoint</th><th ${TH}>Policy</th>
+          <th ${TH}>Adapter / model</th><th ${TH}>Verdict</th><th ${TH}>Adapter health</th>
+          <th ${TH}>Review</th><th ${TH}>Latency</th><th ${TH}>When</th>
+        </tr></thead>
+        <tbody>${lineageRows}</tbody>
       </table>`;
   }
 

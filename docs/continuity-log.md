@@ -1759,6 +1759,69 @@ one of them. Ten learners and one reviewer is enough to catch a rubric that has 
 enough to call the assessment validated. Phase 3's gate (live faculty at least as good as authored
 content) is the one that actually needs independent assessors, and it is still open.
 
+## v0.55 — the institution can now see itself (item #9: curriculum + institution + learner dashboards)
+
+The two dashboards that the M1–M6 gate needs in order to be *readable* rather than just computable.
+The SQL for those metrics was committed in v0.54 and was always runnable by hand; what was missing
+was the thing a founder actually looks at. Two new founder-only views, plus a real per-competency
+picture for an individual learner instead of a flat submission dump.
+
+**`GET /api/admin/curriculum`** — curriculum health, aggregated per competency, hardest first.
+Per competency: attempts, distinct learners reached and the share of the cohort that is, distinct
+challenges attempted, the full four-band distribution, % below Meets, average time on task, and a
+confidence tally. Band distribution is the point: "60% below Meets" and "60% spread evenly across
+three bands" are different problems with different fixes, and the old Overview's struggle-points
+table could not tell them apart. Alongside it, a **stage-reach funnel** (the shape the M1
+completion metric cares about) and **per-checkpoint pass rates**.
+
+**`GET /api/admin/institution`** — the Control Plane's own audit trail. `faculty_calls` is the
+lineage record for every assessment decision, so this view exists to answer *"why was this learner
+banded that way, and who signed off"* without reading the database. Tallies by adapter, policy,
+verdict, kind and model; average latency; degraded count; human review decisions; a 40-row lineage
+tail joined to learner emails; and — the one that matters — **unreviewed escalations**, read with
+the corrected M6 query. The view says so out loud: when no live model has judged anything it shows
+"every call so far ran on the dry-run adapter", and when nothing is recorded it says every number
+is zero *because there is nothing to measure, not because the cohort did well*. A dashboard that
+reads "all clear" on an empty database is the exact failure mode the v0.54 M6 bug was.
+
+**`#/admin/learners/:id`** is now a learner rather than a log: a summary strip (submissions,
+competencies touched, checkpoint attempts, checkpoint passed), per-competency attempts / average
+band / most common band / average time / last attempt, and an explicit CP1+CP2 pass/fail strip that
+shows "not attempted" instead of quietly omitting them. Still the full submission table underneath.
+
+Everything empty-state is safe: no submissions and no calls both render zeroed, with no division
+producing `NaN`. Verified in the browser against both real accounts — the founder (1 submission)
+and `lecheyne24@gmail.com` (none), plus 0 console errors on every view.
+
+**The deploy trap worth remembering.** `wrangler pages deploy dist --project-name aifaculty
+--branch main` reports success and serves the new build at `main.aifaculty.pages.dev` — and leaves
+`aifaculty.pages.dev` and `aifaculty.org` on the *old* build. It is a preview deployment wearing
+the production branch's name. The browser check caught it (the new tabs simply were not there);
+`grep`ing the served `main.js` for a new string confirmed the split before anything was committed.
+Drop `--branch`. Worth checking the served file, not the deploy output, whenever a page change
+appears not to have landed.
+
+### Item #9 closed
+API: `handleAdminCurriculum`, `handleAdminInstitution` + two routes. UI: two routes, a five-tab
+admin strip, two view stubs, two loaders, `bandBar`, `tallyPills`, and the rebuilt learner detail.
+164 tests pass (25 new); `workers/signup` 7 pass; `node --check` clean on every app/landing file.
+
+New tests worth naming, because each one pins a number that could otherwise lie: below-Meets is a
+share of *attempts* and not a learner count; reach counts *distinct learners*; checkpoint pass rate
+is per learner; a non-`ready` call is disputed and a reviewed one stops being unreviewed; the
+adapter tally keeps dry-run distinct from live; and both endpoints return zeroed rather than `NaN`
+on an empty database.
+
+Two bugs I introduced and caught, both from the same bad `str.replace` anchor: a script matched
+`function handleAdminOverview(` *inside* `async function handleAdminOverview(`, orphaning the
+`async` onto the next line and leaving the function non-async; and the two test `INSERT`s were
+written with the wrong arity (`faculty_calls` needs `bands_json`, `faculty_reviews` needs an `id`),
+which silently shifted every argument and produced three plausible-looking failures. Both are why
+the fake-DB now filters the per-user submissions query instead of answering it with the whole table.
+
+`node --check workers/api/index.js` still "fails" — ESM parsed as CommonJS, and committed HEAD fails
+identically at its own `export default`. `node workers/api/test.mjs` is the real gate.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

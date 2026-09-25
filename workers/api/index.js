@@ -535,6 +535,155 @@ function sumActiveMs(timestampsMs) {
   return total;
 }
 
+async function handleAdminCurriculum(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+
+  const [{ results: subs }, { results: users }] = await Promise.all([
+    env.DB.prepare(
+      `SELECT user_id, kind, cap_id, challenge_id, checkpoint_id, band, confidence, duration_ms, completed_at
+       FROM submissions`
+    ).all(),
+    env.DB.prepare("SELECT id FROM users").all(),
+  ]);
+
+  const totalLearners = users.length;
+  const BAND_ORDER = ["Not yet", "Developing", "Meets", "Exceeds"];
+  const byCap = {};
+  for (const s of subs) {
+    const c = (byCap[s.cap_id] ||= {
+      capId: s.cap_id, attempts: 0, learners: new Set(), challenges: new Set(),
+      bands: Object.fromEntries(BAND_ORDER.map((b) => [b, 0])),
+      checkpointAttempts: 0, confidence: { high: 0, medium: 0, low: 0 },
+      totalDuration: 0, durationCount: 0, firstAt: null, lastAt: null,
+    });
+    c.attempts++;
+    c.learners.add(s.user_id);
+    if (s.challenge_id) c.challenges.add(s.challenge_id);
+    if (s.checkpoint_id) c.checkpointAttempts++;
+    if (s.band in c.bands) c.bands[s.band]++;
+    if (s.confidence in c.confidence) c.confidence[s.confidence]++;
+    if (Number.isFinite(s.duration_ms)) { c.totalDuration += s.duration_ms; c.durationCount++; }
+    if (!c.firstAt || s.completed_at < c.firstAt) c.firstAt = s.completed_at;
+    if (!c.lastAt || s.completed_at > c.lastAt) c.lastAt = s.completed_at;
+  }
+
+  const competencies = Object.values(byCap).map((c) => {
+    const reached = c.learners.size;
+    const belowMeets = c.bands["Not yet"] + c.bands["Developing"];
+    return {
+      capId: c.capId,
+      attempts: c.attempts,
+      distinctChallenges: c.challenges.size,
+      checkpointAttempts: c.checkpointAttempts,
+      learnersReached: reached,
+      reachPct: totalLearners ? Math.round((reached / totalLearners) * 100) : 0,
+      bands: c.bands,
+      topBand: BAND_ORDER.reduce((best, b) => (c.bands[b] > c.bands[best] ? b : best), BAND_ORDER[0]),
+      topBandPct: c.attempts ? Math.round((Math.max(...BAND_ORDER.map((b) => c.bands[b])) / c.attempts) * 100) : 0,
+      belowMeetsPct: c.attempts ? Math.round((belowMeets / c.attempts) * 100) : 0,
+      avgDurationMs: c.durationCount ? Math.round(c.totalDuration / c.durationCount) : null,
+      confidence: c.confidence,
+      firstAt: c.firstAt,
+      lastAt: c.lastAt,
+    };
+  }).sort((a, b) => b.belowMeetsPct - a.belowMeetsPct || b.attempts - a.attempts);
+
+  const stageOrder = competencies.map((c) => c.capId);
+  const funnel = stageOrder.map((capId) => {
+    const reached = new Set(subs.filter((s) => s.cap_id === capId).map((s) => s.user_id)).size;
+    return { capId, reached, reachPct: totalLearners ? Math.round((reached / totalLearners) * 100) : 0 };
+  });
+
+  const checkpoints = {};
+  for (const s of subs) {
+    if (!s.checkpoint_id) continue;
+    const cp = (checkpoints[s.checkpoint_id] ||= { checkpointId: s.checkpoint_id, attempts: 0, learners: new Set(), passed: 0 });
+    cp.attempts++;
+    cp.learners.add(s.user_id);
+    if (s.band === "Meets" || s.band === "Exceeds") cp.passed++;
+  }
+
+  return json(200, {
+    ok: true,
+    totals: { learners: totalLearners, submissions: subs.length, competenciesSeen: competencies.length },
+    competencies,
+    funnel,
+    checkpoints: Object.values(checkpoints).map((c) => ({
+      checkpointId: c.checkpointId, attempts: c.attempts, learners: c.learners.size,
+      passed: c.passed,
+      passRatePct: c.learners.size ? Math.round((c.passed / c.learners.size) * 100) : 0,
+    })),
+  }, headers);
+}
+
+async function handleAdminInstitution(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+
+  const [{ results: calls }, { results: reviews }, { results: users }] = await Promise.all([
+    env.DB.prepare(
+      `SELECT id, kind, user_id, cp_id, policy_id, adapter, model, verdict, confidence,
+              degraded, status, latency_ms, created_at
+       FROM faculty_calls ORDER BY created_at DESC`
+    ).all(),
+    env.DB.prepare("SELECT call_id, decision, reviewer_user_id, created_at FROM faculty_reviews").all(),
+    env.DB.prepare("SELECT id, email FROM users").all(),
+  ]);
+
+  const emailById = {};
+  for (const u of users) emailById[u.id] = u.email;
+  const reviewedCalls = new Set(reviews.map((r) => r.call_id));
+
+  const tally = (key) => {
+    const out = {};
+    for (const c of calls) {
+      const k = c[key] == null ? "(none)" : String(c[key]);
+      out[k] = (out[k] || 0) + 1;
+    }
+    return Object.entries(out).map(([value, n]) => ({ value, n })).sort((a, b) => b.n - a.n);
+  };
+
+  const reviewed = new Set();
+  const reviewDecisions = {};
+  for (const r of reviews) {
+    reviewed.add(r.call_id);
+    reviewDecisions[r.decision] = (reviewDecisions[r.decision] || 0) + 1;
+  }
+
+  const disputed = calls.filter((c) => c.verdict !== "ready");
+  const unreviewed = disputed.filter((c) => !reviewedCalls.has(c.id));
+  const latencies = calls.map((c) => c.latency_ms).filter((n) => Number.isFinite(n));
+  const degraded = calls.filter((c) => Number(c.degraded) === 1);
+
+  return json(200, {
+    ok: true,
+    totals: {
+      calls: calls.length,
+      disputed: disputed.length,
+      unreviewed: unreviewed.length,
+      degraded: degraded.length,
+      reviews: reviews.length,
+      liveModelCalls: calls.filter((c) => c.adapter !== "dry-run").length,
+    },
+    byAdapter: tally("adapter"),
+    byPolicy: tally("policy_id"),
+    byVerdict: tally("verdict"),
+    byKind: tally("kind"),
+    byModel: tally("model"),
+    reviewDecisions: Object.entries(reviewDecisions).map(([value, n]) => ({ value, n })).sort((a, b) => b.n - a.n),
+    avgLatencyMs: latencies.length ? Math.round(latencies.reduce((a, b) => a + b, 0) / latencies.length) : null,
+    lineage: calls.slice(0, 40).map((c) => ({
+      id: c.id, kind: c.kind, email: emailById[c.user_id] || c.user_id, cpId: c.cp_id,
+      policyId: c.policy_id, adapter: c.adapter, model: c.model, verdict: c.verdict,
+      confidence: c.confidence, degraded: Number(c.degraded) === 1, status: c.status,
+      latencyMs: c.latency_ms, createdAt: c.created_at,
+      reviewed: reviewed.has(c.id),
+      reviewDecision: (reviews.find((r) => r.call_id === c.id) || {}).decision || null,
+    })),
+  }, headers);
+}
+
 async function handleAdminOverview(request, env, headers) {
   const auth = await requireFounder(request, env, headers);
   if (auth.error) return auth.error;
@@ -1297,6 +1446,12 @@ export default {
     }
     if (request.method === "GET" && url.pathname === "/api/admin/overview") {
       return handleAdminOverview(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/curriculum") {
+      return handleAdminCurriculum(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/institution") {
+      return handleAdminInstitution(request, env, headers);
     }
     if (request.method === "GET" && url.pathname === "/api/admin/readiness") {
       return handleAdminReadiness(request, env, headers);

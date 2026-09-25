@@ -66,9 +66,10 @@ competency, in real software, and *see* their progress.
 - [ ] Second capability added to the graph
 - [x] Learner-faculty (mentor / reviewer) scoped roles — founder-granted `reviewer` role, open-review
       list, reasoned uphold/override/dismiss decisions, learner sees resolutions on Evidence — v0.39
-- [ ] Dashboards (learner / curriculum / faculty / institution) - faculty slice shipped in v0.41
-      (reviewer worklist + uphold/override/dismiss decisions, gated founder/reviewer); learner,
-      curriculum and institution dashboards still to build
+- [x] Dashboards (learner / curriculum / faculty / institution) - faculty slice shipped in v0.41
+      (reviewer worklist + uphold/override/dismiss decisions, gated founder/reviewer); learner +
+      curriculum + institution shipped in v0.55 (per-competency band distribution and stage-reach
+      funnel, checkpoint pass rates, assessment lineage with unreviewed-escalation count)
 - [ ] **Gate:** 10 learners, quality metrics hold
 
 ## Later
