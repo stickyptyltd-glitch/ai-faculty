@@ -1363,9 +1363,11 @@ machine had spent its 8/hour through testing — the 429 was real, not simulated
 Tests 112 → 116, covering the reason codes, the seconds-remaining bounds, and the `Retry-After`
 header on both the lockout and per-IP paths.
 
-**Still open:** the successful sign-in could not be re-verified in a browser inside this change,
-because the per-IP cap was already spent. It was confirmed working by `curl` earlier and by the full
-browser run in v0.46; it is re-checked below once the window rolls over.
+**Closed after the window rolled over.** Once the cap cleared, the full sign-in was re-run in Chrome
+against the live site: password fields present and visible with no clicking, correct password lands
+on `#/account` as `stickyptyltd@gmail.com / founder`, `#/faculty` and `#/account` both load
+afterwards, and the console is clean — zero SEVERE entries. The primary sign-in path is now verified
+end to end in a real browser rather than by inference.
 
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
