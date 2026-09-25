@@ -1735,8 +1735,12 @@ GROUP BY checkpoint_id;
 SELECT COUNT(*) AS retained_learners FROM (
   SELECT user_id FROM activity_log GROUP BY user_id HAVING COUNT(DISTINCT date(ts)) >= 2);
 
--- M6 unresolved escalations
-SELECT COUNT(*) AS open_reviews FROM faculty_reviews WHERE decision IS NULL;
+-- M6 unreviewed escalations. NOT 'decision IS NULL' -- faculty_reviews.decision is
+-- NOT NULL by schema. An escalation is a non-'ready' faculty_calls row with no
+-- review recorded against it yet.
+SELECT COUNT(*) AS unreviewed_escalations
+FROM faculty_calls fc LEFT JOIN faculty_reviews fr ON fr.call_id = fc.id
+WHERE fc.verdict != 'ready' AND fr.id IS NULL;
 
 -- M2 THE IMPORTANT ONE: verbatim answers, awarded band deliberately omitted
 SELECT s.id, s.user_id, s.kind, s.cap_id, s.checkpoint_id, s.fields_json
