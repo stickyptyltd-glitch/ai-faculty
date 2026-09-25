@@ -4,7 +4,7 @@ Everything runs on **Cloudflare** (free tier): domain, DNS, static hosting (Page
 signup backend (Workers). Site layout: **landing page at `/`, the working prototype at `/app/`**
 on `aifaculty.org`.
 
-**Launch target:** Dec 1, 2026 · **Early subscribers get free access.**
+**Status:** live — the landing page links straight into the app at `/app`.
 
 Current state (2026-09-09): domain registered, Pages project live at `aifaculty.pages.dev`,
 Worker deployed + routed. **One manual step left** — the apex DNS record (§3).
@@ -22,7 +22,7 @@ Project **`aifaculty`**, production branch `master`, **direct upload** (not git-
 
 | URL | Source |
 |---|---|
-| `/` | `landing/` (countdown + email signup) |
+| `/` | `landing/` (marketing + email signup) |
 | `/app/` | `app/` (the hash-routed static prototype) |
 
 It also writes a combined `dist/_headers` — the site-wide strict CSP from `landing/_headers`,
@@ -74,7 +74,7 @@ on signup — unset means signups are just stored in KV.
 
 ## 5. Verify (after §3)
 
-- `https://aifaculty.org` — countdown + signup form.
+- `https://aifaculty.org` — marketing + signup form, linking into `/app`.
 - `https://aifaculty.org/app/` — the prototype loads (progress view → "Start the diagnostic").
 - Submit the signup form → "You're on the list!", then:
   ```bash

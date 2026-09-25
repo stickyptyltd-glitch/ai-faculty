@@ -2,7 +2,7 @@
 #
 # Assemble the Cloudflare Pages publish directory.
 #
-#   /            -> landing/  (Dec-1 countdown + email signup)
+#   /            -> landing/  (marketing + email signup)
 #   /app/        -> app/      (the working prototype, hash-routed static app)
 #
 # No toolchain: plain copy + a generated _headers / robots.txt. Output: dist/
