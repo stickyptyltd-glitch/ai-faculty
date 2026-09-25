@@ -1297,6 +1297,43 @@ Also removed a stray `**` and a duplicated verdict from the pending-card body co
 **Not fixed here:** whether the learner-side Evidence view renders the decision correctly is still
 unverified end to end, because the decision has never actually been recorded through the UI.
 
+## v0.46 — 2026-09-25 — ARP loop verified end to end in a real browser (first time)
+
+The reviewer loop had never actually been exercised through the UI. Every prior check was a `curl`
+against the API, which cannot see whether a button is wired to anything — the exact failure mode v0.45
+was. Chrome + chromedriver + selenium are available in this environment, so the loop has now been
+driven the way a person drives it.
+
+What was run, and what came back:
+
+1. **Founder signs in with the password** at `#/login` (opening the collapsed "Sign in with a
+   password instead" details first) — landed on `#/account` as `stickyptyltd@gmail.com / founder`.
+2. **`#/faculty`** loaded the open dispute, `CP1 · dry-run`, verdict `revise`, learner
+   `smoke-arp-v041@example.com`, callId `0050cd30-…`.
+3. **Clicked "Record decision"** — chose `override`, added a note, submitted. Before v0.45 this was
+   a no-op that looked like a page reload. It now posts and the worklist refreshes.
+4. **Server confirmed** `decision=override`, note intact, `reviewer_email=stickyptyltd@gmail.com`.
+5. **Learner signed in by magic link** and opened `#/evidence`, which rendered:
+
+       SPECIALIST RESOLUTION · CP1
+       override · 9/25/2026, 8:37:37 PM
+       Specialist overrode the second assessment — your point was real and is recorded.
+       Note: Browser-verified end to end.
+
+That closes the Assessment Resolution Protocol end to end for the first time: disputed assessment →
+learner escalation → reviewer decision → reasoned resolution back to the learner. Console was clean
+apart from Cloudflare's analytics beacon being correctly blocked by CSP and the expected 401 before
+sign-in.
+
+**The lesson worth keeping:** the 112-test suite is server-side only and had no way to catch v0.45,
+and `curl` had no way to catch it either. Both said everything was fine while the feature was
+completely non-functional. Anything with a submit button in this app needs a browser to verify it.
+That is now possible here, and should be done before calling a client-side change done.
+
+Smoke-test data removed afterwards (user `smoke-arp-v041@example.com` and its call/review/session
+rows), so the first real learner's dispute will be the first thing on the review list. The review
+list is now empty and `faculty_calls` is back to 0.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
