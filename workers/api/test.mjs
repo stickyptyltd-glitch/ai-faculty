@@ -83,7 +83,10 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     } else if (sql.includes("WHERE stripe_customer_id = ?")) {
       const [plan, status, cust] = args; // subscription sync: (plan, status, stripe_customer_id)
       const u = usersRows.find(u => u.stripe_customer_id === cust);
-      if (u) { u.plan = plan; u.plan_status = status; }
+      // Honour the AND plan != 'founding' guard the real SQL carries, otherwise this fake would
+      // happily apply an update production rejects and the test would prove nothing.
+      const skipsFounding = sql.includes("plan != 'founding'");
+      if (u && !(skipsFounding && u.plan === "founding")) { u.plan = plan; u.plan_status = status; }
     } else if (sql.startsWith("UPDATE users SET role")) {
       const [role, id] = args;
       const u = usersRows.find(u => u.id === id);
@@ -1004,6 +1007,68 @@ function strongSubmission() {
   const failBody = await r.json();
   check("a failed send returns 502", r.status === 502);
   check("a failed send leaks no link", failBody.error === "email_send_failed" && !failBody.dev_link);
+}
+
+// 34. Founding Member is lifetime: subscription events must never revoke it
+{
+  const f = await makeEnv({ role: "founder" });
+  const env = f.env;
+  env.STRIPE_SECRET_KEY = "sk_test";
+  env.STRIPE_WEBHOOK_SECRET = "whsec_" + Buffer.from("testsecret").toString("base64url");
+  env.STRIPE_PRICE_FOUNDING = "price_founding";
+  env.STRIPE_PRICE_PRO_MONTHLY = "price_pro_m";
+
+  const stripeEvent = async (type, object, id = "evt_" + Math.random().toString(36).slice(2)) => {
+    const raw = JSON.stringify({ id, type, data: { object } });
+    const t = Math.floor(Date.now() / 1000);
+    const mac = await crypto.subtle.importKey("raw", new TextEncoder().encode("testsecret"),
+      { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sig = [...new Uint8Array(await crypto.subtle.sign("HMAC", mac, new TextEncoder().encode(`${t}.${raw}`)))]
+      .map(b => b.toString(16).padStart(2, "0")).join("");
+    return worker.fetch(new Request("https://aifaculty.org/api/payments/webhook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Stripe-Signature": `t=${t},v1=${sig}` },
+      body: raw,
+    }), env);
+  };
+
+  // A pro subscriber who then buys founding, keeping the same Stripe customer.
+  const user = env.DB._users[0];
+  user.stripe_customer_id = "cus_lifetime";
+  user.plan = "founding";
+  user.plan_status = "active";
+
+  let r = await stripeEvent("customer.subscription.deleted",
+    { customer: "cus_lifetime", status: "canceled", items: { data: [{ price: { id: "price_pro_m" } }] } });
+  check("subscription cancellation accepted", r.status === 200);
+  check("founding survives a subscription cancellation", user.plan === "founding" && user.plan_status === "active");
+
+  await stripeEvent("customer.subscription.updated",
+    { customer: "cus_lifetime", status: "past_due", items: { data: [{ price: { id: "price_pro_m" } }] } }, "evt_2");
+  check("founding survives a past_due subscription", user.plan === "founding" && user.plan_status === "active");
+
+  // A genuine pro subscriber must still be downgraded normally.
+  const g = await makeEnv({ role: "founder" });
+  g.env.STRIPE_SECRET_KEY = "sk_test";
+  g.env.STRIPE_WEBHOOK_SECRET = env.STRIPE_WEBHOOK_SECRET;
+  const pro = g.env.DB._users[0];
+  pro.stripe_customer_id = "cus_pro_only";
+  pro.plan = "pro";
+  const t = Math.floor(Date.now() / 1000);
+  const raw = JSON.stringify({ id: "evt_3", type: "customer.subscription.deleted",
+    data: { object: { customer: "cus_pro_only", status: "canceled", items: { data: [{ price: { id: "price_pro_m" } }] } } } });
+  const mac = await crypto.subtle.importKey("raw", new TextEncoder().encode("testsecret"),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = [...new Uint8Array(await crypto.subtle.sign("HMAC", mac, new TextEncoder().encode(`${t}.${raw}`)))]
+    .map(b => b.toString(16).padStart(2, "0")).join("");
+  await worker.fetch(new Request("https://aifaculty.org/api/payments/webhook", {
+    method: "POST", headers: { "Content-Type": "application/json", "Stripe-Signature": `t=${t},v1=${sig}` }, body: raw,
+  }), g.env);
+  check("a real pro subscriber is still downgraded on cancellation", pro.plan === "free" && pro.plan_status === "canceled");
+
+  check("webhook refuses a bad signature", (await worker.fetch(new Request("https://aifaculty.org/api/payments/webhook", {
+    method: "POST", headers: { "Stripe-Signature": "t=1,v1=deadbeef" }, body: "{}",
+  }), env)).status === 400);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -888,7 +888,10 @@ async function handlePaymentsWebhook(request, env, headers) {
     const user = await upsertUserByEmail(env, sessionEmail, now);
     if (user) {
       const plan = (obj.metadata && obj.metadata.plan) || priceToPlan(env, obj.line_items && obj.line_items.data && obj.line_items.data[0] && obj.line_items.data[0].price && obj.line_items.data[0].price.id);
-      await applyGrant(env, user, plan, plan === "pro" ? "active" : "active", obj.customer || null, obj.amount_total || 0, obj.currency || "usd", event.id, "checkout");
+      // Founding Member is a one-time lifetime purchase, so "active" is the only status that
+      // means anything for it. (Both branches of a ternary here used to read "active" — leftover
+      // from when founding had a different lifecycle.)
+      await applyGrant(env, user, plan, "active", obj.customer || null, obj.amount_total || 0, obj.currency || "usd", event.id, "checkout");
     }
     return json(200, { ok: true }, headers);
   }
@@ -896,9 +899,13 @@ async function handlePaymentsWebhook(request, env, headers) {
   if (type.startsWith("customer.subscription.") && obj) {
     const plan = priceToPlan(env, obj.items && obj.items.data && obj.items.data[0] && obj.items.data[0].price && obj.items.data[0].price.id);
     const status = type === "customer.subscription.deleted" ? "canceled" : (obj.status || "active");
-    const planField = status === "canceled" || status === "past_due" && plan === "pro" ? "free" : plan;
+    const planField = (status === "canceled" || (status === "past_due" && plan === "pro")) ? "free" : plan;
+    // A subscription event must never revoke Founding Member access. Founding is a one-time
+    // lifetime purchase, so it has no subscription lifecycle to be downgraded by — but if the
+    // same Stripe customer once held a Pro subscription and later bought Founding, a replayed or
+    // delayed subscription webhook would otherwise quietly strip a paid-for lifetime entitlement.
     await env.DB.prepare(
-      "UPDATE users SET plan = ?, plan_status = ? WHERE stripe_customer_id = ?"
+      "UPDATE users SET plan = ?, plan_status = ? WHERE stripe_customer_id = ? AND plan != 'founding'"
     ).bind(planField, status, obj.customer).run();
     return json(200, { ok: true }, headers);
   }

@@ -1456,6 +1456,54 @@ Tests 124 → 134. One of them caught a real defect in its own test: the old Res
 requests through to the real API and never asserted a success status, which is precisely why the
 missing `res.ok` check had gone unnoticed. The stub now returns a real response.
 
+## v0.50 — 2026-09-25 — Stripe is audited; one paid-entitlement bug fixed
+
+Payments can't be switched on without a Stripe account, but everything on our side of that line is
+now checked rather than assumed. The good news first: migration `0005_billing.sql` is **already
+applied** in production (`plan`, `plan_status`, `stripe_customer_id` are live columns), the
+readiness gate is a single `STRIPE_SECRET_KEY` check, `/api/payments/plans` degrades honestly with
+`stripeEnabled:false`, and checkout refuses cleanly with 501 rather than half-starting. The webhook
+is correctly gated on *both* secrets, verifies the HMAC signature before parsing anything, uses a
+constant-time compare, and rejects replays older than five minutes. That part is sound.
+
+Two defects fixed while auditing it:
+
+- **A Founding Member's lifetime access could be silently revoked.** Founding is a one-time
+  purchase with no subscription lifecycle, but the subscription webhook matched on
+  `stripe_customer_id` alone. If the same Stripe customer ever held a Pro subscription and later
+  bought Founding, a replayed or delayed subscription event would rewrite their plan back to
+  `free` — taking a paid-for lifetime entitlement away with no refund and no error. The update now
+  carries `AND plan != 'founding'`, so subscription lifecycle can never touch a founding member.
+  Verified against production D1 that the guarded statement is valid SQL.
+- `plan === "pro" ? "active" : "active"` — a ternary whose branches were identical, left over from
+  when founding had a different lifecycle. Now just `"active"`, which is the only status that means
+  anything for a one-time purchase.
+
+A precedence-dependent line (`status === "canceled" || status === "past_due" && plan === "pro"`) was
+correct but only by accident of `&&` binding tighter than `||`; it now has explicit parentheses.
+
+The fake D1 was also lying here: it matched `WHERE stripe_customer_id = ?` and applied the update
+unconditionally, so it could never have caught the founding bug. It now honours the guard clause,
+because a mock that ignores the WHERE is worse than no mock.
+
+Tests 134 → 139, including a real signed Stripe-Signature round trip (HMAC generated in the test,
+verified by the worker) proving founding survives cancellation and past-due, a genuine Pro
+subscriber is still downgraded, and a bad signature is refused.
+
+**To activate (founder):**
+1. Create the Stripe account and complete onboarding.
+2. Create three prices: Pro monthly ($15), Pro annual ($120), Founding Member ($150 one-time).
+3. `npx wrangler secret put STRIPE_SECRET_KEY --name aifaculty-api`
+4. `npx wrangler secret put STRIPE_WEBHOOK_SECRET --name aifaculty-api`
+5. Put the three price IDs into `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_ANNUAL`,
+   `STRIPE_PRICE_FOUNDING` in `workers/api/wrangler.toml`.
+6. Add a webhook endpoint at `/api/payments/webhook` for
+   `checkout.session.completed`, `customer.subscription.*` and `invoice.paid`, and copy its signing
+   secret into step 4.
+7. Enable the **PayPal** wallet in the Stripe Dashboard.
+8. Redeploy, then buy a real Founding Member ticket and confirm the plan flips and the ledger row
+   appears in `/api/admin/overview`.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
