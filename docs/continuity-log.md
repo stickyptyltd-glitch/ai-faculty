@@ -1822,6 +1822,78 @@ the fake-DB now filters the per-user submissions query instead of answering it w
 `node --check workers/api/index.js` still "fails" — ESM parsed as CommonJS, and committed HEAD fails
 identically at its own `export default`. `node workers/api/test.mjs` is the real gate.
 
+## v0.56 — the model adapter is no longer untested code (item #10, preparatory half)
+
+Item #10 is "set `FACULTY_MODEL_KEY` and flip `FACULTY_ADAPTER` off dry-run", and that half is
+still blocked: there are no secrets on the worker, and a model key is not mine to mint. What I
+could do — and should have done before asking anyone to flip that switch — is remove the risk that
+the flip is the first time the code ever runs.
+
+**The `openai-compatible` adapter had zero test coverage.** `modelAssess` is live in the deployed
+Worker: `facultyAssess` calls it whenever the key, base URL and model name are all set and
+`FACULTY_ADAPTER` is not `dry-run`. Nothing had ever executed it, because nothing is configured.
+So the plan was to set a key, flip a flag, and find out. It is now covered by 34 tests driving
+`/api/faculty/assess` with a stubbed `fetch`, and the code was correct as written — which is the
+best available outcome, because it means the flip is now a configuration change rather than a
+debugging session.
+
+What the tests pin, each of which is a way the adapter could have quietly lied:
+
+- **The model's own verdict is never trusted.** `modelAssess` recomputes the verdict from the
+  model's *bands* via `verdictFromStrictBands` and ignores the `verdict` field in the reply. A
+  model that returns `"verdict": "ready"` over two `"Not yet"` bands gets `more`, and the test
+  asserts exactly that. A learner cannot be passed on a model's say-so.
+- **Five malformed-model shapes all degrade instead of throwing**: a band outside the four-point
+  scale, a rubric dimension missing from the reply, prose with no JSON, malformed JSON, and an
+  empty content block. Each falls back to the dry-run result with `degraded: true`, and the test
+  asserts the bad bands never reach the response body.
+- **A dead provider costs a learner nothing.** A thrown `ECONNREFUSED` and an HTTP 500 both
+  degrade; neither 500s. `degraded` is written to `faculty_calls`, so the institution dashboard
+  can see that a live call fell back rather than having quietly stopped being live.
+- **The key does not leak.** It travels in the `Authorization` header and is asserted absent from
+  the request body, which the lineage record does store.
+- **Fenced JSON is handled.** ```` ```json ```` around the object is a normal model behaviour and
+  is stripped, not treated as garbage.
+- **The config flag, not just the key, is what turns it on.** A pinned `dry-run` adapter with a
+  valid key configured never contacts the model, and a partial config missing `FACULTY_MODEL_NAME`
+  stays on dry-run.
+
+### The bug this found
+
+The launch-readiness panel reported the faculty plane as "model live" on the strength of
+`modelConfigured` alone — so setting the key *without* flipping `FACULTY_ADAPTER` would have
+put a green ✓ next to a faculty plane that was still 100% dry-run, every call scored by the same
+local rubric. That is the v0.54 M6 failure mode exactly: a dashboard reading "all clear" when the
+thing it is supposed to watch is not happening. It now distinguishes all three states — not
+configured, configured-but-adapter-still-dry-run, and genuinely live — and only the last one gets
+the ✓. The server already reported `adapter` and `modelConfigured` independently, so no API change
+was needed; a test pins all three states so the distinction cannot be quietly collapsed again.
+
+One self-inflicted stumble worth recording, because it is the third time this shape of error has
+appeared in this session: the new readiness test called `makeEnv()` with no role, which defaults
+to `learner`, so it read `controls` off a 403 body. Test 27 next to it had the right call a few
+lines away. The lesson is that a 403 and a 200 are both "no exception thrown" to a naive test,
+which is exactly why assertions check the field they mean rather than just the status.
+
+200 tests pass (61 added since v0.55), `workers/signup` 7 pass, build and deploy clean, verified in
+the browser with 0 console errors.
+
+### Still blocked, and the exact steps
+
+```
+npx wrangler secret put FACULTY_MODEL_KEY      --name aifaculty-api
+# then in workers/api/wrangler.toml [vars]:
+#   FACULTY_ADAPTER = "openai-compatible"
+#   FACULTY_MODEL_BASE_URL = "https://<provider>/v1"
+#   FACULTY_MODEL_NAME = "<model id>"
+npx wrangler deploy
+```
+
+The model must return strict JSON shaped `{"bands":{"<dimension>":"Meets"},"verdict":"ready|revise|more","note":"…"}`
+— the shape is stated in the policy preamble the adapter sends. The base URL is the provider's
+OpenAI-compatible root, and `/chat/completions` is appended. A test now proves the readiness panel
+turns green only once all three are set.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

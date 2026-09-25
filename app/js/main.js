@@ -1790,11 +1790,16 @@
     const emailDone = !c.email.devMode;
     const emailValue = emailDone ? "live (dev links off)"
       : "dev links (" + (c.email.resendConfigured ? "Resend key set, DEV_LINKS still on" : "no Resend key yet") + ")";
+    const facultyLive = c.faculty.modelConfigured && c.faculty.adapter !== "dry-run";
+    const facultyValue = facultyLive
+      ? "model live (" + c.faculty.adapter + ")"
+      : c.faculty.modelConfigured
+        ? "model key set but FACULTY_ADAPTER is still dry-run — nothing is calling it"
+        : "dry-run live — model behind FACULTY_MODEL_KEY";
     const items = [
       item("Sign-in email", emailDone, emailValue),
       item("Payments", c.stripe.configured, c.stripe.configured ? "Stripe live" : "waitlist — Stripe not connected"),
-      item("Faculty plane", c.faculty.modelConfigured,
-        c.faculty.modelConfigured ? "model live (" + c.faculty.adapter + ")" : "dry-run live — model behind FACULTY_MODEL_KEY"),
+      item("Faculty plane", facultyLive, facultyValue),
     ];
     const open = l.openReviews;
     const loopLine = open > 0

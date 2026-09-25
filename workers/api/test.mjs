@@ -1197,5 +1197,176 @@ function strongSubmission() {
     && b.totals.unreviewed === 0 && b.avgLatencyMs === null && b.lineage.length === 0);
 }
 
+
+// 42. The openai-compatible model adapter. This path is what item #10 turns on, and it has
+// never been exercised: the deployed adapter is "dry-run", so nothing here runs in production
+// yet. Flipping FACULTY_ADAPTER should not be the first time this code has ever executed.
+const RUBRIC = ["Clarity", "Specificity"];
+const FIELDS = [{ key: "a", label: "A", minWords: 10 }, { key: "b", label: "B", minWords: 10 }];
+const SUBMISSION = {
+  a: "We split intake into three steps because triage was slow; specifically the reviewer queue grew by 40 each Monday.",
+  b: "We measure it as median handoff time, which was 6 hours on the Tuesday of week two because nobody owned the queue.",
+};
+function withFetch(handler, fn) {
+  const real = globalThis.fetch;
+  globalThis.fetch = handler;
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => { globalThis.fetch = real; });
+}
+function modelEnv(env, over = {}) {
+  env.FACULTY_MODEL_KEY = "sk-test";
+  env.FACULTY_MODEL_BASE_URL = "https://model.test/v1";
+  env.FACULTY_MODEL_NAME = "assessor-1";
+  env.FACULTY_ADAPTER = "openai-compatible";
+  Object.assign(env, over);
+  return env;
+}
+function modelReply(content) {
+  return async (url, init) => {
+    modelReply.last = { url, init };
+    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+  };
+}
+function bandsReply(bands, extra = {}) {
+  return modelReply(JSON.stringify({
+    bands, verdict: "ready", note: "model note", confidence: "high", ...extra,
+  }));
+}
+async function assess(env, rawToken, body = {}) {
+  const res = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken,
+    body: { cpId: "CP1", rubricDims: RUBRIC, fields: FIELDS, submission: SUBMISSION, ...body },
+  }), env);
+  return { res, body: await res.json() };
+}
+const GOOD = { Clarity: "Meets", Specificity: "Exceeds" };
+
+// 43. unconfigured -> dry-run, and the model is never contacted
+{
+  const { env, rawToken } = await makeEnv();
+  let called = false;
+  const { res, body } = await withFetch(async () => { called = true; throw new Error("must not be called"); },
+    () => assess(env, rawToken));
+  check("200 assess", res.status === 200);
+  check("no key -> dry-run adapter", body.adapter === "dry-run" && body.model === null);
+  check("unconfigured adapter never calls the model", called === false);
+  check("dry-run result is not flagged degraded", body.degraded === false);
+  check("lineage records the dry-run adapter", env.DB._faculty[0].adapter === "dry-run");
+}
+
+// 44. configured -> the model decides, and the lineage says so
+{
+  const { env, rawToken } = await makeEnv();
+  modelEnv(env);
+  const { res, body } = await withFetch(bandsReply(GOOD), () => assess(env, rawToken));
+  check("200 assess with a model configured", res.status === 200);
+  check("adapter reports openai-compatible and the model name", body.adapter === "openai-compatible" && body.model === "assessor-1");
+  check("bands come from the model", body.bands.Clarity === "Meets" && body.bands.Specificity === "Exceeds");
+  check("a live call is not degraded", body.degraded === false);
+  check("verdict recomputed from model bands reaches ready", body.verdict === "ready");
+  const call = env.DB._faculty[0];
+  check("lineage records the live adapter and model", call.adapter === "openai-compatible" && call.model === "assessor-1");
+  check("lineage records the model bands verbatim", JSON.parse(call.bands_json).Clarity === "Meets");
+  const sent = modelReply.last;
+  check("request goes to base URL + /chat/completions", sent.url === "https://model.test/v1/chat/completions");
+  check("key is sent as a bearer token, not in the body", sent.init.headers.Authorization === "Bearer sk-test"
+    && !JSON.stringify(JSON.parse(sent.init.body)).includes("sk-test"));
+  check("configured model name is sent, temperature pinned to 0",
+    JSON.parse(sent.init.body).model === "assessor-1" && JSON.parse(sent.init.body).temperature === 0);
+}
+
+// 45. integrity: the model's own "ready" claim is ignored — the verdict is recomputed
+{
+  const { env, rawToken } = await makeEnv();
+  modelEnv(env);
+  const { body } = await withFetch(
+    bandsReply({ Clarity: "Not yet", Specificity: "Not yet" }), () => assess(env, rawToken));
+  check("a model claiming ready on below-Meets bands does not get ready", body.verdict === "more");
+  check("weak dimensions are derived from the model bands", body.weakDims.length === 2);
+  check("confidence follows the recomputed verdict", body.confidence === "low");
+}
+
+// 46. degraded fallbacks — the model cannot be trusted to be well-formed, and the lineage must not lie
+const badModel = [
+  ["a band outside the scale", bandsReply({ Clarity: "Brilliant", Specificity: "Meets" })],
+  ["a dimension missing from the reply", bandsReply({ Clarity: "Meets" })],
+  ["prose with no JSON at all", modelReply("I think this is quite good overall, well done.")],
+  ["malformed JSON", modelReply("{bands: {Clarity: 'Meets',")],
+  ["an empty content block", modelReply("")],
+];
+for (const [label, handler] of badModel) {
+  const { env, rawToken } = await makeEnv();
+  modelEnv(env);
+  const { res, body } = await withFetch(handler, () => assess(env, rawToken));
+  const call = env.DB._faculty[0];
+  check(`falls back and flags degraded: ${label}`,
+    res.status === 200 && body.degraded === true && body.adapter === "dry-run" && call.degraded === 1);
+  check(`the model's bad bands never reach the learner: ${label}`,
+    body.bands.Clarity === "Exceeds" || body.bands.Clarity === "Meets");
+}
+
+// 47. a transport failure degrades rather than 500s — a dead provider must not cost a learner their result
+{
+  const { env, rawToken } = await makeEnv();
+  modelEnv(env);
+  const boom = async () => { throw new Error("ECONNREFUSED"); };
+  const { res, body } = await withFetch(boom, () => assess(env, rawToken));
+  check("network throw degrades instead of 500ing", res.status === 200 && body.degraded === true);
+  const { env: env2, rawToken: t2 } = await makeEnv();
+  modelEnv(env2);
+  const http500 = async () => new Response("upstream boom", { status: 500 });
+  const b2 = await withFetch(http500, () => assess(env2, t2));
+  check("http 500 degrades instead of 500ing", b2.res.status === 200 && b2.body.degraded === true);
+}
+
+// 48. the config flag, not just the key, turns the model on
+{
+  const { env, rawToken } = await makeEnv();
+  modelEnv(env, { FACULTY_ADAPTER: "dry-run" });
+  let called = false;
+  const { body } = await withFetch(async () => { called = true; return new Response("{}", { status: 200 }); },
+    () => assess(env, rawToken));
+  check("adapter pinned to dry-run ignores a configured model", body.adapter === "dry-run" && called === false);
+}
+{
+  const { env, rawToken } = await makeEnv();
+  modelEnv(env, { FACULTY_MODEL_NAME: "" });
+  let called = false;
+  const { body } = await withFetch(async () => { called = true; return new Response("{}", { status: 200 }); },
+    () => assess(env, rawToken));
+  check("a partial config (no model name) stays on dry-run", body.adapter === "dry-run" && called === false);
+}
+
+// 49. fenced JSON is a normal model failure mode and is handled, not treated as garbage
+{
+  const { env, rawToken } = await makeEnv();
+  modelEnv(env);
+  const fenced = modelReply("Sure!\n```json\n" + JSON.stringify({ bands: GOOD, note: "ok" }) + "\n```");
+  const { body } = await withFetch(fenced, () => assess(env, rawToken));
+  check("fenced JSON parses and is not degraded",
+    body.degraded === false && body.adapter === "openai-compatible" && body.bands.Clarity === "Meets");
+}
+
+
+// 50. Readiness must report the adapter and the key separately, so a set key with a dry-run
+// adapter can never be mistaken for a live faculty plane.
+{
+  const { env, rawToken } = await makeEnv({ role: "founder" });
+  const off = await (await worker.fetch(await req("/api/admin/readiness", { token: rawToken }), env)).json();
+  check("readiness: unconfigured reports dry-run and not configured",
+    off.controls.faculty.adapter === "dry-run" && off.controls.faculty.modelConfigured === false);
+
+  modelEnv(env, { FACULTY_ADAPTER: "dry-run" });
+  const pinned = await (await worker.fetch(await req("/api/admin/readiness", { token: rawToken }), env)).json();
+  check("readiness: key set but adapter dry-run is still reported as dry-run",
+    pinned.controls.faculty.adapter === "dry-run" && pinned.controls.faculty.modelConfigured === true);
+
+  modelEnv(env, { FACULTY_ADAPTER: "openai-compatible" });
+  const live = await (await worker.fetch(await req("/api/admin/readiness", { token: rawToken }), env)).json();
+  check("readiness: only a non-dry-run adapter reports live",
+    live.controls.faculty.adapter === "openai-compatible" && live.controls.faculty.modelConfigured === true);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
