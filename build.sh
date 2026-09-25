@@ -3,7 +3,7 @@
 # Assemble the Cloudflare Pages publish directory.
 #
 #   /            -> landing/  (marketing + email signup)
-#   /app/        -> app/      (the working prototype, hash-routed static app)
+#   /app/        -> app/      (the app, hash-routed static)
 #
 # No toolchain: plain copy + a generated _headers / robots.txt. Output: dist/
 #
@@ -31,13 +31,14 @@ cat >> dist/_headers <<'EOF'
 /app/*
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://aifaculty-api.lecheyne24.workers.dev; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'
-  X-Robots-Tag: noindex, nofollow
 EOF
 
-# --- keep the prototype out of search indexes ---
+# --- robots.txt: /app is public, so nothing is disallowed here. This file is still emitted
+# because without it Pages falls back to serving index.html for /robots.txt, which is not a
+# valid robots file at all.
 cat > dist/robots.txt <<'EOF'
 User-agent: *
-Disallow: /app/
+Allow: /
 EOF
 
 # --- www -> apex (takes effect once the www DNS record + Pages domain are live) ---

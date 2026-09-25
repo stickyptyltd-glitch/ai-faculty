@@ -1255,6 +1255,22 @@ linked from the landing page, which is what noindex was for — keeping the prot
 results — but a public release and a deliberately unindexed prototype are two different intentions,
 and only the founder can say which one this is now.
 
+## v0.44 — 2026-09-25 — /app un-hidden from search (release)
+
+`/app/*` carried `X-Robots-Tag: noindex, nofollow` and a `robots.txt` disallow, and `build.sh`
+still described it as "the working prototype". That was right while nothing linked to it and the
+intent was to keep it out of search results — but the founder has moved the landing page to a
+public release, and the landing page now links into `/app` three times, so the two intents no longer
+agree.
+
+Both are removed: the `X-Robots-Tag` header is off `/app/*`, and `robots.txt` no longer disallows
+`/app`. Verified live — the header is absent and the file parses.
+
+`robots.txt` is still emitted (`User-agent: * / Allow: /`). Removing the file outright was a brief
+mistake worth recording: with no `robots.txt` in the publish directory, Pages falls back to serving
+`index.html` for `/robots.txt`, so the URL returned the landing page's HTML with a 200 — not a valid
+robots file. Keeping a real file that permits everything is the correct end state.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
