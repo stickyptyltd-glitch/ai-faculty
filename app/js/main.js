@@ -31,6 +31,7 @@
     { test: p => p === "/", view: viewProgress },
     { test: p => p === "/diagnostic", view: viewDiagnostic },
     { test: p => p === "/evidence", view: viewEvidence, after: loadMyReviews },
+    { test: p => p === "/faculty", view: viewFacultyWorklist, after: loadFacultyWorklist },
     { test: p => p === "/about", view: viewAbout },
     { test: p => p.startsWith("/learn/"), view: viewLearn },
     { test: p => p.startsWith("/competency/"), view: viewCompetency },
@@ -42,10 +43,10 @@
     { test: p => p === "/login", view: viewLogin },
     { test: p => p === "/account", view: viewAccount },
     { test: p => p === "/feedback", view: viewFeedback },
-    { test: p => p.startsWith("/admin/learners/"), view: viewAdminLearnerDetail },
-    { test: p => p === "/admin/learners", view: viewAdminLearners },
     { test: p => p === "/admin/feedback", view: viewAdminFeedback },
     { test: p => p === "/admin", view: viewAdminOverview },
+    { test: p => p.startsWith("/admin/learners/"), view: viewAdminLearnerDetail },
+    { test: p => p === "/admin/learners", view: viewAdminLearners },
   ];
 
   // "When was this challenge/checkpoint opened" — stamped by viewChallenge/viewCheckpoint,
@@ -416,6 +417,31 @@
           <p style="margin:0">Your answers are preserved — revise and resubmit any time; evidence is only
           recorded once the rubric is met, so you can keep practising in the meantime.</p>
         </div>`;
+      return;
+    }
+
+    if (kind === "faculty-decide") {
+      const callId = form.dataset.callId;
+      const decision = String(data.decision || "").trim();
+      const note = String(data.note || "").trim();
+      const box = document.getElementById("facultyBody");
+      if (!callId || !decision) {
+        if (box) box.innerHTML = `<div class="notice" style="border-color:var(--warn)">Pick a decision (uphold, override, or dismiss) first.</div>`;
+        return;
+      }
+      if (box) box.innerHTML = `<div class="notice">Recording your decision…</div>`;
+      const res = await window.AUTH.apiPost("/faculty/reviews", { callId, decision, note });
+      if (res.ok && res.data && res.data.ok === true) {
+        window.STORE.log("faculty-decide", callId);
+        if (box) box.innerHTML = `<div class="notice" style="border-color:var(--good)">Decision recorded — the reviewer worklist refreshes.</div>`;
+        if (typeof loadFacultyWorklist === "function") loadFacultyWorklist();
+      } else {
+        const msg =
+          res.status === 403 ? "Not authorized to record a specialist decision."
+          : res.status === 429 ? "Too many — try again in a bit."
+          : "Couldn't record that decision — try again.";
+        if (box) box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
+      }
       return;
     }
 
@@ -1509,6 +1535,7 @@
     if (!checked) { el.innerHTML = ""; return; }
     el.innerHTML = user
       ? `${user.role === "founder" ? `<a data-nav href="#/admin">Admin</a>` : ""}
+         ${user.role === "founder" || user.role === "reviewer" ? `<a data-nav href="#/faculty">Faculty</a>` : ""}
          <a data-nav href="#/account">${esc(user.email)}</a>
          <button class="link-btn" type="button" data-action="logout">Sign out</button>`
       : `<a data-nav href="#/login">Sign in</a>`;
@@ -1557,6 +1584,79 @@
   }
   function viewAdminFeedback() {
     return requireFounderView(() => `<h1>Admin</h1>${adminTabs("feedback")}<div id="adminBody"><p class="hint">Loading…</p></div>`);
+  }
+
+  // ---- faculty panel (reviewer|founder; server enforces requireReviewer — this is UX only) -----
+  function requireFacultyView(body) {
+    const auth = window.AUTH.get();
+    if (!auth.checked) return `<h1>Faculty</h1><p class="lead">Checking your sign-in status…</p>`;
+    if (!auth.user) { location.hash = "#/login"; return ""; }
+    if (auth.user.role !== "reviewer" && auth.user.role !== "founder")
+      return `<h1>Faculty</h1><div class="notice">Not authorized.</div>`;
+    return body();
+  }
+
+  function viewFacultyWorklist() {
+    return requireFacultyView(() => `<h1>Faculty</h1><div id="facultyBody"><p class="hint">Loading…</p></div>`);
+  }
+
+  // Byte-mirror of loadMyReviews/loadEvidence: GET the open review-list from the Control Plane, then
+  // splice the specialist's current decisions into the learner-side dispute records (the same
+  // FACULTY_REVIEWS_LIST_SQL rows a reviewer acts on), and render cards.
+  async function loadFacultyWorklist() {
+    const auth = window.AUTH.get();
+    if (!auth.checked || !auth.user) return;
+    const box = document.getElementById("facultyBody");
+    if (!box) return;
+    box.innerHTML = `<p class="hint">Loading worklist…</p>`;
+    let res;
+    try { res = await window.AUTH.apiGet("/faculty/reviews"); }
+    catch { box.innerHTML = `<div class="notice">Could not reach the Control Plane — try again.</div>`; return; }
+    if (!res.ok || !res.data || !Array.isArray(res.data.reviews)) {
+      box.innerHTML = `<div class="notice">Could not load the review worklist.</div>`;
+      return;
+    }
+    const rows = res.data.reviews;
+    const pending = rows.filter(r => !r.decision);
+    const decided = rows.filter(r => r.decision);
+    const decisionText = {
+      uphold: "Specialist upheld the independent second assessment — the dispute stands as raised.",
+      override: "Specialist overrode the second assessment — the dispute was real and is recorded.",
+      dismiss: "Specialist dismissed the dispute — no change to the assessment.",
+    };
+    const pill = (state, label) => window.PROGRESS.pill(state, label);
+    const pendingCards = pending.map(r => `
+      <div class="card">
+        <div class="card__label">${esc(r.cp_id)} · ${esc(r.adapter)} / ${esc(r.model)}</div>
+        <p style="margin:4px 0">Verdict <strong>${esc(r.verdict)}</strong> · learner <strong>${esc(r.learner_email)}</strong>
+          · ${fmtWhen(r.call_at)} · disputed by ${esc(r.learner_email)}</p>
+        <div class="lead">${esc(r.verdict)}** Assessed: read the learner's Control-Plane-sealed second
+          assessment and the specialist record, then decide.</div>
+        <form data-form="faculty-decide" data-call-id="${esc(r.call_id)}">
+          <div class="field">
+            <label class="card__label">Decision</label>
+            <label class="pill__opt"><input type="radio" name="decision" value="uphold" required> ${esc("uphold")} — uphold the second assessment</label>
+            <label class="pill__opt"><input type="radio" name="decision" value="override"> override — the dispute is real</label>
+            <label class="pill__opt"><input type="radio" name="decision" value="dismiss"> dismiss — no change</label>
+          </div>
+          <div class="field">
+            <label for="facNote">Note for the learner (optional)</label>
+            <textarea id="facNote" name="note" rows="2" placeholder="Why the specialist decided this way (shown to the learner on the Evidence view)."></textarea>
+          </div>
+          <button class="btn" type="submit">Record decision</button>
+        </form>
+      </div>`).join("");
+    const decidedCards = decided.map(r => `
+      <div class="card" style="border-color:var(--good)">
+        <div class="card__label">${esc(r.cp_id)} · decided ${fmtWhen(r.reviewed_at)}</div>
+        <p style="margin:4px 0">${pill(r.decision, r.decision)} · by ${esc(r.reviewer_email)}</p>
+        <p style="margin:4px 0">${esc(decisionText[r.decision] || r.decision)}</p>
+        ${r.note ? `<p style="margin:4px 0;font-size:14px"><strong>Note:</strong> ${esc(r.note)}</p>` : ""}
+      </div>`).join("");
+    box.innerHTML = `
+      ${pending.length ? `<h2>Open on the review list (${pending.length})</h2>${pendingCards}` :
+        `<div class="notice">No disputes on the specialist open-review list right now.</div>`}
+      ${decided.length ? `<h2>Decided (${decided.length})</h2>${decidedCards}` : ""}`;
   }
 
   function readinessState(ready) {

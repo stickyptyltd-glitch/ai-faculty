@@ -1136,6 +1136,41 @@ Two follow-on halves from the v0.39 ship: founder-facing ops hardening, and a fu
   was 23 (content.js `PATHWAYS`). Now 24. The prompt's example gap names (journalism, K-12) were
   still the honest highest-value picks to check first.
 
+## v0.41 - 2026-09-25 - Faculty reviewer worklist (client half of the ARP loop)
+
+The v0.39 ship built the server half of the Assessment Resolution Protocol (ARP) and the v0.40 ship
+hardened ops around it, but nothing on the client ever called it: the `/faculty` route pointed at
+`viewFacultyWorklist` / `loadFacultyWorklist`, which did not exist. The reviewer loop was therefore
+unreachable - a dispute could be escalated and would appear on the open-review list, but no
+specialist could ever see it or record a decision.
+
+- **Worklist** - `/faculty` now renders the Control Plane review list: every disputed call with its
+  checkpoint, adapter, model, verdict, learner and call time, split into the open list and the
+  decided history. Gated by `requireFacultyView` to `founder` / `reviewer`; the server enforces the
+  same rule on `GET /api/faculty/reviews`, the client gate is UX only.
+- **Decisions** - each open row carries an uphold / override / dismiss form plus an optional note for
+  the learner. The new `faculty-decide` branch in `handleForm` (a byte-sibling of the existing
+  `escalate` branch) POSTs `{ callId, decision, note }` to `/api/faculty/reviews`, logs the action,
+  and reloads the worklist. Vocabulary is the same `decisionText` copy the learner already reads on
+  the Evidence view, so both sides of the loop say the same thing about the same decision.
+- **Navigation** - `renderAuthNav` gained a Faculty link for `founder` / `reviewer`, alongside the
+  founder-only Admin link.
+- **Cleanup** - the panel had been pasted twice by an earlier interrupted edit; the dead first copy
+  (68 lines, the `facultyBox` variant) is excised. Each of `requireFacultyView`,
+  `viewFacultyWorklist`, `loadFacultyWorklist` is now declared exactly once. JavaScript hoisting
+  meant the last copy was the one that ran, so this was dead weight rather than a live bug - but it
+  hid the fact that the second copy disagreed with the dispatch about which container to write to.
+- **Validation** - `node --check`, `node workers/api/test.mjs` 73/73 (worker untouched this ship),
+  and a structural sweep confirming the dispatch branch, both decide forms, and the nav link are each
+  present exactly once.
+
+Scope note, stated plainly: this is the **faculty** slice of the Phase 4 "Dashboards (learner /
+curriculum / faculty / institution)" line, not the whole of it. The learner, curriculum and
+institution dashboards are still open, so that roadmap checkbox stays unticked. The founder-locked
+items are unchanged and not claimed here: Stripe Connect onboarding, Workers Paid + Cloudflare Email
+billing, `FACULTY_MODEL_KEY`, Mission-006 ratification, and the human mastery run + 10-learner
+quality gate.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
