@@ -1617,6 +1617,62 @@ thread (docs/08 §5). ARP is proven — v0.46 drove a real override through a re
 a real browser — but the C1 *challenge* path has not yet been driven against a second assessor, and
 the gate should not be read as claiming that.
 
+## v0.53 — 2026-09-25 — Full path to mastery driven end to end; what the evidence is and isn't worth
+
+The Phase 2 gate is *"one learner reaches mastery of AI-Assisted Workflow Designer with an evidence
+trail"*. Drove the entire path in a real browser. **It passes**, and the numbers are:
+
+| | |
+|---|---|
+| Evidence records | **18** (16 challenges + CP1 + CP2) |
+| Foundation module | **100% · 7/7 competencies** |
+| Checkpoints | CP1 and CP2 both `confidence: high · assessors: 1 + 2 (independent) agree` |
+| End state | all seven competencies at **"Can design better approaches"** |
+| Project | auto-promoted to **Demonstrated** |
+| Console errors | 0 (the one 401 is `/api/auth/me` on an anonymous browser, as expected) |
+
+This closes the gap I flagged in v0.52. The ARP was proven on the *review* path; what was untested was
+the ARP on the **checkpoint/capstone** path, which is the one the gate actually depends on. It works,
+and the button is discoverable: submitting to the Assessment Faculty produces formative feedback plus
+a separate **"Request second assessment"** action, which returns *"Assessor 2 of 2 · independent,
+stricter bar"* and either agreement or a specific disagreement. The record then reads
+`assessors: 1 + 2 (independent) agree`. No code changes were needed — this was verification, not repair.
+
+The full shape for the founder, ~2–3 hours: diagnostic → 7 lessons (each: 6 steps, guided practice
+**with a real attempt in a field**, then the three challenges) → **16 challenges** → CP1 → CP2. Both
+checkpoints are three clicks: *Submit to Assessment Faculty* → read the feedback → *Request second
+assessment* → *Confirm & save evidence*. Submitting alone does not record anything; the confirm is the
+save.
+
+**What the evidence is not worth — three limits, stated because the gate is a real gate.**
+
+1. **Assessor 2 is not independent.** It is the same local rubric at a stricter bar, because
+   `FACULTY_ADAPTER="dry-run"`. It is deterministic code, not a second mind. It can catch a missed
+   rubric dimension; it cannot catch a shared blind spot, which is the failure mode two assessors exist
+   to catch. Genuine independence is the Control-Plane thread (docs/08 §5) and is not built.
+2. **Challenge-level evidence is formative and soft.** A scenario challenge passes on the right option
+   plus ≥15 words of reasoning, and the only guard is `placeholderish` — which rejects literally
+   `n/a`, `none`, `-`, `.`, `idk`, `nothing`, or under 3 characters (faculty.js:13). A generic sentence
+   clears it. Worse, the rubric feedback *names* the correct option, and the option order reshuffles on
+   every render (verified: 6 re-renders, 3 distinct orders) — so a learner can retry until the right
+   answer is where they expect it. Neither is an oversight: this is a formative challenge that records
+   engagement, and revealing the answer is the teaching. But it should not be mistaken for assessment
+   rigour, and the checkbox that says "assessed" is doing less work than it appears to.
+3. **Critique challenges are keyword-scored.** They pass by containing signal strings from a list in
+   content.js. My first rehearsal pass genuinely failed all three of them with real prose, and passed
+   once the prose happened to include the signals. A learner who reverse-engineers the list can pass
+   without the reasoning.
+
+The architecture's answer to all three is the same and it is the right one: **the challenges are
+formative, and the checkpoint is the gate.** Mastery comes from CP1+CP2 with two assessors across
+seven banded dimensions, not from eighteen challenge records. The design is defensible and the labels
+are honest — but the honest version of the claim is *"one learner reached the mastery gate and
+produced an 18-record trail"*, not *"the assessment is validated."* Validating that needs real
+independent assessors, and until they exist the founder should know the ceiling is the local rubric.
+
+No production data was touched: every rehearsal ran in an anonymous browser profile, so nothing was
+written to D1 and there is nothing to clean up.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
