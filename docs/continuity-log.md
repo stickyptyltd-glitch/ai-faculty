@@ -2022,6 +2022,34 @@ available.
 
 No new `.md` file: the reconciliation went into this log, per the standing rule.
 
+## v0.59 — the last stale line, and the inventory that should have prevented it (item #13)
+
+The Open-threads list carried "Authored content for C2–C7 still to be written." It was false, and
+had been false since the roadmap line beside it was ticked. It survived that long because nobody
+had a verified count to check it against — which is the actual defect, not the line.
+
+Verified by loading `app/js/content.js` and reading the exports rather than trusting a doc:
+
+| Fact | Value |
+|---|---|
+| Competencies | 7 — `C1`–`C7`, every one with a full lesson |
+| Challenges | 16 (C1:3, C2:3, C3:2, C4:2, C5:2, C6:2, C7:2) |
+| Pathways | 24, all `status: "available"` |
+| Modules (pathway × competency) | 46 |
+| D1 tables | 13 · migrations applied: 9 |
+
+All three of these counts are now in this log where a reader will hit them. Two other Open-threads
+lines were corrected while in there, because v0.57 and v0.58 had made them wrong: "Phases 2–5 …
+monetization now started" now says Phase 2 is built but switched off and Phases 3–5 were never
+started, and the "more domains" line now carries the expansion-prompt warning instead of presenting
+automation as a clean answer.
+
+One adjacent overclaim left in place deliberately: `02-faculty-roles.md` opens by saying each role
+is specified with eight attributes (mission, scope, boundaries, inputs, methods, outputs, handoffs,
+…) and the table carries two of them. So the "faculty role full specs still to be written" thread is
+genuinely open — I annotated it rather than deleting it, and did not rewrite the registry, because
+what belongs in those six missing columns is a content decision, not a cleanup.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
@@ -2033,17 +2061,25 @@ No new `.md` file: the reconciliation went into this log, per the standing rule.
   apply migration `0005_billing.sql`, deploy, enable the **PayPal** wallet in the Stripe Dashboard,
   and decide Public-Sector-style next steps (industry
   academies, teams licensing, verified certificates — see `docs/11-monetization.md` §2).
-- **Phases 2–5** of the platform roadmap (learning plans, qualifications, leaderboard — monetization
-  now started) — remainder approved, not yet built. See `/home/dayle/.claude/plans/smooth-scribbling-heron.md`.
-- **More domains** — professional-services variants, public sector, sales-engineering, product
-  management, design/UX, journalism, and industry-specific academies. Now automatable via
-  `docs/expansion-prompt.md`.
+- **Phases 3–5** of the platform roadmap (learning plans, qualifications, leaderboard) — approved,
+  never started: no `learning_plans`, `qualifications`, `leaderboard_scores` or `reward_redemptions`
+  table exists. Phase 2 (monetization) is **built but switched off** pending a Stripe account, and
+  Phase 1 (accounts) is live. Full phase-by-phase delta in v0.57; the plan itself is
+  `/home/dayle/.claude/plans/smooth-scribbling-heron.md`, whose opening premise is now false and
+  which the founder should rewrite (I did not edit it — it is outside this repo and is a working
+  document of theirs).
+- **More domains** — 24 pathways exist and all are `status: "available"`. Now automatable via
+  `docs/expansion-prompt.md`, which was corrected in v0.58 (it would otherwise have deployed
+  nothing while reporting success, and told the agent to write to an array that does not exist).
 - **Short video clips** — real filmed/animated clips per lesson are a future production asset.
 - **Regulated-domain pathways** (Legal/Finance/HR/Healthcare) — decide experimental-academy
   status vs R2+ verification of regulatory specifics before non-founder learners (see v0.17).
 
 - Mission 006 answers are drafts — founder to review and ratify → promotes `05` to a firmer version.
-- Faculty role full specs (mission/scope/boundaries/…) still to be written.
-- Authored content for C2–C7 still to be written.
+- Faculty role full specs (mission/scope/boundaries/…) still to be written — note
+  `02-faculty-roles.md` opens by promising each role is specified with eight attributes, but the
+  table carries only Mission and Reserved authority. The registry is a summary, not the spec.
 - Control Plane v1 ships the dry-run adapter live; the real model lives behind `FACULTY_MODEL_KEY`
   (founder sets `wrangler secret put` + `FACULTY_ADAPTER`/base URL/name in `wrangler.toml`).
+  As of v0.56 the `openai-compatible` path has 34 tests against it, so that flip is a config change
+  rather than a debugging session.
