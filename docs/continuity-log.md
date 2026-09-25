@@ -2138,6 +2138,64 @@ in under a second. I have not added one: it is a new pattern in a repo whose bui
 "No toolchain", and introducing it is a call worth making deliberately rather than as a side effect
 of a bug fix.
 
+## v0.61 — the same lie was in the app itself, and app/js finally has tests
+
+v0.60 fixed the *export*. Two follow-ups, and the second is the one that matters.
+
+**1. The Evidence view in the app had all four of the same defects.** I went looking for more
+instances rather than stopping at the export, and the page the learner actually looks at was
+laundering the same way:
+
+- The empty state said: *"Evidence is created when you complete a challenge or a practical
+  assessment on your own task and **Assessment Faculty confirms it against the rubric**."* But a
+  challenge answer never leaves the browser — it is scored by keyword heuristics in `faculty.js` and
+  self-confirmed. The copy told a learner that a keyword-matched critique had been confirmed by
+  Assessment Faculty against a rubric. It never had been. This is the single worst sentence I have
+  written in this project and it was live.
+- Per-record lines printed the raw `kind`, so a challenge and a two-assessor capstone looked
+  like the same class of thing.
+- The project pill read **Demonstrated** with no formative qualifier.
+- The lead promised *"Every capability claim links to evidence"* while showing an undifferentiated
+  pile that did not say which records were strong.
+
+All four now mirror the export: records read `formative challenge · not independently assessed`
+versus `checkpoint · assessors: 1 + 2 (independent) agree`; a project backed only by challenges
+gets a `Demonstrated (formative only)` pill and a line saying it is practice, not a verified
+outcome; the empty state describes both routes accurately. Verified in the browser against the
+real 18-record profile (16 challenge records relabelled, checkpoint records untouched, the project
+correctly still reading plain **Demonstrated** because it *is* checkpoint-backed) and against a
+fresh profile for the empty state. 0 console errors.
+
+**2. `app/js` had no tests, so I added them.** v0.60 ended by naming this gap and declining to
+close it as a side effect. It is no longer a side effect — it is the work. 25 tests under
+`node --test`, no dependencies, no build step, no network. `app/test/load.mjs` evaluates the real
+`content.js` / `model.js` / `pathway.js` / `export.js` in a stubbed `window` via `node:vm`, so the
+suite covers shipped code rather than a reimplementation:
+
+- *Content integrity* — unique challenge ids, every `raises` names a real ladder state, every
+  checkpoint references real competencies.
+- *Ladder reachability* — no challenge can grant the top state; exactly one checkpoint does, and
+  it covers all seven; states never downgrade.
+- *Provenance* — challenge-only is formative; checkpoint scope is respected, so C4–C7 correctly
+  claim only CP2 and never CP1.
+- *Export* — the gameable profile from v0.53 cannot be presented as assessed, in Markdown or JSON;
+  the fully-assessed profile still reads plain **Demonstrated**, so the fix cannot degrade a real
+  portfolio into looking unverified.
+- *The open disagreement* — a test that pins `moduleComplete === false` alongside
+  `projectDemonstrated === true` on challenge-only evidence, labelled as the founder decision it
+  still is. It documents the ambiguity rather than hiding it.
+
+**I checked the tests can actually fail.** A suite that passes against broken code is worse than
+no suite, so I mutated the source twice and confirmed red: reverting the v0.60 export fix fails 3
+tests, and changing one challenge's `raises` to the top state fails 4. Both are non-vacuous. The
+first mutation attempt silently did nothing — `raises` is a positional argument to a challenge
+constructor, not a literal, so my `sed` matched nothing and the suite passed green over a broken
+ladder. Worth recording: a mutation that does not apply is indistinguishable from a passing test,
+which is exactly how a green suite lies to you.
+
+`build.sh` now documents the three suites. Note `node --test app/test/` also picks up `load.mjs` as
+a test file, so the documented command names `frontend.test.mjs` explicitly.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

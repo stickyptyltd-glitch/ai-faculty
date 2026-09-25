@@ -147,8 +147,61 @@ window.MODEL = (function () {
     });
   }
 
+  // ---- provenance ---------------------------------------------------
+  // What a claim actually rests on. A capability state is only as strong as the
+  // evidence behind it, and a challenge is formative: self-confirmed and scored
+  // by local heuristics, never an independent judgement. Only a checkpoint goes
+  // through the Assessment Resolution Protocol. Anything rendering a claim to
+  // the learner or to a third party should say which of these it is.
+  function checkpointBacking(learner) {
+    const out = {};
+    Object.keys((learner && learner.checkpoints) || {}).forEach(cpId => {
+      const cp = C.checkpoint(cpId);
+      if (!cp) return;
+      cp.after.forEach(capId => {
+        if (!out[capId]) out[capId] = [];
+        out[capId].push(cpId);
+      });
+    });
+    return out;
+  }
+
+  function capabilityProvenance(learner, capId, backing) {
+    const back = backing || checkpointBacking(learner);
+    const checkpoints = (back[capId] || []).slice().sort();
+    const kinds = [];
+    evidenceFor(learner, capId).forEach(e => {
+      if (e.kind && !kinds.includes(e.kind)) kinds.push(e.kind);
+    });
+    const assessed = checkpoints.length > 0;
+    const formative = kinds.includes("challenge");
+    let label;
+    if (assessed && formative) label = "challenge + " + checkpoints.join(", ");
+    else if (assessed) label = checkpoints.join(", ");
+    else if (formative) label = "formative only (challenge)";
+    else label = kinds.length ? kinds.join(", ") : "no evidence";
+    return { assessed, formative, checkpoints, kinds, label };
+  }
+
+  function projectProvenance(learner, projectId) {
+    const cps = [];
+    evidenceForProject(learner, projectId).forEach(e => {
+      if (e.checkpointId && !cps.includes(e.checkpointId)) cps.push(e.checkpointId);
+    });
+    cps.sort();
+    const hasChallenge = evidenceForProject(learner, projectId).some(e => e.kind === "challenge");
+    return { assessed: cps.length > 0, formativeOnly: hasChallenge && cps.length === 0, checkpoints: cps };
+  }
+
+  const PROVENANCE_NOTE =
+    "A capability state is only as strong as the evidence named on it. Formative evidence is a "
+    + "competency challenge: self-confirmed, scored by local heuristics, and not an independent "
+    + "judgement. Assessed evidence is a checkpoint that went through the Assessment Resolution "
+    + "Protocol, with the assessor count shown.";
+
   return {
     levelIndex, levelLabel, raise, markTaught, addEvidence, evidenceFor,
+    checkpointBacking, capabilityProvenance, projectProvenance, PROVENANCE_NOTE,
     challengeDone, nextChallenge, challengeProgress, competencyComplete, markChallengeDone,
     checkpointDone, checkpointReady, markCheckpointDone,
     addProject, project, evidenceForProject, projectCoverage, projectDemonstrated,

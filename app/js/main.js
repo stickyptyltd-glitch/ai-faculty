@@ -1407,8 +1407,10 @@
     const reviewsBox = window.AUTH.get().user ? `<div id="reviewsBox"></div>` : "";
     if (!learner.evidence.length) {
       return `<h1>Evidence</h1>${pendingNote}${reviewsBox}
-        <p class="lead">Nothing recorded yet. Evidence is created when you complete a challenge or a
-        practical assessment on a real task of your own and Assessment Faculty confirms it against the rubric.</p>
+        <p class="lead">Nothing recorded yet. Records are created two ways. A <strong>challenge</strong>
+        is formative: you answer on your own task, and a set of local heuristics gives you feedback to
+        revise against. A <strong>checkpoint</strong> is assessed: you submit real work to Assessment
+        Faculty, who confirm it against the rubric and record who agreed.</p>
         <a class="btn" data-nav href="#/">Back to progress</a>`;
     }
     const renderEv = ev => {
@@ -1419,7 +1421,7 @@
       return `<div class="evidence-item">
         <time>${new Date(ev.createdAt).toLocaleString()}</time>
         <h3 style="margin:4px 0;text-transform:none;letter-spacing:0;color:var(--text);font-size:15px">${esc(ev.title)}</h3>
-        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${esc(ev.kind)} · confidence: ${esc(ev.confidence)}${ev.assessors ? ` · assessors: ${esc(ev.assessors)}` : ""}${ev.model ? ` · ${esc(ev.model)}` : ""}${ev.lineage ? ` · lineage: ${esc(ev.lineage)}` : ""}</p>
+        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${ev.kind === "challenge" ? "formative challenge" : esc(ev.kind)} · confidence: ${esc(ev.confidence)}${ev.kind === "challenge" ? " · not independently assessed" : ""}${ev.assessors ? ` · assessors: ${esc(ev.assessors)}` : ""}${ev.model ? ` · ${esc(ev.model)}` : ""}${ev.lineage ? ` · lineage: ${esc(ev.lineage)}` : ""}</p>
         ${fieldList}
         ${rub ? `<p style="margin:6px 0 0">${rub}</p>` : ""}
         <p style="margin:8px 0 0;font-size:14px"><strong>Faculty note:</strong> ${esc(ev.feedback)}</p>
@@ -1429,18 +1431,28 @@
     const groups = [];
     (learner.projects || []).forEach(p => {
       const evs = learner.evidence.filter(e => e.projectId === p.id);
-      if (evs.length) groups.push({ name: p.name, demonstrated: M.projectDemonstrated(learner, p.id, activeModule(learner)), evs });
+      if (evs.length) groups.push({
+        name: p.name,
+        demonstrated: M.projectDemonstrated(learner, p.id, activeModule(learner)),
+        pv: M.projectProvenance(learner, p.id),
+        evs,
+      });
     });
     const loose = learner.evidence.filter(e => !e.projectId || !M.project(learner, e.projectId));
     if (loose.length) groups.push({ name: "Not attached to a project", evs: loose });
 
     const body = groups.map(g => `
-      <h2>${esc(g.name)} ${g.demonstrated ? `<span class="pill pill--independent">Demonstrated</span>` : ""}</h2>
+      <h2>${esc(g.name)} ${g.demonstrated ? (g.pv && g.pv.formativeOnly
+        ? `<span class="pill pill--guided">Demonstrated (formative only)</span>`
+        : `<span class="pill pill--independent">Demonstrated</span>`) : ""}</h2>
+      ${g.demonstrated && g.pv && g.pv.formativeOnly ? `<p class="hint">Every competency in this module has evidence on this project, but none of it has been independently assessed. This is practice, not a verified outcome — a checkpoint is what makes it assessed.</p>` : ""}
       ${g.evs.map(renderEv).join("")}`).join("");
 
     return `<h1>Evidence portfolio</h1>
       <p class="lead">${learner.evidence.length} record${learner.evidence.length === 1 ? "" : "s"}.
-      Every capability claim links to evidence (see docs/01-architecture.md).</p>
+      Each record is marked either a <strong>formative challenge</strong> (yours, scored locally, not
+      independently judged) or an <strong>assessed checkpoint</strong> (Faculty-confirmed against the
+      rubric). A capability claim is only as strong as the records behind it.</p>
       ${pendingNote}${reviewsBox}
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
         <button class="btn" type="button" data-action="export-portfolio" data-format="md">⬇ Export as Markdown</button>

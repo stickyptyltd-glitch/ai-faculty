@@ -1,0 +1,37 @@
+// Loads the app's browser scripts in a stubbed `window` so the pure-logic modules
+// (content / model / pathway / export) can be tested under `node --test`. Nothing
+// here reaches the network or touches the filesystem beyond reading app/js.
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import vm from "node:vm";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const jsDir = join(here, "..", "js");
+
+export function loadApp(files = ["content.js", "model.js", "pathway.js", "export.js"]) {
+  const win = {};
+  const sandbox = {
+    window: win,
+    console,
+    Date,
+    Math,
+    JSON,
+    localStorage: (() => {
+      const m = new Map();
+      return {
+        getItem: k => (m.has(k) ? m.get(k) : null),
+        setItem: (k, v) => m.set(k, String(v)),
+        removeItem: k => m.delete(k),
+      };
+    })(),
+  };
+  sandbox.globalThis = sandbox;
+  win.window = win;
+  vm.createContext(sandbox);
+  for (const f of files) {
+    const src = readFileSync(join(jsDir, f), "utf8");
+    vm.runInContext(src, sandbox, { filename: f });
+  }
+  return win;
+}

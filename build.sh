@@ -7,6 +7,12 @@
 #
 # No toolchain: plain copy + a generated _headers / robots.txt. Output: dist/
 #
+# Tests are separate from the build:
+#   node --test app/test/frontend.test.mjs   frontend logic (content/model/pathway/export)
+#   node workers/api/test.mjs   Worker
+#   node workers/signup/test.mjs
+# app/test/ ships in dist/ so the suite travels with the code it covers.
+#
 set -euo pipefail
 cd "$(dirname "$0")"
 

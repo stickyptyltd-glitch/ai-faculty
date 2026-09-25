@@ -17,45 +17,6 @@ window.EXPORT = (function () {
 
   function flat(s) { return String(s || "").replace(/\s+/g, " ").trim(); }
 
-  function checkpointBacking(learner) {
-    const out = {};
-    Object.keys(learner.checkpoints || {}).forEach(cpId => {
-      const cp = C.checkpoint(cpId);
-      if (!cp) return;
-      cp.after.forEach(capId => { (out[capId] = out[capId] || []).push(cpId); });
-    });
-    return out;
-  }
-
-  function capabilityProvenance(learner, capId, backing) {
-    const checkpoints = backing[capId] || [];
-    const kinds = [];
-    (learner.evidence || []).forEach(e => {
-      if (e.capId === capId && e.kind && !kinds.includes(e.kind)) kinds.push(e.kind);
-    });
-    const assessed = checkpoints.length > 0;
-    const formative = kinds.includes("challenge");
-    let label;
-    if (assessed && formative) label = "challenge + " + checkpoints.join(", ");
-    else if (assessed) label = checkpoints.join(", ");
-    else if (formative) label = "formative only (challenge)";
-    else label = kinds.length ? kinds.join(", ") : "no evidence";
-    return { assessed, formative, checkpoints, kinds, label };
-  }
-
-  function projectProvenance(learner, projectId) {
-    const evs = M.evidenceForProject(learner, projectId);
-    const cps = [];
-    evs.forEach(e => { if (e.checkpointId && !cps.includes(e.checkpointId)) cps.push(e.checkpointId); });
-    const hasChallenge = evs.some(e => e.kind === "challenge");
-    return {
-      assessed: cps.length > 0,
-      formativeOnly: hasChallenge && cps.length === 0,
-      checkpoints: cps.slice().sort(),
-    };
-  }
-
-  // one evidence record -> a markdown block
   function recordMd(ev, level) {
     const lvl = "#".repeat(level);
     const formative = ev.kind === "challenge";
@@ -90,7 +51,7 @@ window.EXPORT = (function () {
 
   function portfolioMarkdown(learner) {
     const moduleId = activeModuleOf(learner);
-    const backing = checkpointBacking(learner);
+    const backing = M.checkpointBacking(learner);
     const md = [];
     md.push("# AI Faculty — Evidence Portfolio");
     md.push("");
@@ -106,7 +67,7 @@ window.EXPORT = (function () {
     C.allCompetencies().forEach(c => {
       const cap = learner.capabilities[c.id];
       if (cap && cap.state && cap.state !== "unknown") {
-        const pv = capabilityProvenance(learner, c.id, backing);
+        const pv = M.capabilityProvenance(learner, c.id, backing);
         md.push("- " + c.id + " (" + c.name + "): **" + M.levelLabel(cap.state) + "** — confidence "
           + cap.confidence + " — evidence: " + pv.label);
       }
@@ -119,7 +80,7 @@ window.EXPORT = (function () {
     const demo = demonstratedProjects(learner, moduleId);
     (learner.projects || []).forEach(p => {
       const evs = learner.evidence.filter(e => e.projectId === p.id);
-      if (evs.length) groups.push({ name: p.name, demonstrated: !!demo[p.id], pv: projectProvenance(learner, p.id), evs });
+      if (evs.length) groups.push({ name: p.name, demonstrated: !!demo[p.id], pv: M.projectProvenance(learner, p.id), evs });
     });
     const loose = learner.evidence.filter(e => !e.projectId || !(learner.projects || []).some(p => p.id === e.projectId));
     if (loose.length) groups.push({ name: "Not attached to a project", demonstrated: false, evs: loose });
@@ -148,12 +109,12 @@ window.EXPORT = (function () {
   }
 
   function portfolioJSON(learner) {
-    const backing = checkpointBacking(learner);
+    const backing = M.checkpointBacking(learner);
     const capabilities = {};
     C.allCompetencies().forEach(c => {
       const cap = (learner.capabilities || {})[c.id];
       if (!cap || !cap.state || cap.state === "unknown") return;
-      const pv = capabilityProvenance(learner, c.id, backing);
+      const pv = M.capabilityProvenance(learner, c.id, backing);
       capabilities[c.id] = {
         state: cap.state,
         stateLabel: M.levelLabel(cap.state),
@@ -169,10 +130,9 @@ window.EXPORT = (function () {
       format: "aifaculty-evidence-portfolio",
       version: 2,
       provenance: {
-        note: "A capability state is only as strong as the evidence named on it. formativeOnly=true "
-          + "means the state rests on self-confirmed competency challenges scored by local heuristics, "
-          + "not on an independent assessment. assessedByCheckpoint=true means a checkpoint went through "
-          + "the Assessment Resolution Protocol; see the assessor count on the evidence record.",
+        note: M.PROVENANCE_NOTE,
+        formativeOnly: "Set on a capability or project whose evidence is entirely self-confirmed challenges.",
+        assessedByCheckpoint: "True when a checkpoint went through the Assessment Resolution Protocol; see the assessor count on the evidence record.",
         kindSemantics: {
           challenge: "formative - self-confirmed practice, not an independent judgement",
           checkpoint: "assessed - went through the Assessment Resolution Protocol",
@@ -184,7 +144,7 @@ window.EXPORT = (function () {
       challenges: learner.challenges || {},
       checkpoints: learner.checkpoints || {},
       projects: (learner.projects || []).map(p => {
-        const pv = projectProvenance(learner, p.id);
+        const pv = M.projectProvenance(learner, p.id);
         return Object.assign({}, p, {
           demonstrated: !!M.projectDemonstrated(learner, p.id, activeModuleOf(learner)),
           demonstratedByCheckpoint: pv.assessed,
