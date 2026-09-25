@@ -1556,6 +1556,67 @@ Tests unchanged at 139 (no logic changed); verified in a browser that the Foundi
 "Lifetime Pro… Original price while we build.", $150 is intact, Pro and Founding buttons are now
 hidden, and no launch-date phrasing survives anywhere on the page.
 
+## v0.52 — 2026-09-25 — C1 gate rehearsed end to end; the runbook the founder needs
+
+The Phase 1 gate is *"founder runs the full C1 loop end-to-end and it produces a real evidence
+record"*. Before handing that to the founder I drove the whole loop in a real browser, because a
+gate that fails on a wiring bug costs them an hour of their time and tells us nothing about the
+pedagogy. **It passes.** The loop runs clean end to end:
+
+diagnostic → C1 lesson (6 steps) → guided practice → Applied Project → C1.1 / C1.2 / C1.3 →
+rubric preview → Confirm & save evidence → **3 evidence records, C1 at 3/3, 1/7 competencies,
+11% of the foundation module**, zero console errors.
+
+So the machinery is sound. The gate is still the founder's to run, and it has to be: the point is
+a human judging whether the teaching lands, which is exactly the thing I can't supply. What I can
+do is make sure they don't hit a wall, and hand them the one thing I had to discover the hard way.
+
+**The trap: finishing the lesson is not finishing the lesson.** Clicking "Next →" through all six
+steps does *not* mark C1 taught. `markTaught` only fires from the "I'm ready — do it on my own task"
+button on the final step, and that button refuses to work until at least one guided field has a real
+attempt in it (model.js:26, main.js:210-223). This is deliberate — `10-pedagogy-review §4.1` makes the
+retrieval attempt the one thing that can't be skipped with zero friction, and the store records
+`l.guided[capId]` as proof it happened. Good design. But it presents as a dead end: a learner who
+clicks through the lesson lands back on "C1 is next, start with the lesson" having just read the
+whole thing, with nothing on screen saying why. I hit it myself on the first pass and briefly logged
+it as a bug in the pathway engine.
+
+Worth noting what the engine got right there: it did *not* mark the competency taught on a click-
+through. If it had, the learner would have skipped the only step that does any work. The
+authorisation is correct and the *explanation* is missing. Cheap fix for whoever picks this up —
+say so on the step ("do the guided practice below to finish this lesson"), rather than let the
+learner re-read six steps to work out what they missed. I have left the behaviour alone; it is
+correct, and changing it is a pedagogy call, not a bug fix.
+
+**Runbook for the founder** (in order, ~20 min):
+
+1. Sign in at `aifaculty.org/app/#/login` with the founder account. Open it in a **normal window**,
+   not a private one — state is per-browser.
+2. `#/` → **Start the diagnostic**. It is ungraded and exists only to set a starting point.
+3. **Start the lesson** on C1. Work all six steps. At the last step, *actually fill in at least one
+   of the four fields* before pressing **Check against the model answer** — the attempt is the
+   learning, and it will not reveal the model answer without one. Then **I'm ready — do it on my own
+   task**, which routes straight to C1.1. (This routing is the proof the lesson registered.)
+4. You will land on `#/projects` at some point and it wants a real task. Add one — the course is
+   built to attach evidence to your actual work, and attaching it is what makes the portfolio real.
+5. C1.1 **Reproduce** (your real task) → C1.2 **Adapt** (critique a deliberately broken goal) →
+   C1.3 **Transfer** (a deliberately *different* context — if C1.1 was work, make C1.3 home).
+6. Each challenge: write, press **Submit to Assessment Faculty**, read the rubric it gives back,
+   adjust the banded ratings if they are wrong, then **Confirm & save evidence**. Submitting alone
+   does not save — the confirm step is the save.
+7. Check `#/evidence` — **three records** must be there, each linked to the project, each with the
+   per-dimension bands. Export as Markdown if you want to read the portfolio as a document; that is
+   the artefact the gate is really about.
+8. Check `#/` — C1 should read **3/3 "Can adapt it to new contexts"** and the module should move off
+   0%. "Can adapt it to new contexts" is the *Transfer* level, which is the intended end state: C1 is
+   not complete at recall, it is complete at transfer.
+
+**What I could not verify, stated plainly:** the second assessment. The loop above used the local
+rubric at the stricter bar, and a genuinely independent assessor pool is still the Control-Plane
+thread (docs/08 §5). ARP is proven — v0.46 drove a real override through a real second reviewer in
+a real browser — but the C1 *challenge* path has not yet been driven against a second assessor, and
+the gate should not be read as claiming that.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
