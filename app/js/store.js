@@ -66,6 +66,14 @@ window.STORE = (function () {
     if (!l.module) l.module = "foundation";
     if (l.pathway === undefined) l.pathway = null;
     if (l.foundationSkipped === undefined) l.foundationSkipped = false;
+    // Records saved before v0.62 stored an assessor line claiming two independent assessors
+    // agreed. The second pass was never an independent assessor -- it is the same rubric engine
+    // at a higher bar -- so rewrite it rather than letting an upgraded learner keep asserting it.
+    (l.evidence || []).forEach(ev => {
+      if (ev.assessors && /independent/i.test(ev.assessors)) {
+        ev.assessors = window.MODEL.assessorLineFor(ev);
+      }
+    });
     // add capability slots for any competency not seen before (e.g. new pathway)
     window.CONTENT.allCompetencies().forEach(c => {
       if (!l.capabilities[c.id]) l.capabilities[c.id] = { state: "unknown", confidence: "low", taughtAt: null };

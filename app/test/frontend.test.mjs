@@ -248,3 +248,155 @@ test("known internal disagreement, still open for the founder", async t => {
     assert.equal(M.projectDemonstrated(l, "pr1", "foundation"), true);
   });
 });
+
+test("the second pass is never called independent", async t => {
+  const claims = [
+    [/1 \+ 2 \(independent\)/, "evidence record claims independent agreement"],
+    [/independent second assess/i, "copy calls the second pass an independent assessor"],
+    [/independently agree/i, "copy claims the passes independently agree"],
+    [/assessor \d of 2 · independent/, "assessor badge claims independence"],
+  ];
+
+  await t.test("assessorLine never claims independence", () => {
+    const single = M.assessorLine({ assessor: 1 });
+    const both = M.assessorLine({ assessor: 2 }, true);
+    for (const [re, why] of claims) {
+      assert.ok(!re.test(single), `single: ${why}`);
+      assert.ok(!re.test(both), `double: ${why}`);
+    }
+    assert.match(single, /single pass/);
+    assert.match(both, /stricter second pass/);
+    assert.match(both, /same local rubric engine/, "must name the engine honestly");
+  });
+
+  await t.test("provenance note says what assessed does and does not mean", () => {
+    assert.match(M.PROVENANCE_NOTE, /same local rubric engine re-run at a higher bar/);
+    assert.match(M.PROVENANCE_NOTE, /No independent human or AI assessor is connected yet/);
+  });
+
+  await t.test("no learner-facing source string claims an independent assessor", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const { join, dirname } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const jsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "js");
+    const banned = [/1 \+ 2 \(independent\)/, /independent second assess/i, /independently agree/i];
+    for (const f of readdirSync(jsDir).filter(n => n.endsWith(".js"))) {
+      const src = readFileSync(join(jsDir, f), "utf8");
+      for (const re of banned) {
+        assert.ok(!re.test(src), `${f} contains ${re} — claims independence it does not have`);
+      }
+    }
+  });
+
+  await t.test("the two passes really are the same engine at two thresholds", async () => {
+    // Guards the claim itself: if these ever diverge into genuinely different logic, the
+    // honest wording above becomes under-stated and the docs need revisiting.
+    const { readFileSync } = await import("node:fs");
+    const { join, dirname } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "js", "faculty.js"), "utf8");
+    assert.match(src, /function fieldBand\(f, val, strict\)/);
+    assert.match(src, /const ready = strict \?/,
+      "verdict must be one code path with a strict flag, not a separate assessor implementation");
+  });
+});
+
+test("progress counts split formative from assessed", async t => {
+  await t.test("challenge-only learner has zero assessed", () => {
+    const l = gameableProfile();
+    const s = M.evidenceSplit(l);
+    assert.equal(s.total, 7);
+    assert.equal(s.formative, 7);
+    assert.equal(s.assessed, 0);
+    assert.equal(s.checkpointsPassed, 0);
+  });
+
+  await t.test("moduleProvenance flags a module that is challenged but not assessed", () => {
+    const mp = M.moduleProvenance(gameableProfile(), "foundation");
+    assert.equal(mp.challengedOnly, true);
+    assert.equal(mp.fullyAssessed, false);
+  });
+
+  await t.test("passing both checkpoints makes it fully assessed", () => {
+    const mp = M.moduleProvenance(fullyAssessedProfile(), "foundation");
+    assert.equal(mp.fullyAssessed, true);
+    assert.equal(mp.challengedOnly, false);
+  });
+});
+
+// The claims above are made in rendered HTML, so assert on the rendered HTML, not just
+// on the helpers feeding it. A helper test cannot catch a view that ignores it.
+const P = win.PROGRESS;
+
+test("the progress view does not overclaim", async t => {
+  await t.test("challenge-only learner: nothing presented as proved or assessed", () => {
+    const l = gameableProfile();
+    const html = P.render(l);
+    assert.match(html, /0<\/strong> assessed/, "assessed count must be visible and zero");
+    assert.match(html, /7<\/strong> formative/, "formative count must be shown separately");
+    assert.match(html, /Nothing assessed yet/, "must say plainly that nothing is assessed");
+    assert.match(html, /<strong>0\/2<\/strong>\s*checkpoints passed/);
+    assert.ok(!/\b\d+<\/strong> evidenced?\b/.test(html), "must not present a raw record count as proof");
+  });
+
+  await t.test("challenge-only learner: no unqualified Demonstrated pill", () => {
+    const l = gameableProfile();
+    const html = P.render(l);
+    assert.ok(!/pill--independent">Demonstrated</.test(html), "challenge-only project shown as Demonstrated");
+    assert.match(html, /Covered \(formative\)/);
+  });
+
+  await t.test("challenge-only learner: the bar is labelled as level, not completion", () => {
+    const html = P.render(gameableProfile());
+    assert.match(html, /average capability level/);
+    assert.ok(!/competencies complete/.test(html), "still frames challenge count as competencies complete");
+  });
+
+  await t.test("fully assessed learner: assessed counts and plain Demonstrated are correct", () => {
+    const html = P.render(fullyAssessedProfile());
+    assert.match(html, /2<\/strong> assessed/);
+    assert.match(html, /<strong>2\/2<\/strong>\s*checkpoints passed/);
+    assert.match(html, /pill--independent">Demonstrated</, "a genuinely assessed project should say Demonstrated");
+    assert.ok(!/Nothing assessed yet/.test(html), "over-corrected: hides real assessment");
+  });
+
+  await t.test("a skipped foundation is not reported as done", () => {
+    const l = gameableProfile();
+    l.foundationSkipped = true;
+    l.pathway = null;
+    const html = P.render(l);
+    assert.match(html, /Foundation skipped/, "skip must be reported as a skip");
+    assert.ok(!/Foundation done/.test(html), "a skipped module must not read as done");
+  });
+});
+
+test("records saved by earlier builds cannot keep claiming independence", async t => {
+  const legacy = [
+    { kind: "checkpoint", assessors: "1 + 2 (independent) agree" },
+    { kind: "checkpoint", assessors: "1 + 2 (independent) agree — Control Plane", lineage: "cp-1" },
+    { kind: "checkpoint", assessors: "1" },
+  ];
+
+  await t.test("legacy strings map to honest ones", () => {
+    assert.match(M.assessorLineFor(legacy[0]), /stricter second pass/);
+    assert.match(M.assessorLineFor(legacy[0]), /same local rubric engine/);
+    assert.match(M.assessorLineFor(legacy[1]), /via Control Plane/);
+    assert.match(M.assessorLineFor(legacy[2]), /single pass/);
+    legacy.forEach(ev => assert.doesNotMatch(M.assessorLineFor(ev), /independent/i));
+  });
+
+  await t.test("a legacy record exports without the old claim", () => {
+    const l = gameableProfile();
+    // simulate a record persisted by an earlier build
+    l.evidence[0].assessors = "1 + 2 (independent) agree";
+    const md = E.portfolioMarkdown(l);
+    const json = E.portfolioJSON(l);
+    // Target the claim itself, not the word: "not an independent judgement" and the
+    // "no independent assessor connected" disclaimer are correct and must survive.
+    const claim = /1 \+ 2 \(independent\)|independently agree/i;
+    assert.doesNotMatch(md, claim, "export markdown still carries the old claim");
+    assert.doesNotMatch(json, claim, "export json still carries the old claim");
+    assert.match(md, /not an independent judgement/, "the honest disclaimer must remain");
+    assert.match(md, /stricter second pass/);
+  });
+});

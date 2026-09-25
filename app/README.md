@@ -26,7 +26,9 @@ for `localStorage`.)
 - **Checkpoints** — CP1 (combined workflow design, C1–C3) and CP2 (full build/test/improve capstone),
   scored against the mastery rubric.
 - **Banded rubric** — Not yet / Developing / Meets / Exceeds, with transparent per-dimension feedback.
-- **Assessment Resolution Protocol** — checkpoints offer an independent second assessment at a
+- **Assessment Resolution Protocol** — checkpoints offer a stricter second pass (the same local
+  rubric engine at a higher bar — corroboration, not an independent assessor; real independent
+  assessors are still to do) at a
   stricter bar before you confirm.
 - **Applied Projects** — register a real project, attach your challenge/checkpoint work to it, and it
   becomes "Demonstrated" once your evidence covers all seven competencies.

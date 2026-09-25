@@ -45,7 +45,7 @@ window.FACULTY = (function () {
   const BANDS = ["Not yet", "Developing", "Meets", "Exceeds"];
   const bandIndex = b => BANDS.indexOf(b);
 
-  // Band one field's answer. `strict` = the second, independent assessment (higher bar).
+  // Band one field's answer. `strict` = the second pass at a higher bar. Same engine, not a second assessor.
   function fieldBand(f, val, strict) {
     if (!val || !val.trim() || placeholderish(val)) return "Not yet";
     const n = wc(val);
@@ -77,7 +77,7 @@ window.FACULTY = (function () {
     const n = wc(val);
     let note;
     if (b === "Not yet") note = !val || !val.trim() ? "Not answered yet." : "Reads as a placeholder — give this a real answer.";
-    else if (b === "Developing") note = `Too thin${strict ? " for an independent pass" : ""}. ${f.hint || ""}`.trim() + (n ? ` (${n} words)` : "");
+    else if (b === "Developing") note = `Too thin${strict ? " for the stricter pass" : ""}. ${f.hint || ""}`.trim() + (n ? ` (${n} words)` : "");
     else if (b === "Meets") note = "Concrete and usable.";
     else note = "Specific and well-reasoned — names, numbers or trade-offs are explicit.";
     return { key: f.key, label: f.label, band: b, ok: bandIndex(b) >= 2, note };
@@ -96,7 +96,7 @@ window.FACULTY = (function () {
         summary: kind === "checkpoint"
           ? (strict
               ? "Second assessment agrees: this meets the mastery rubric on every dimension, specifically. Confirm to record it."
-              : "This holds together as a whole workflow and meets the rubric. You can confirm now, or request an independent second assessment.")
+              : "This holds together as a whole workflow and meets the rubric. You can confirm now, or request a stricter second pass.")
           : "Every rubric dimension is met. Records as evidence for this challenge — confirm below." };
     }
     if (majorityPresent) {
@@ -194,7 +194,7 @@ window.FACULTY = (function () {
   }
 
   // ---- Assessment Faculty — checkpoint (mastery-rubric) -------------
-  // pass strict:true for the independent second assessment (Assessment Resolution Protocol).
+  // pass strict:true for the stricter second pass (Assessment Resolution Protocol).
   function assessCheckpoint(cpId, submission, strict) {
     const cp = C.checkpoint(cpId);
     if (!cp) return null;

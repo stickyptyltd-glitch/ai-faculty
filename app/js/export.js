@@ -23,7 +23,8 @@ window.EXPORT = (function () {
     const lines = [
       lvl + " " + (ev.title || "Untitled evidence"),
       "*" + (ev.kind || "record") + "*" + (formative ? " — *formative, not an independent judgement*" : "")
-        + " · confidence: " + (ev.confidence || "—") + (ev.assessors ? " · " + ev.assessors : ""),
+        + " · confidence: " + (ev.confidence || "—")
+        + (ev.assessors ? " · " + M.assessorLineFor(ev) : ""),
       "**Recorded:** " + fmtDate(ev.createdAt),
       "",
     ];
@@ -152,7 +153,8 @@ window.EXPORT = (function () {
           checkpoints: pv.checkpoints,
         });
       }),
-      evidence: learner.evidence || [],
+      evidence: (learner.evidence || []).map(ev =>
+        ev.assessors ? Object.assign({}, ev, { assessors: M.assessorLineFor(ev) }) : ev),
     }, null, 2);
   }
 

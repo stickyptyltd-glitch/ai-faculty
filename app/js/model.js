@@ -193,15 +193,80 @@ window.MODEL = (function () {
     return { assessed: cps.length > 0, formativeOnly: hasChallenge && cps.length === 0, checkpoints: cps };
   }
 
+  // The Assessment Resolution Protocol's second pass is the SAME rubric engine re-run at a
+  // higher bar -- one algorithm asked twice, sharing every blind spot. It is real corroboration
+  // and it really detects disagreement, but it is not an independent assessor, and nothing in the
+  // system may imply otherwise. docs/08-assessment-model.md still lists real independent
+  // assessors (human + AI) as to do; this naming is what keeps the code honest about that.
+  // How many records are formative vs assessed, and whether a checkpoint was passed at all.
+  // Any "what have I proved" style count needs this split: a pile of challenge records is not
+  // proof of anything, it is practice.
+  function evidenceSplit(learner) {
+    const evs = (learner && learner.evidence) || [];
+    const assessed = evs.filter(e => e.kind === "checkpoint").length;
+    return {
+      total: evs.length,
+      assessed,
+      formative: evs.length - assessed,
+      checkpointsPassed: Object.keys((learner && learner.checkpoints) || {}).length,
+    };
+  }
+
+  // Whether a module's completion rests on assessed evidence, or only on challenges.
+  function moduleProvenance(learner, moduleId) {
+    const caps = C.competenciesFor(moduleId);
+    const cps = C.checkpointsFor(moduleId);
+    const passed = cps.filter(cp => checkpointDone(learner, cp.id)).length;
+    return {
+      checkpointsPassed: passed,
+      checkpointsTotal: cps.length,
+      fullyAssessed: cps.length > 0 && passed === cps.length,
+      challengedOnly: cps.length > 0 && passed === 0,
+    };
+  }
+
+  const ARP = {
+    secondPass: "stricter second pass",
+    basis: "the same local rubric engine re-run at a higher bar",
+    disclaimer: "No independent human or AI assessor is connected yet, so nothing here is a "
+      + "corroborated second opinion. Disagreement is detected by re-running one rubric, not by "
+      + "asking a second judge.",
+  };
+
+  // Derive an honest assessors line from a record rather than trusting whatever string was
+  // persisted. Records written by earlier builds stored a line claiming two independent
+  // assessors agreed, and a learner who upgrades must not keep asserting that.
+  function assessorLineFor(ev) {
+    if (!ev) return "local rubric";
+    const a = ev.assessors || "";
+    if (/1\s*\+\s*2/.test(a)) {
+      return "local rubric + " + ARP.secondPass
+        + (ev.lineage ? " (via Control Plane)" : "")
+        + " — " + ARP.basis;
+    }
+    if (/\b1\b/.test(a)) return "local rubric, single pass";
+    return a.replace(/\s*\(independent\)\s*/g, " ").trim() || "local rubric";
+  }
+
+  // Honest assessors line for an evidence record. Never says "independent".
+  function assessorLine(result, lineage) {
+    if (!result) return "local rubric";
+    if (result.assessor !== 2) return "local rubric, single pass";
+    return "local rubric + " + ARP.secondPass
+      + (lineage ? " (via Control Plane)" : "")
+      + " — " + ARP.basis;
+  }
+
   const PROVENANCE_NOTE =
     "A capability state is only as strong as the evidence named on it. Formative evidence is a "
-    + "competency challenge: self-confirmed, scored by local heuristics, and not an independent "
-    + "judgement. Assessed evidence is a checkpoint that went through the Assessment Resolution "
-    + "Protocol, with the assessor count shown.";
+    + "competency challenge: self-confirmed, scored by local heuristics, and not a judgement. "
+    + "Assessed evidence is a checkpoint passed on the local mastery rubric; where a second pass "
+    + "is shown it is " + ARP.basis + ", not an independent assessor. " + ARP.disclaimer;
 
   return {
     levelIndex, levelLabel, raise, markTaught, addEvidence, evidenceFor,
-    checkpointBacking, capabilityProvenance, projectProvenance, PROVENANCE_NOTE,
+    checkpointBacking, capabilityProvenance, projectProvenance, PROVENANCE_NOTE, ARP, assessorLine,
+    evidenceSplit, moduleProvenance, assessorLineFor,
     challengeDone, nextChallenge, challengeProgress, competencyComplete, markChallengeDone,
     checkpointDone, checkpointReady, markCheckpointDone,
     addProject, project, evidenceForProject, projectCoverage, projectDemonstrated,

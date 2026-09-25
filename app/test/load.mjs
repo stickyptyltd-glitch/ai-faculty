@@ -1,6 +1,8 @@
 // Loads the app's browser scripts in a stubbed `window` so the pure-logic modules
-// (content / model / pathway / export) can be tested under `node --test`. Nothing
-// here reaches the network or touches the filesystem beyond reading app/js.
+// (content / model / pathway / export) and the string-building progress view can be
+// tested under `node --test`. Nothing here reaches the network or touches the
+// filesystem beyond reading app/js. main.js is deliberately excluded: it is a DOM
+// router, and its claim-bearing copy is covered by source-level assertions instead.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -9,7 +11,7 @@ import vm from "node:vm";
 const here = dirname(fileURLToPath(import.meta.url));
 const jsDir = join(here, "..", "js");
 
-export function loadApp(files = ["content.js", "model.js", "pathway.js", "export.js"]) {
+export function loadApp(files = ["content.js", "model.js", "pathway.js", "export.js", "progress.js"]) {
   const win = {};
   const sandbox = {
     window: win,

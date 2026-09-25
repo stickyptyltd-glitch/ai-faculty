@@ -2196,6 +2196,96 @@ which is exactly how a green suite lies to you.
 `build.sh` now documents the three suites. Note `node --test app/test/` also picks up `load.mjs` as
 a test file, so the documented command names `frontend.test.mjs` explicitly.
 
+## v0.62 — the system was calling one rubric engine "two independent assessors"
+
+v0.60 and v0.61 fixed what evidence was *shown*. This is about what the system *claimed to be*,
+and it is the most consequential false statement in the product.
+
+**What it was actually doing.** `assessCheckpoint(cpId, submission, strict)` — the "Assessment
+Resolution Protocol" second pass — is the same function with a flag:
+
+```js
+function fieldBand(f, val, strict) {
+  const min = strict ? Math.ceil(f.minWords * 1.4) : f.minWords;   // faculty.js:52
+function verdictFromBands(reports, kind, strict) {
+  const ready = strict ? (allMeet && noDeveloping && idx.some(i => i >= 3)) : allMeet;  // :92
+```
+
+Same rubric, same keyword matching, same blind spots, one threshold and a stricter one. And the
+evidence record said:
+
+```
+assessors: "1 + 2 (independent) agree"
+```
+
+**Why that matters more than any wording bug so far.** A learner is told two independent assessors
+agreed. An employer reading the exported portfolio is told the same. `docs/08` lists "Real
+independent assessors (human + AI)" as *to do*, and `docs/04` calls this a Control Plane dry-run —
+so the docs were honest and the code was not, and the code is what ships. The top ladder state
+("Can design better approaches") and module completion were both resting on a corroboration that
+did not exist. Two runs of one algorithm is not a second opinion.
+
+**What I kept, because it is real.** The stricter pass does detect disagreement, the reasoned
+review of *why* it disagreed is genuinely useful, and routing it through the Control Plane when
+signed in is worth keeping. Only the word "independent" was false. So nothing was removed — it was
+renamed to what it is, everywhere, from one canonical definition so it cannot drift again:
+
+```
+local rubric + stricter second pass (via Control Plane)
+  — the same local rubric engine re-run at a higher bar
+```
+
+and `PROVENANCE_NOTE` now ends by saying no independent human or AI assessor is connected yet, and
+that disagreement comes from re-running one rubric rather than asking a second judge. Thirteen
+learner-facing strings changed: the evidence record, the ARP running notice, the reasoned-review
+sentence, the request-a-second-pass button, the pass badge, the pathway "next step" reason, the
+dispute resolution text, the faculty rubric legend, two feedback strings, and `app/README.md`. The
+ladder state named "independent" and the course content about verification independence are a
+different meaning of the word and are untouched.
+
+**Existing learners would have kept the claim forever.** The string was persisted in localStorage,
+so fixing the write path does nothing for the 18 records already in the browser — I found this
+because the live page still showed `1 + 2 (independent) agree` after deploying. Three layers now:
+`store.js` rewrites legacy lines on load, `assessorLineFor(ev)` derives the line from the record so
+render and export never trust stored text, and `portfolioJSON` maps records rather than shipping
+`learner.evidence` raw — that last one was a real gap the test caught, since the machine-readable
+export would otherwise have carried the old claim while the Markdown did not.
+
+**Progress view: five more, all the same shape.** This is the page a learner opens most, and it
+made four unsupported claims:
+
+| Was | Problem | Now |
+|---|---|---|
+| "What have I proved — *N* evidence records" | counted self-confirmed challenges as proof | "*N* assessed · *M* formative", with "Nothing assessed yet" when nothing is |
+| "*P*% · *X*/7 competencies complete" | bar is average ladder *level*, but captioned as completion | "*P*% average capability level · *X*/7 challenges complete · *Y*/2 checkpoints passed" |
+| bar next to the caption | bar moves when you are *taught*, not assessed; a challenge-only learner reads **60%** | caveat under the bar: "Nothing here has been assessed yet" |
+| "Demonstrated" pill | unqualified, 3rd and 4th occurrence | "Covered (formative)" when no checkpoint backs it |
+| "Foundation done" | shown after *skipping* foundation | "Foundation skipped (it stays available…)" |
+
+That 60% is the one I would put in front of a founder. A learner with zero checkpoints, zero
+assessed evidence and 0/7 challenges complete had a progress bar reading 60%, directly above a
+caption claiming zero completion. Both numbers were arithmetically correct and jointly misleading —
+the same failure mode as `projectDemonstrated` v0.53 identified, now in the most-viewed view.
+
+**Tests: 25 → 43, and two caught me.** Assertions are now on *rendered HTML*, not just the helpers
+feeding it, because a helper test cannot catch a view that ignores it. I proved that the hard way:
+after adding every helper test, I re-ran the progress-view mutation and the suite stayed **34/34
+green over a regressed view**. Helper tests, all passing, no view test. The view assertions, and
+`progress.js` in the loader, close it.
+
+Four more mutations confirmed red: restoring the independence claim in the evidence record, putting
+the raw proved-count back, dropping the project pill qualifier, and reverting the JSON sanitiser.
+One is worth recording — my own guard flagged a *comment* in `model.js` that quoted the legacy
+string while explaining the migration. The guard was right and the comment was wrong, so I reworded
+the comment rather than loosening the ban.
+
+**Still not fixed, and I want to be explicit about it.** Two things I found and deliberately left:
+`projectDemonstrated` still returns true on formative evidence alone (the founder decision from
+v0.60, unchanged), and `overallPct` still moves when content is merely taught. I relabelled the
+number honestly instead of changing what it computes, because both are product decisions — but a
+"60% from being taught" bar is a defensible product choice only if it is a choice, and right now
+nobody has made it deliberately.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

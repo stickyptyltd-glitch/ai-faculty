@@ -41,11 +41,22 @@ window.PROGRESS = (function () {
     const pct = M.overallPct(learner, moduleId);
     const caps = M.summary(learner, moduleId);
     const done = caps.filter(c => c.complete).length;
+    const mp = M.moduleProvenance(learner, moduleId);
+    // The bar is average ladder attainment, not completion, and it moves when you are taught as
+    // well as when you are assessed. Say so, and never let it stand in for "done".
+    const caveat = mp.challengedOnly
+      ? `<p class="hint" style="margin:6px 0 0">Nothing here has been assessed yet. This bar reflects
+           challenge practice and what you have been taught — <strong>not</strong> a verified outcome.</p>`
+      : (mp.fullyAssessed
+        ? `<p class="hint" style="margin:6px 0 0">All ${mp.checkpointsTotal} checkpoints passed on the mastery rubric.</p>`
+        : "");
     return `
       <div class="card card--tight" style="margin-bottom:10px">
         <div class="card__label">${esc(title)}</div>
         <div class="bar"><span style="width:${pct}%"></span></div>
-        <p style="margin:0">${pct}% · <strong>${done}/${caps.length}</strong> competencies complete</p>
+        <p style="margin:0">${pct}% average capability level · <strong>${done}/${caps.length}</strong>
+          challenges complete · <strong>${mp.checkpointsPassed}/${mp.checkpointsTotal}</strong> checkpoints passed</p>
+        ${caveat}
       </div>
       <div class="caplist">${capList(learner, moduleId)}</div>
       <div class="caplist" style="margin-top:8px">${checkpointRows(learner, moduleId)}</div>`;
@@ -68,7 +79,7 @@ window.PROGRESS = (function () {
         <a class="btn" data-nav href="${nba.href}">${esc(window.PATHWAY.actionVerb(nba.action))}</a>
       </div>`;
 
-    const evidenceCount = learner.evidence.length;
+    const split = M.evidenceSplit(learner);
 
     // work pathway section
     let pathwaySection;
@@ -79,7 +90,9 @@ window.PROGRESS = (function () {
         <div class="notice">This pathway is planned — content coming soon. <a data-nav href="#/pathways">Switch pathway</a>.</div>`;
     } else if (M.foundationDone(learner)) {
       pathwaySection = `<h2>Work pathway</h2>
-        <div class="card next"><p style="margin:0 0 10px">Foundation done — choose the pathway that matches your work.</p>
+        <div class="card next"><p style="margin:0 0 10px">${learner.foundationSkipped
+          ? "Foundation skipped (it stays available if you want it)"
+          : "Foundation done"} — choose the pathway that matches your work.</p>
           <a class="btn" data-nav href="#/pathways">Browse work pathways</a></div>`;
     } else {
       pathwaySection = `<h2>Work pathway</h2>
@@ -93,12 +106,14 @@ window.PROGRESS = (function () {
           const mod = M.foundationDone(learner) && learner.pathway ? learner.pathway : "foundation";
           const cov = M.projectCoverage(learner, p.id, mod).length;
           const dem = M.projectDemonstrated(learner, p.id, mod);
+          const pv = M.projectProvenance(learner, p.id);
           const tot = C.competenciesFor(mod).length;
           return `<a class="caprow" data-nav href="#/projects">
             <span class="caprow__id">▷</span>
             <span class="caprow__name">${esc(p.name)}
               <span style="color:var(--text-dim);font-size:12px">· ${cov}/${tot} covered</span></span>
-            ${pill(dem ? "independent" : "guided", dem ? "Demonstrated" : "In progress")}</a>`;
+            ${pill(dem ? (pv.formativeOnly ? "guided" : "independent") : "guided",
+                    dem ? (pv.formativeOnly ? "Covered (formative)" : "Demonstrated") : "In progress")}</a>`;
         }).join("") + `</div>`
       : `<div class="notice">Register a real task to apply the course to — <a data-nav href="#/projects">add a project</a>.</div>`;
 
@@ -108,8 +123,11 @@ window.PROGRESS = (function () {
       ${nextCard}
       <div class="card card--tight">
         <div class="card__label">What have I proved</div>
-        <p style="margin:0"><strong>${evidenceCount}</strong> evidence record${evidenceCount === 1 ? "" : "s"} ·
+        <p style="margin:0"><strong>${split.assessed}</strong> assessed ·
+          <strong>${split.formative}</strong> formative record${split.formative === 1 ? "" : "s"} ·
           <a data-nav href="#/evidence">view portfolio</a></p>
+        ${split.assessed === 0 && split.formative > 0 ? `<p class="hint" style="margin:6px 0 0">Nothing assessed yet — every record so far is
+          a challenge you self-confirmed. Passing a checkpoint is what moves something into the assessed column.</p>` : ""}
       </div>
 
       <h2>Foundation module</h2>

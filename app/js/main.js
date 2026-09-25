@@ -433,11 +433,11 @@
     if (kind === "second-assessment") {
       const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
       if (!payload || payload.scope !== "checkpoint") { location.hash = "#/"; return; }
-      // Run the independent second assessment through the Institutional AI Control Plane when it's
+      // Run the stricter second pass through the Institutional AI Control Plane when it's
       // reachable (signed in) — the lineage id then rides the evidence record. Fall back to the
       // local heuristic whenever the server is unavailable; the flow must never block on the network.
       const box = document.getElementById("assessResult");
-      if (box) box.innerHTML = `<div class="notice">Assessment Faculty — independent second assessment running…</div>`;
+      if (box) box.innerHTML = `<div class="notice">Assessment Faculty — stricter second pass running (same rubric engine)…</div>`;
       const result = await requestSecondAssessment(payload);
       if (!result) return; // user navigated away mid-flight
       const disagreement = payload.result && payload.result.verdict === "ready" && result.verdict !== "ready";
@@ -586,9 +586,7 @@
             fields: stripMeta(payload.data), feedback: payload.result.summary,
             confidence: payload.result.confidence,
             rubric: payload.result.rubric.map(d => ({ label: d.label, band: d.band })),
-            assessors: payload.result.assessor === 2
-              ? (payload.lineage ? "1 + 2 (independent) agree — Control Plane" : "1 + 2 (independent) agree")
-              : "1",
+            assessors: M.assessorLine(payload.result, payload.lineage),
             lineage: payload.lineage || null,
             model: payload.adapter || null,
           });
@@ -642,7 +640,7 @@
     });
   }
 
-  // Run the independent second assessment through the Control Plane when signed in; never let the
+  // Run the stricter second pass through the Control Plane when signed in; never let the
   // network block the flow — any failure falls back to the local strict heuristic.
   async function requestSecondAssessment(payload) {
     const cp = C.checkpoint(payload.cp);
@@ -758,7 +756,7 @@
     }).join("");
 
     const assessorLine = result.assessor
-      ? `<p class="hint" style="margin:-4px 0 10px">Assessor ${result.assessor} of 2${result.assessor === 2 ? " · independent, stricter bar" : ""}</p>`
+      ? `<p class="hint" style="margin:-4px 0 10px">Pass ${result.assessor} of 2${result.assessor === 2 ? " · stricter bar, same rubric engine — not a second assessor" : ""}</p>`
       : "";
 
     const canConfirm = result.verdict === "ready";
@@ -779,14 +777,14 @@
         </div>`;
     }
 
-    // ARP §5.4 reasoned review: when assessor 2 (stricter, independent bar) does not agree with a
+    // ARP §5.4 reasoned review: when the stricter pass does not agree with a
     // "ready" from assessor 1, surface exactly what the second assessor wanted and offer escalation.
     let arp = "";
     if (ctx.disagreement && ctx.scope === "checkpoint" && mastery) {
       arp = `
         <div class="card" style="border-color:var(--warn)">
           <div class="card__label">ARP — second assessor disagrees · reasoned review</div>
-          <p style="margin:0 0 8px">Assessor 1 passed this; the independent second assessor applied the
+          <p style="margin:0 0 8px">The first pass cleared this; the stricter second pass applied the
           stricter bar and wanted more. Here is what the second assessor specifically asked for.
           <strong>Revising and resubmitting after review is normal, not failure</strong> (docs/08 §5.4);
           evidence only records once the rubric is met.</p>
@@ -855,7 +853,7 @@
       ${offerSecond
         ? `<form data-form="second-assessment" style="margin-bottom:10px">
              <p class="notice" style="margin-bottom:10px">A single pass is a first opinion, not a mastery
-             decision. Request an <strong>independent second assessment</strong> (stricter bar) before you confirm.</p>
+             decision. Request a <strong>stricter second pass</strong> (same rubric, higher bar) before you confirm.</p>
              <button class="btn btn--ghost" type="submit">Request second assessment</button>
            </form>` : ""}
       ${canConfirm
@@ -1211,15 +1209,19 @@
     const list = (learner.projects || []).map(p => {
       const cov = M.projectCoverage(learner, p.id, mod);
       const done = M.projectDemonstrated(learner, p.id, mod);
+      const pv = M.projectProvenance(learner, p.id);
       const evc = M.evidenceForProject(learner, p.id).length;
       return `<div class="card">
         <div style="display:flex;justify-content:space-between;gap:10px;align-items:start">
           <strong style="font-size:15px">${esc(p.name)}</strong>
-          <span class="pill pill--${done ? "independent" : "guided"}">${done ? "Demonstrated" : `${cov.length}/${total} covered`}</span>
+          <span class="pill pill--${done && !pv.formativeOnly ? "independent" : "guided"}">${
+            done ? (pv.formativeOnly ? "Covered (formative)" : "Demonstrated") : `${cov.length}/${total} covered`}</span>
         </div>
         <p style="margin:6px 0 4px;color:var(--text-dim);font-size:13px">${esc(p.context)} · ${evc} evidence record${evc === 1 ? "" : "s"}</p>
         <p style="margin:0;font-size:14px">${esc(p.goal)}</p>
         ${cov.length ? `<p class="hint" style="margin:8px 0 0">Covered: ${cov.join(", ")}</p>` : ""}
+        ${done && pv.formativeOnly ? `<p class="hint" style="margin:6px 0 0">Every competency in this module has evidence here,
+          but none of it has been assessed. This is practice, not a verified outcome.</p>` : ""}
       </div>`;
     }).join("");
 
@@ -1421,7 +1423,7 @@
       return `<div class="evidence-item">
         <time>${new Date(ev.createdAt).toLocaleString()}</time>
         <h3 style="margin:4px 0;text-transform:none;letter-spacing:0;color:var(--text);font-size:15px">${esc(ev.title)}</h3>
-        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${ev.kind === "challenge" ? "formative challenge" : esc(ev.kind)} · confidence: ${esc(ev.confidence)}${ev.kind === "challenge" ? " · not independently assessed" : ""}${ev.assessors ? ` · assessors: ${esc(ev.assessors)}` : ""}${ev.model ? ` · ${esc(ev.model)}` : ""}${ev.lineage ? ` · lineage: ${esc(ev.lineage)}` : ""}</p>
+        <p style="margin:4px 0;color:var(--text-dim);font-size:13px">${ev.kind === "challenge" ? "formative challenge" : esc(ev.kind)} · confidence: ${esc(ev.confidence)}${ev.kind === "challenge" ? " · not independently assessed" : ""}${ev.assessors ? ` · ${esc(M.assessorLineFor(ev))}` : ""}${ev.model ? ` · ${esc(ev.model)}` : ""}${ev.lineage ? ` · lineage: ${esc(ev.lineage)}` : ""}</p>
         ${fieldList}
         ${rub ? `<p style="margin:6px 0 0">${rub}</p>` : ""}
         <p style="margin:8px 0 0;font-size:14px"><strong>Faculty note:</strong> ${esc(ev.feedback)}</p>
@@ -1486,7 +1488,7 @@
       });
     });
     const decisionText = {
-      uphold: "Specialist upheld the independent second assessment — the dispute stands as raised.",
+      uphold: "Specialist upheld the stricter second pass — the dispute stands as raised.",
       override: "Specialist overrode the second assessment — your point was real and is recorded.",
       dismiss: "Specialist dismissed the dispute — no change to the assessment.",
     };
@@ -1514,7 +1516,7 @@
         <li><strong>Foundation module</strong> (AI-Assisted Workflow Designer, C1–C7): each competency is a
           6-step lesson — story → idea → played worked example → the moves → quick-check MCQs → guided
           attempt — then 2–3 rubric-assessed challenges on your own task</li>
-        <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional independent second assessment</li>
+        <li><strong>Checkpoints</strong> CP1 &amp; CP2, banded mastery rubric, optional stricter second pass (same engine, higher bar)</li>
         <li><strong>Pathways</strong> — after the foundation, go deep. 18 built, each with a capstone:
           <em>Using AI at work</em> (Software, Content, Operations &amp; Admin, Customer Support,
           Research &amp; Analysis, Education &amp; Training, Legal &amp; Contracts, Sales,
@@ -1747,7 +1749,7 @@
     const pending = rows.filter(r => !r.decision);
     const decided = rows.filter(r => r.decision);
     const decisionText = {
-      uphold: "Specialist upheld the independent second assessment — the dispute stands as raised.",
+      uphold: "Specialist upheld the stricter second pass — the dispute stands as raised.",
       override: "Specialist overrode the second assessment — the dispute was real and is recorded.",
       dismiss: "Specialist dismissed the dispute — no change to the assessment.",
     };

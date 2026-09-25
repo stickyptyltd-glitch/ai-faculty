@@ -57,7 +57,7 @@ window.PATHWAY = (function () {
       const weak = weakestCovered(learner, cp.after);
       const dims = (attempt.weak && attempt.weak.length) ? attempt.weak.join(", ") : "deeper specifics";
       const second = attempt.disagreement
-        ? ` — the independent second assessor disagreed with assessor 1 (reasoned review)`
+        ? ` — a stricter second pass disagreed with the first (reasoned review)`
         : attempt.assessor === 2 ? " — confirmed against the stricter bar" : "";
       return {
         action: "branch", cpId: cp.id, capId: weak.id, capName: weak.name, weakDims: attempt.weak,
