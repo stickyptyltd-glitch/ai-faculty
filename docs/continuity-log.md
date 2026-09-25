@@ -2050,6 +2050,94 @@ is specified with eight attributes (mission, scope, boundaries, inputs, methods,
 genuinely open — I annotated it rather than deleting it, and did not rewrite the registry, because
 what belongs in those six missing columns is a content decision, not a cleanup.
 
+## v0.60 — the evidence portfolio was asserting demonstrated competence it had never assessed
+
+No backlog item: this came out of hunting the bug class that produced three real defects today —
+*things that look correct and report falsely*. I smoke-tested all 13 read endpoints in production
+first (13/13 correct as founder, 6/6 refused signed out, 0 console errors), then went looking for
+derived numbers and status words that could be wrong. This was the worst one.
+
+**What it did.** `export.js` is the artefact that leaves the system — a learner-owned Markdown or
+JSON portfolio, exportable signed-out, the thing a learner could hand to an employer. It opened
+with "a learner-owned record of **confirmed** evidence", listed every competency under the heading
+"**Assessed capability states**", and marked a project "**Demonstrated**".
+
+I built the profile v0.53 says is gameable and rendered it. Seven evidence records, one passed
+challenge per competency, every answer the same single sentence, **zero checkpoints, zero
+capstone, module not complete** — and the export said:
+
+```
+**Assessed capability states:**
+- C1 (Goal Definition): **Can do it independently** — confidence high
+   ... (all seven, confidence high)
+## Some real task — **Demonstrated**
+```
+
+No mention of a checkpoint. No mention of a capstone. No hint that challenge evidence is formative.
+A document leaving the system, asserting assessed competence across seven competencies at high
+confidence, on the strength of seven one-sentence answers that were never independently judged.
+
+**The internal contradiction that gave it away.** In that same run:
+
+| | |
+|---|---|
+| `competencyComplete` ×7 | `false` |
+| `moduleComplete("foundation")` | `false` |
+| `checkpointDone` CP1 / CP2 | `false` / `false` |
+| `projectDemonstrated("pr1")` | **`true`** |
+
+`projectCoverage` counts any evidence record carrying a `capId`, so one record per competency marks
+a project demonstrated. Two functions with near-identical names, measuring overlapping things,
+disagreeing — and the optimistic one is the one that gets rendered into an export.
+
+**What is *not* broken, and it matters.** I checked the capability ladder before touching anything,
+because if challenges could reach the top state this would be much worse. They cannot. A passed
+challenge raises a competency to at most `transferable` — "Can adapt it to new contexts". The top
+state, `advanced` — "Can design better approaches" — is reachable **only** through CP2, the
+capstone, which carries the two-assessor ARP. The pedagogy is sound and the strongest claim is
+properly gated. The defect was confined to how the export *described* that evidence.
+
+**The fix, in the document rather than the pedagogy.** I did not change what a learner earns —
+that is a design decision and not mine to make quietly. Instead the export now carries provenance,
+so it cannot launder:
+
+- A "How to read this" paragraph defining formative (challenge: self-confirmed, local heuristics,
+  **not** an independent judgement) against assessed (checkpoint: went through the ARP, assessor
+  count shown).
+- Every capability state names its evidence: `evidence: challenge + CP1, CP2`, or
+  `evidence: formative only (challenge)`.
+- Every challenge record is labelled `*formative, not an independent judgement*` inline.
+- A project backed only by challenge evidence now reads **Demonstrated (formative evidence only)**
+  with a line saying it is practice, not a verified outcome. One backed by a checkpoint still reads
+  plain **Demonstrated**.
+- JSON went to `version: 2` with a `provenance` block, per-capability `assessedByCheckpoint`,
+  `checkpoints` and `formativeOnly`, and per-project `demonstratedByCheckpoint`. A machine consumer
+  previously got `{"state":"independent","confidence":"high"}` with no way to know what rested it.
+
+I verified the *assessed* side too, which was the risk in the other direction — a fix that made
+every portfolio look unverified would be its own lie. Against the real 18-record browser profile
+(16 challenges, CP1, CP2): all seven capabilities read `challenge + CP1, CP2` for C1–C3 and
+`challenge + CP2` for C4–C7, which correctly reflects that CP1 only covers C1–C3; the project reads
+plain **Demonstrated**; JSON reports `assessedByCheckpoint: true, formativeOnly: false`. 0 console
+errors.
+
+**The open decision this surfaces, for the founder.** `projectDemonstrated` still returns `true`
+on formative evidence alone. I left the behaviour alone and fixed the description, but the
+inconsistency with `moduleComplete` is real and someone should decide what "Demonstrated" is
+supposed to mean: *you have touched every competency on this project*, or *you have demonstrated
+this module*. If the second, `projectDemonstrated` should require checkpoint backing and projects
+will stop reading "Demonstrated" until CP1 — a visible change to what learners see, so it is
+yours to call.
+
+**A gap this exposed.** All of this code is frontend, and the repo has no frontend tests at all —
+`node workers/api/test.mjs` covers the Worker, and the 61 tests I added today are all Worker-side.
+The bug class I have been hunting lives disproportionately in `app/js`, and it is currently
+verified only by hand and by a throwaway node harness. A minimal `node --test` suite over
+`content.js` / `model.js` / `export.js` / `pathway.js` with a stub `window` would have caught this
+in under a second. I have not added one: it is a new pattern in a repo whose build script states
+"No toolchain", and introducing it is a call worth making deliberately rather than as a side effect
+of a bug fix.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
