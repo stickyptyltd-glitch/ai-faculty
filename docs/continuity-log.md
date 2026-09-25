@@ -1759,7 +1759,7 @@ one of them. Ten learners and one reviewer is enough to catch a rubric that has 
 enough to call the assessment validated. Phase 3's gate (live faculty at least as good as authored
 content) is the one that actually needs independent assessors, and it is still open.
 
-## v0.55 — the institution can now see itself (item #9: curriculum + institution + learner dashboards)
+## v0.55 — 2026-09-26 — The institution can now see itself (item #9: curriculum + institution + learner dashboards)
 
 The two dashboards that the M1–M6 gate needs in order to be *readable* rather than just computable.
 The SQL for those metrics was committed in v0.54 and was always runnable by hand; what was missing
@@ -1822,7 +1822,7 @@ the fake-DB now filters the per-user submissions query instead of answering it w
 `node --check workers/api/index.js` still "fails" — ESM parsed as CommonJS, and committed HEAD fails
 identically at its own `export default`. `node workers/api/test.mjs` is the real gate.
 
-## v0.56 — the model adapter is no longer untested code (item #10, preparatory half)
+## v0.56 — 2026-09-26 — The model adapter is no longer untested code (item #10, preparatory half)
 
 Item #10 is "set `FACULTY_MODEL_KEY` and flip `FACULTY_ADAPTER` off dry-run", and that half is
 still blocked: there are no secrets on the worker, and a model key is not mine to mint. What I
@@ -1893,6 +1893,134 @@ The model must return strict JSON shaped `{"bands":{"<dimension>":"Meets"},"verd
 — the shape is stated in the policy preamble the adapter sends. The base URL is the provider's
 OpenAI-compatible root, and `/chat/completions` is appended. A test now proves the readiness panel
 turns green only once all three are set.
+
+## v0.57 — 2026-09-26 — Reconciling the five-phase plan against what actually got built (item #11)
+
+`/home/dayle/.claude/plans/smooth-scribbling-heron.md` (2026-09-12) is the plan this whole build
+followed. Its opening premise is now false: *"AI Faculty is currently a zero-backend static app:
+no accounts, no payments, everything free and anonymous."* Two of its five phases are substantially
+built, one is half-built, and two have never been started. The document is the only place that
+still describes the old state, so it is worth being precise about the delta rather than leaving it
+to be rediscovered.
+
+| Phase | Plan said | Reality | Verdict |
+|---|---|---|---|
+| 1 Accounts | 3 tables, passwordless magic-link via Resend | 13 tables, 9 migrations, **password-first** auth + magic-link fallback, **Cloudflare Email Service** chosen over Resend | Built, and deliberately different |
+| 2 Monetization | `subscriptions` table, `/api/billing/*` | no `subscriptions` table; append-only `payments` ledger + `users.plan`/`plan_status`; routes are `/api/payments/*`; three prices not one | Built but **switched off** (no Stripe account) |
+| 3 Learning plans | `learning_plans` + `learning_plan_pathways` | **neither table exists** | Not started |
+| 4 Qualifications | `qualifications` table, `#/qualification/:id` | **no `qualifications` table**; the evidence portfolio (`export.js`, v0.37) is the closest thing and is not a credential | Not started |
+| 5 Leaderboard | `leaderboard_scores` + `reward_redemptions` | **neither table exists** | Not started |
+
+**The trap worth flagging: `app/js/plans.js` is not "learning plans".** It is the monetization
+paywall helper — it derives a tier from `AUTH` and decides which pathways are gated, and it says
+in its own header that the gate is a soft client-side lock because the curriculum lives in
+localStorage. Phase 3 in the plan is about `learning_plans` grouping multiple pathways with target
+dates. Grepping for "plans" lands on a file that looks like Phase 3 and is actually Phase 2. I
+have not renamed it, because a rename across `main.js`, `index.html` and the two bundle paths is
+churn that buys clarity only if someone is looking; say the word and I will.
+
+**Where the plan was right and the build drifted, favourably.** Phase 1 assumed Resend and
+passwordless-only. Both changed for reasons that only surfaced by building: the sign-in flow had to
+become password-first after a founder account-takeover hole was found (a magic link mailed to an
+address you already control is a credential, so dev-link minting had to be gated on holding a
+founder *session* — see the v0.4x entry), and Cloudflare Email Service replaced Resend because the
+founder chose it and it is one fewer paid dependency. `PASSWORD_ITERATIONS` is 10k, not the OWASP
+600k, because the Workers **Free** plan caps CPU at 10ms per request and the recommended setting
+blows through it; the count is stored per row and credentials upgrade themselves on the next
+sign-in once the account is on Workers Paid, with no migration.
+
+**Where the build exceeded the plan.** The plan treated `faculty.js` `assessCheckpoint(...,
+strict:true)` as the whole assessment story and read its verdict for qualifications. In practice
+the Assessment Resolution Protocol grew a server-side control plane the plan never anticipated:
+`faculty_calls` as a lineage record for every assessment decision, `faculty_reviews` for the human
+layer with uphold/override/dismiss, an open-review escalation queue, a reviewer role, and a
+founder-only institution dashboard. That is a governance surface, not a feature, and it is the
+part of this build most likely to be load-bearing for Phase 4 — a qualification should be issued
+against `faculty_calls` + `faculty_reviews`, not against a local heuristic.
+
+**The plan's two corrections both still stand and are still unimplemented.** Certificates free for
+every tier (paying funds breadth, never a credential) and free leaderboard entry (a prize with
+monetary value behind a paywall is pay-to-enter). Neither is built. The plan's own reasoning for
+excluding authored heuristics from leaderboard scoring has been vindicated rather than
+speculative: v0.53 measured that challenge evidence is formative and soft — the placeholder check
+only rejects literal filler, a 15-word generic answer passes, and critique challenges are
+keyword-scored against a signal list — so a leaderboard scored on any of it would be farming.
+
+**Prerequisites, restated accurately.** The plan asks for a Resend key (Phase 1) and a Stripe
+account (Phases 2 and 5). The Resend ask is superseded — Phase 1 now needs Workers Paid ($5/mo)
+plus `aifaculty.org` onboarded to Email Sending, and nothing else. The Stripe ask stands, with one
+correction: the plan says to use the Stripe MCP connector *"already available in this session"*.
+It is not available now. Keys have to come from the founder directly:
+
+```
+npx wrangler secret put STRIPE_SECRET_KEY      --name aifaculty-api
+npx wrangler secret put STRIPE_WEBHOOK_SECRET  --name aifaculty-api
+```
+
+then fill the three `STRIPE_PRICE_*` vars in `workers/api/wrangler.toml`. All three prices are
+already priced and designed (Pro $15/mo, Pro $120/yr, Founding $150 one-time); only the IDs are
+missing.
+
+Recommendation: rewrite the plan file's Context section rather than leaving it to rot, since the
+plan is the thing a new reader picks up first. I have not edited `/home/dayle/.claude/plans/`
+because it sits outside this repo and is the founder's own working document — that is a call for
+the founder, not a tidy-up I should make silently.
+
+## v0.58 — the expansion prompt was going to ship nothing, and had been wrong since day one (item #12)
+
+`docs/expansion-prompt.md` is the prompt for unattended pathway authoring. Reconciling it turned up
+one instruction that would have silently broken every future run, one that had been wrong since the
+first line of code, and one that has quietly rotted. The prompt itself is fixed; the reasoning is
+here because two of these are not obvious and both look correct.
+
+**`--branch master` ships nothing while reporting success.** This is the same trap as v0.55,
+caught independently: any `--branch X` on `wrangler pages deploy` produces a *preview*
+deployment. It prints "Deployment complete", serves the new build at `X.aifaculty.pages.dev`, and
+leaves `aifaculty.pages.dev` and `aifaculty.org` on the old build. The branch name was right
+(`master` is the actual branch) which is exactly why it survived — the command looks impeccable.
+Production is the deployment with **no** branch flag. The prompt now says so in capitals, and adds
+the companion trap that the API is a Worker, not a Pages project, so it deploys with
+`npx wrangler deploy` from `workers/api/` and never `wrangler pages deploy`.
+
+**`_COMPETENCIES` never existed.** The prompt tells the agent to add competencies to a
+`_COMPETENCIES` array. There is no such array. The real one is `COMPETENCIES`, and it has been
+`COMPETENCIES` since commit `5f9c927` (2026-09-01, the first working app slice) — I checked the
+file as it stood on 2026-09-12, the day the prompt was written, and it exported
+`PATHWAY, COMPETENCIES, CHECKPOINTS, PATHWAYS, PATHWAY_CHECKPOINTS, QUICK_CHECKS` then and exports
+the same names now. So this was not rot; an agent following the prompt would append a second,
+dead competencies array that nothing reads, and the new pathway would render with no content while
+every structural check in the prompt passed. Worth stating plainly: the non-negotiable rules in
+that prompt were carefully earned, and this one slipped through anyway.
+
+**"16 pathways as of 2026-09" was accurate and is now 24.** Rather than just bump the number, the
+prompt now reads the count at run time and tells the reader not to trust any count written in it —
+a count in a prompt is stale the moment someone adds a pathway by hand, which is how eight got
+here. I verified both one-liners the prompt now uses actually run and print `24`.
+
+**The validation gate was thinner than it looked.** The prompt's checks were `node -c` (a valid
+alias for `--check`; I was wrong to suspect it, confirmed against a deliberately broken file) and a
+hand-rolled vm-load sweep that exists nowhere in the repo. The suite that actually gates this
+codebase — `node workers/api/test.mjs`, 200 tests — was not mentioned. It is now in the prompt,
+with a note that it also catches a broken Worker module.
+
+**Two guardrail corrections.** The scope list banned touching "the leaderboard", which does not
+exist — Phase 5 was never built (v0.57). It now names the thing that *does* exist and that a
+pathway author could plausibly drift into: the faculty/assessment plane. And the review step is
+stated honestly: a pathway added as `status: "available"` is publicly reachable the moment it
+deploys, so "the founder should skim it before it's announced" is a real hole in the governance
+chain rather than a formality. The prompt now requires the founder to have pre-approved the
+domain, and to stop and ask otherwise.
+
+**One thing I added that is advice rather than a correction.** The notes now carry the v0.53
+measurement that challenge evidence is formative — the placeholder check only rejects literal
+filler, rubric feedback names the correct option, option order reshuffles per render, and critique
+is keyword-scored. A prompt whose job is to add ~10–12 more challenges per run should say plainly
+that they are the easiest evidence in the system to farm, that fewer better challenges beat
+matching the existing count, and that none of it may end up carrying a credential. That last part
+matters because Phase 4 is unbuilt and whoever builds it will reach for the easiest evidence
+available.
+
+No new `.md` file: the reconciliation went into this log, per the standing rule.
 
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
