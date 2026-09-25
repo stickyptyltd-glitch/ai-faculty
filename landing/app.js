@@ -1,5 +1,3 @@
-const TARGET = new Date("2026-12-01T00:00:00Z").getTime();
-
 // On aifaculty.org the signup Worker is routed at /signup (same origin).
 // Anywhere else (e.g. the *.pages.dev preview) hit the Worker directly — it
 // sends permissive CORS headers so a cross-origin POST is fine.
@@ -11,28 +9,6 @@ const SIGNUP_ENDPOINT = /(^|\.)aifaculty\.org$/.test(location.hostname)
 const API_BASE = /(^|\.)aifaculty\.org$/.test(location.hostname)
   ? "/api"
   : "https://aifaculty-api.lecheyne24.workers.dev/api";
-
-const cdD = document.getElementById("cdD");
-const cdH = document.getElementById("cdH");
-const cdM = document.getElementById("cdM");
-const cdS = document.getElementById("cdS");
-
-function pad(n) { return String(n).padStart(2, "0"); }
-
-function tick() {
-  const diff = Math.max(0, TARGET - Date.now());
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor((diff % 86400000) / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  const s = Math.floor((diff % 60000) / 1000);
-  cdD.textContent = pad(d);
-  cdH.textContent = pad(h);
-  cdM.textContent = pad(m);
-  cdS.textContent = pad(s);
-}
-
-tick();
-setInterval(tick, 1000);
 
 const form = document.getElementById("signupForm");
 const email = document.getElementById("email");
