@@ -116,6 +116,35 @@
     else if (path === "/admin/learners") loadAdminLearners();
     else if (path.startsWith("/admin/learners/")) loadAdminLearnerDetail(parseHash().parts[2]);
     else if (path === "/admin/feedback") loadAdminFeedback();
+    else if (path === "/account") loadPasswordStatus();
+  }
+
+  async function loadPasswordStatus() {
+    const user = window.AUTH.get().user;
+    const box = document.getElementById("passwordCardBody");
+    if (!box || !user || user.role !== "founder") return;
+    const res = await window.AUTH.apiGet("/auth/password");
+    if (!box.isConnected) return;
+    if (!res.ok) { box.innerHTML = `<p class="hint">Couldn't check password status.</p>`; return; }
+    const already = !!(res.data && res.data.passwordSet);
+    box.innerHTML = already
+      ? `<p style="margin:6px 0 12px">You have a password. Changing it signs out every other session.</p>
+         <form data-form="set-password" class="field">
+           <label for="curPw">Current password</label>
+           <input id="curPw" type="password" name="currentPassword" required autocomplete="current-password" />
+           <label for="newPw" style="margin-top:10px">New password</label>
+           <input id="newPw" type="password" name="password" required minlength="12" autocomplete="new-password" />
+           <button class="btn" type="submit" style="margin-top:10px">Change password</button>
+         </form>
+         <div id="passwordResult"></div>`
+      : `<p style="margin:6px 0 12px">Set a password so you can sign in without waiting on an email link.</p>
+         <form data-form="set-password" class="field">
+           <label for="newPw">New password</label>
+           <input id="newPw" type="password" name="password" required minlength="12" autocomplete="new-password" />
+           <button class="btn" type="submit" style="margin-top:10px">Set password</button>
+         </form>
+         <div id="passwordResult"></div>`;
+    box.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
   }
 
   function handleQopt(e) {
@@ -286,6 +315,50 @@
           ? `<div class="notice">Dev mode — no email sender configured yet, so here's the link
                directly: <a href="${res.dev_link}">${esc(res.dev_link)}</a></div>`
           : `<div class="notice">Check your email for the sign-in link — it expires in 15 minutes.</div>`;
+      });
+      return;
+    }
+
+    if (kind === "login-password") {
+      const box = document.getElementById("passwordResult");
+      const email = (data.email || "").trim();
+      const password = data.password || "";
+      if (box) box.innerHTML = `<p class="hint">Signing in…</p>`;
+      window.AUTH.apiPost("/auth/login", { email, password }).then(res => {
+        if (!box) return;
+        if (!res.ok) {
+          const msg = res.status === 429
+            ? "Too many failed attempts — this account is locked for 15 minutes."
+            : res.status === 400 ? "Enter your email and password."
+            : "That email and password don't match.";
+          box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
+          return;
+        }
+        form.reset();
+        window.AUTH.refresh().then(() => { renderAuthNav(); location.hash = "#/account"; });
+      });
+      return;
+    }
+
+    if (kind === "set-password") {
+      const box = document.getElementById("passwordResult");
+      const password = data.password || "";
+      const body = { password };
+      if (data.currentPassword) body.currentPassword = data.currentPassword;
+      if (box) box.innerHTML = `<p class="hint">Saving…</p>`;
+      window.AUTH.apiPost("/auth/password", body).then(res => {
+        if (!box) return;
+        if (!res.ok) {
+          const err = res.data && res.data.error;
+          const msg = err === "weak_password" ? "Use at least 12 characters."
+            : err === "invalid_credentials" ? "Your current password isn't right."
+            : res.status === 403 ? "Only the founder account can have a password."
+            : "Something went wrong — try again.";
+          box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
+          return;
+        }
+        form.reset();
+        box.innerHTML = `<div class="notice">Password saved. Every other signed-in session was signed out.</div>`;
       });
       return;
     }
@@ -1450,6 +1523,17 @@
         <button class="btn" type="submit" style="margin-top:10px">Send sign-in link</button>
       </form>
       <div id="loginResult"></div>
+      <details style="margin-top:20px">
+        <summary style="cursor:pointer">Sign in with a password instead</summary>
+        <form data-form="login-password" class="field" style="margin-top:12px">
+          <label for="pwEmail">Email</label>
+          <input id="pwEmail" type="email" name="email" required placeholder="you@example.com" />
+          <label for="pwPassword" style="margin-top:10px">Password</label>
+          <input id="pwPassword" type="password" name="password" required autocomplete="current-password" />
+          <button class="btn" type="submit" style="margin-top:10px">Sign in</button>
+        </form>
+        <div id="passwordResult"></div>
+      </details>
       <p class="hint" style="margin-top:18px">Signing in doesn't move or affect the lesson
         progress on this device — that stays exactly as it is, in this browser. Accounts are for
         entitlements, qualifications and the leaderboard as those roll out.</p>
@@ -1481,12 +1565,18 @@
            <button class="btn btn--ghost" type="button" data-action="checkout-plan" data-plan="founding">Founding Member · $150 lifetime</button>
            <div id="planResult"></div>
          </div>`;
+    const passwordCard = u.role === "founder" ? `
+      <div class="card" style="margin-top:14px">
+        <div class="card__label">Password</div>
+        <div id="passwordCardBody"><p class="hint">Checking…</p></div>
+      </div>` : "";
     return `
       <h1>Account</h1>
       <p class="lead">Signed in as <strong>${esc(u.email)}</strong>. ${planBadge}</p>
       <p class="hint">Account created ${esc(new Date(u.created_at).toLocaleDateString())}.</p>
       ${granted}
       ${planCard}
+      ${passwordCard}
       <p class="hint" style="margin-top:14px">Your lesson progress on this device stays in this
         browser regardless of which account you're signed into.</p>
       <button class="btn btn--ghost" type="button" data-action="logout" style="margin-top:16px">Sign out</button>

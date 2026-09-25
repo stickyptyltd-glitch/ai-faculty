@@ -22,6 +22,8 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
   const payments = [];
   const facultyCalls = [];
   const facultyReviews = [];
+  const founderPasswords = [];
+  const passwordFailures = [];
   const usersRows = users.map(u => ({ plan: "free", plan_status: "none", stripe_customer_id: null, ...u }));
 
   async function first(sql, args) {
@@ -38,6 +40,12 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     }
     if (flat.includes("FROM users WHERE stripe_customer_id")) {
       return usersRows.find(u => u.stripe_customer_id === args[0]) || null;
+    }
+    if (flat.includes("FROM founder_passwords WHERE user_id")) {
+      return founderPasswords.find(p => p.user_id === args[0]) || null;
+    }
+    if (flat.includes("FROM password_failures WHERE user_id")) {
+      return passwordFailures.find(p => p.user_id === args[0]) || null;
     }
     if (flat.includes("SELECT id FROM faculty_calls WHERE id")) {
       return facultyCalls.find(c => c.id === args[0]) || null;
@@ -88,6 +96,31 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
       const [id, user_id, stripe_event_id, event_type, plan, amount, currency, status, created_at] = args;
       if (!payments.some(p => p.stripe_event_id === stripe_event_id)) {
         payments.push({ id, user_id, stripe_event_id, event_type, plan, amount_cents: amount, currency, status, created_at });
+      }
+    } else if (sql.startsWith("INSERT INTO sessions")) {
+      const [token_hash, user_id, created_at, expires_at] = args;
+      sessions.push({ token_hash, user_id, created_at, expires_at });
+    } else if (sql.startsWith("INSERT INTO founder_passwords")) {
+      const [user_id, salt, hash, iterations, created_at, updated_at] = args;
+      founderPasswords.push({ user_id, salt, hash, iterations, created_at, updated_at });
+    } else if (sql.startsWith("UPDATE founder_passwords")) {
+      const [salt, hash, iterations, updated_at, user_id] = args;
+      const p = founderPasswords.find(p => p.user_id === user_id);
+      if (p) Object.assign(p, { salt, hash, iterations, updated_at });
+    } else if (sql.startsWith("INSERT INTO password_failures")) {
+      const [user_id, fails, locked_until, updated_at] = args;
+      passwordFailures.push({ user_id, fails, locked_until, updated_at });
+    } else if (sql.startsWith("UPDATE password_failures")) {
+      const [fails, locked_until, updated_at, user_id] = args;
+      const p = passwordFailures.find(p => p.user_id === user_id);
+      if (p) Object.assign(p, { fails, locked_until, updated_at });
+    } else if (sql.startsWith("DELETE FROM password_failures")) {
+      const i = passwordFailures.findIndex(p => p.user_id === args[0]);
+      if (i >= 0) passwordFailures.splice(i, 1);
+    } else if (sql.includes("DELETE FROM sessions WHERE user_id")) {
+      const keep = args[1];
+      for (let i = sessions.length - 1; i >= 0; i--) {
+        if (sessions[i].user_id === args[0] && sessions[i].token_hash !== keep) sessions.splice(i, 1);
       }
     } else if (sql.startsWith("INSERT INTO faculty_calls")) {
       const [id, kind, user_id, cp_id, rubric_dims, submission_json, policy_id, adapter, model,
@@ -182,7 +215,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     };
     return stmt;
   }
-  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows, _faculty: facultyCalls, _reviews: facultyReviews };
+  return { prepare, _feedback: feedback, _payments: payments, _users: usersRows, _faculty: facultyCalls, _reviews: facultyReviews, _passwords: founderPasswords, _fails: passwordFailures, _sessions: sessions };
 }
 
 function makeKV() {
@@ -705,6 +738,164 @@ function strongSubmission() {
   const learnerE = await makeEnv();
   const forbidden = await worker.fetch(await req("/api/admin/readiness", { token: learnerE.rawToken }), learnerE.env);
   check("403 readiness as learner", forbidden.status === 403);
+}
+
+// 28. founder password: set, sign in, refuse wrong guesses
+{
+  const PW = "correct horse battery staple";
+  const founderE = await makeEnv({ role: "founder" });
+  const env = founderE.env;
+  env.rate_limit = { window_seconds: 3600, max_per_ip: 100 };
+  const ft = founderE.rawToken;
+  const IP = "9.9.9.9";
+  const post = async (path, body, o = {}) => worker.fetch(
+    await req(path, { method: "POST", body, ip: IP, ...o }), env);
+
+  let r = await worker.fetch(await req("/api/auth/password", { token: ft }), env);
+  check("founder has no password initially", r.status === 200 && (await r.json()).passwordSet === false);
+
+  r = await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("401 login before a password is set", r.status === 401);
+
+  r = await post("/api/auth/password", { password: "short" }, { token: ft });
+  check("400 weak password", r.status === 400);
+
+  r = await post("/api/auth/password", { password: PW }, { token: ft });
+  check("200 founder sets password", r.status === 200);
+  r = await worker.fetch(await req("/api/auth/password", { token: ft }), env);
+  check("passwordSet true after set", (await r.json()).passwordSet === true);
+
+  const stored = env.DB._passwords[0];
+  check("stores salt+hash only, never plaintext",
+    stored && stored.salt.length === 32 && stored.hash.length === 64
+    && stored.hash !== PW && stored.iterations === 10000);
+
+  r = await post("/api/auth/login", { email: "learner@example.com", password: "not the password" });
+  check("401 wrong password", r.status === 401);
+  check("failure counted", env.DB._fails.length === 1 && env.DB._fails[0].fails === 1);
+
+  r = await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  const cookie = r.headers.get("Set-Cookie") || "";
+  check("200 password login", r.status === 200);
+  check("sets hardened session cookie",
+    cookie.startsWith("af_session=") && cookie.includes("HttpOnly") && cookie.includes("Secure") && cookie.includes("SameSite=Lax"));
+  const newTok = cookie.split(";")[0].slice("af_session=".length);
+  const me = await worker.fetch(await req("/api/auth/me", { token: newTok }), env);
+  check("password session authenticates as founder", me.status === 200 && (await me.json()).user.role === "founder");
+  check("failures cleared on success", env.DB._fails.length === 0);
+
+  r = await post("/api/auth/login", { email: "nobody@example.com", password: PW });
+  check("401 unknown email refused same as wrong password", r.status === 401);
+  r = await post("/api/auth/login", { email: "learner@example.com", password: "" });
+  check("400 empty password", r.status === 400);
+
+  const learnerE = await makeEnv();
+  learnerE.env.rate_limit = { window_seconds: 3600, max_per_ip: 100 };
+  r = await worker.fetch(await req("/api/auth/password", { method: "POST", token: learnerE.rawToken, body: { password: PW } }), learnerE.env);
+  check("403 set password as learner", r.status === 403);
+  r = await worker.fetch(await req("/api/auth/password", { token: learnerE.rawToken }), learnerE.env);
+  check("403 password status as learner", r.status === 403);
+  r = await worker.fetch(await req("/api/auth/password", { method: "POST", body: { password: PW } }), learnerE.env);
+  check("401 set password signed out", r.status === 401);
+}
+
+// 29. account lockout, password change, session invalidation
+{
+  const PW = "correct horse battery staple";
+  const NEW_PW = "a different long password";
+  const founderE = await makeEnv({ role: "founder" });
+  const env = founderE.env;
+  env.rate_limit = { window_seconds: 3600, max_per_ip: 100 };
+  const ft = founderE.rawToken;
+  const post = async (path, body, ip = "8.8.8.8") => worker.fetch(
+    await req(path, { method: "POST", body, ip }), env);
+
+  await worker.fetch(await req("/api/auth/password", { method: "POST", token: ft, body: { password: PW } }), env);
+
+  for (let i = 0; i < 5; i++) await post("/api/auth/login", { email: "learner@example.com", password: "guess-" + i });
+  check("locked after 5 failures", env.DB._fails[0].fails === 5 && !!env.DB._fails[0].locked_until);
+
+  let r = await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("429 correct password refused while locked", r.status === 429);
+  r = await post("/api/auth/login", { email: "learner@example.com", password: PW }, "7.7.7.7");
+  check("lock is per-account, not per-IP", r.status === 429);
+
+  r = await worker.fetch(await req("/api/auth/password", { method: "POST", token: ft, body: { password: NEW_PW } }), env);
+  check("403 change without current password", r.status === 403);
+  r = await worker.fetch(await req("/api/auth/password", { method: "POST", token: ft, body: { currentPassword: "wrong current", password: NEW_PW } }), env);
+  check("403 change with wrong current password", r.status === 403);
+  check("failed change left the credential intact", env.DB._passwords[0].hash !== NEW_PW);
+
+  const secondHash = await sha256Hex("a-second-session-token");
+  env.DB._sessions.push({ token_hash: secondHash, user_id: "u1", created_at: "2026-01-01T00:00:00.000Z", expires_at: "2099-01-01T00:00:00.000Z" });
+
+  r = await worker.fetch(await req("/api/auth/password", { method: "POST", token: ft, body: { currentPassword: PW, password: NEW_PW } }), env);
+  check("200 change with current password", r.status === 200);
+  check("change cleared the lockout", env.DB._fails.length === 0);
+  check("other sessions dropped, changer kept",
+    env.DB._sessions.length === 1 && env.DB._sessions[0].token_hash === await sha256Hex(ft));
+  const stillMe = await worker.fetch(await req("/api/auth/me", { token: ft }), env);
+  check("changer still signed in after change", stillMe.status === 200);
+  const otherMe = await worker.fetch(await req("/api/auth/me", { token: "a-second-session-token" }), env);
+  check("other session no longer authenticates", otherMe.status === 401);
+
+  r = await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("old password no longer works", r.status === 401);
+  r = await post("/api/auth/login", { email: "learner@example.com", password: NEW_PW });
+  check("new password works", r.status === 200);
+}
+
+// 30. password login is rate limited per IP
+{
+  const PW = "correct horse battery staple";
+  const founderE = await makeEnv({ role: "founder" });
+  const env = founderE.env;
+  await worker.fetch(await req("/api/auth/password", { method: "POST", token: founderE.rawToken, body: { password: PW } }), env);
+  const body = { email: "learner@example.com", password: "wrong" };
+  let last = 0;
+  for (let i = 0; i < 4; i++) {
+    last = await worker.fetch(await req("/api/auth/login", { method: "POST", body, ip: "6.6.6.6" }), env);
+  }
+  check("429 once the per-IP login cap is hit", last.status === 429);
+  const other = await worker.fetch(await req("/api/auth/login", { method: "POST", body, ip: "6.6.6.7" }), env);
+  check("per-IP bucket is per address", other.status === 401);
+}
+
+// 31. work factor is env-driven, clamped, and credentials self-upgrade on sign-in
+{
+  const PW = "correct horse battery staple";
+  const founderE = await makeEnv({ role: "founder" });
+  const env = founderE.env;
+  env.rate_limit = { window_seconds: 3600, max_per_ip: 100 };
+  const ft = founderE.rawToken;
+  const post = async (path, body) => worker.fetch(
+    await req(path, { method: "POST", body, ip: "5.5.5.5" }), env);
+
+  env.PASSWORD_ITERATIONS = "0";
+  await worker.fetch(await req("/api/auth/password", { method: "POST", token: ft, body: { password: PW } }), env);
+  check("absent/zero setting falls back to the default", env.DB._passwords[0].iterations === 10000);
+
+  env.PASSWORD_ITERATIONS = "not-a-number";
+  await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("garbage setting falls back to the default", env.DB._passwords[0].iterations === 10000);
+
+  env.PASSWORD_ITERATIONS = "25000";
+  let r2 = await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("login still succeeds at the new work factor", r2.status === 200);
+  check("credential self-upgraded to the new count", env.DB._passwords[0].iterations === 25000);
+
+  env.PASSWORD_ITERATIONS = "999999999";
+  r2 = await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("clamped to the maximum", r2.status === 200 && env.DB._passwords[0].iterations === 600000);
+
+  env.PASSWORD_ITERATIONS = "1";
+  await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("clamped to the minimum, never weakened", env.DB._passwords[0].iterations === 10000);
+
+  const before = env.DB._passwords[0].hash;
+  env.PASSWORD_ITERATIONS = "30000";
+  await post("/api/auth/login", { email: "learner@example.com", password: PW });
+  check("re-hash uses a fresh salt each upgrade", env.DB._passwords[0].hash !== before);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

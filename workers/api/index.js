@@ -40,6 +40,58 @@ async function sha256Hex(input) {
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function createSession(userId, env) {
+  const token = randomToken();
+  const tokenHash = await sha256Hex(token);
+  const now = new Date();
+  const expires = new Date(now.getTime() + SESSION_TTL_S * 1000);
+  await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)")
+    .bind(tokenHash, userId, now.toISOString(), expires.toISOString()).run();
+  return token;
+}
+
+const PASSWORD_MIN_LEN = 12;
+const PASSWORD_MAX_LEN = 200;
+const PASSWORD_ITERATIONS_DEFAULT = 10000;
+const PASSWORD_ITERATIONS_MIN = 10000;
+const PASSWORD_ITERATIONS_MAX = 600000;
+
+function pbkdfIterations(env) {
+  const n = Number(env.PASSWORD_ITERATIONS);
+  if (!Number.isFinite(n) || n <= 0) return PASSWORD_ITERATIONS_DEFAULT;
+  return Math.min(PASSWORD_ITERATIONS_MAX, Math.max(PASSWORD_ITERATIONS_MIN, Math.floor(n)));
+}
+const PASSWORD_MAX_FAILS = 5;
+const PASSWORD_LOCK_MS = 15 * 60 * 1000;
+const DUMMY_SALT = "00000000000000000000000000000000";
+
+function hexToBytes(hex) {
+  return new Uint8Array((hex.match(/../g) || []).map(b => parseInt(b, 16)));
+}
+
+async function pbkdf2Hex(password, saltHex, iterations) {
+  const key = await crypto.subtle.importKey(
+    "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt: hexToBytes(saltHex), iterations, hash: "SHA-256" }, key, 256
+  );
+  return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function readPassword(body) {
+  const password = typeof body.password === "string" ? body.password : "";
+  if (password.length < PASSWORD_MIN_LEN || password.length > PASSWORD_MAX_LEN) return null;
+  return password;
+}
+
 function getCookie(request, name) {
   const header = request.headers.get("Cookie") || "";
   for (const part of header.split(/;\s*/)) {
@@ -162,11 +214,7 @@ async function handleVerify(request, env) {
     user = { id, email: row.email };
   }
 
-  const sessionToken = randomToken();
-  const sessionHash = await sha256Hex(sessionToken);
-  const sessionExpires = new Date(now.getTime() + SESSION_TTL_S * 1000);
-  await env.DB.prepare("INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)")
-    .bind(sessionHash, user.id, now.toISOString(), sessionExpires.toISOString()).run();
+  const sessionToken = await createSession(user.id, env);
 
   return new Response(null, {
     status: 302,
@@ -215,6 +263,115 @@ async function handleLogout(request, env, headers) {
     await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(tokenHash).run();
   }
   return json(200, { ok: true }, { ...headers, "Set-Cookie": clearCookie() });
+}
+
+async function handlePasswordLogin(request, env, headers) {
+  if (await rateLimited(request, env, "pwrl")) {
+    return json(429, { ok: false, error: "rate_limited" }, headers);
+  }
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+  const email = String(body.email || "").trim().toLowerCase();
+  const password = typeof body.password === "string" ? body.password : "";
+  if (!EMAIL_RE.test(email) || !password || password.length > PASSWORD_MAX_LEN) {
+    return json(400, { ok: false, error: "invalid_credentials" }, headers);
+  }
+  const deny = () => json(401, { ok: false, error: "invalid_credentials" }, headers);
+
+  const user = await env.DB.prepare("SELECT id, email, role FROM users WHERE email = ?").bind(email).first();
+  if (!user) {
+    await pbkdf2Hex(password, DUMMY_SALT, pbkdfIterations(env));
+    return deny();
+  }
+  const cred = await env.DB.prepare("SELECT * FROM founder_passwords WHERE user_id = ?").bind(user.id).first();
+  if (!cred) {
+    await pbkdf2Hex(password, DUMMY_SALT, pbkdfIterations(env));
+    return deny();
+  }
+
+  const now = new Date();
+  const failRow = await env.DB.prepare("SELECT * FROM password_failures WHERE user_id = ?").bind(user.id).first();
+  if (failRow && failRow.locked_until && new Date(failRow.locked_until) > now) {
+    await pbkdf2Hex(password, cred.salt, cred.iterations);
+    return json(429, { ok: false, error: "rate_limited" }, headers);
+  }
+
+  const hash = await pbkdf2Hex(password, cred.salt, cred.iterations);
+  if (!timingSafeEqual(hash, cred.hash)) {
+    const locked = failRow && failRow.locked_until && new Date(failRow.locked_until) > now;
+    const fails = (locked ? 0 : (failRow ? failRow.fails : 0)) + 1;
+    const lockedUntil = fails >= PASSWORD_MAX_FAILS
+      ? new Date(now.getTime() + PASSWORD_LOCK_MS).toISOString() : null;
+    if (failRow) {
+      await env.DB.prepare(
+        "UPDATE password_failures SET fails = ?, locked_until = ?, updated_at = ? WHERE user_id = ?"
+      ).bind(fails, lockedUntil, now.toISOString(), user.id).run();
+    } else {
+      await env.DB.prepare(
+        "INSERT INTO password_failures (user_id, fails, locked_until, updated_at) VALUES (?, ?, ?, ?)"
+      ).bind(user.id, fails, lockedUntil, now.toISOString()).run();
+    }
+    return deny();
+  }
+
+  await env.DB.prepare("DELETE FROM password_failures WHERE user_id = ?").bind(user.id).run();
+  const wantIterations = pbkdfIterations(env);
+  if (cred.iterations !== wantIterations) {
+    const salt = randomToken(16);
+    const rehashed = await pbkdf2Hex(password, salt, wantIterations);
+    await env.DB.prepare("UPDATE founder_passwords SET salt = ?, hash = ?, iterations = ?, updated_at = ? WHERE user_id = ?")
+      .bind(salt, rehashed, wantIterations, now.toISOString(), user.id).run();
+  }
+  const token = await createSession(user.id, env);
+  return json(200, { ok: true, email: user.email, role: user.role },
+    { ...headers, "Set-Cookie": sessionCookie(token, SESSION_TTL_S) });
+}
+
+async function handleSetPassword(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+  let body;
+  try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
+  const password = readPassword(body);
+  if (!password) return json(400, { ok: false, error: "weak_password" }, headers);
+
+  const existing = await env.DB.prepare("SELECT * FROM founder_passwords WHERE user_id = ?").bind(auth.user.id).first();
+  if (existing) {
+    const current = typeof body.currentPassword === "string" ? body.currentPassword : "";
+    const currentHash = await pbkdf2Hex(current, existing.salt, existing.iterations);
+    if (!timingSafeEqual(currentHash, existing.hash)) {
+      return json(403, { ok: false, error: "invalid_credentials" }, headers);
+    }
+  }
+
+  const now = new Date().toISOString();
+  const salt = randomToken(16);
+  const iterations = pbkdfIterations(env);
+  const hash = await pbkdf2Hex(password, salt, iterations);
+  if (existing) {
+    await env.DB.prepare(
+      "UPDATE founder_passwords SET salt = ?, hash = ?, iterations = ?, updated_at = ? WHERE user_id = ?"
+    ).bind(salt, hash, iterations, now, auth.user.id).run();
+  } else {
+    await env.DB.prepare(
+      "INSERT INTO founder_passwords (user_id, salt, hash, iterations, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)"
+    ).bind(auth.user.id, salt, hash, iterations, now, now).run();
+  }
+
+  const currentToken = getCookie(request, SESSION_COOKIE);
+  if (currentToken) {
+    await env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND token_hash != ?")
+      .bind(auth.user.id, await sha256Hex(currentToken)).run();
+  }
+  await env.DB.prepare("DELETE FROM password_failures WHERE user_id = ?").bind(auth.user.id).run();
+  return json(200, { ok: true });
+}
+
+async function handleHasPassword(request, env, headers) {
+  const auth = await requireFounder(request, env, headers);
+  if (auth.error) return auth.error;
+  const cred = await env.DB.prepare("SELECT user_id FROM founder_passwords WHERE user_id = ?").bind(auth.user.id).first();
+  return json(200, { ok: true, passwordSet: !!cred }, headers);
 }
 
 // ---- progress sync (Phase A: additive telemetry, never blocks the local-first save) -----
@@ -1025,6 +1182,15 @@ export default {
     }
     if (request.method === "POST" && url.pathname === "/api/auth/logout") {
       return handleLogout(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/auth/login") {
+      return handlePasswordLogin(request, env, headers);
+    }
+    if (request.method === "POST" && url.pathname === "/api/auth/password") {
+      return handleSetPassword(request, env, headers);
+    }
+    if (request.method === "GET" && url.pathname === "/api/auth/password") {
+      return handleHasPassword(request, env, headers);
     }
     if (request.method === "POST" && url.pathname === "/api/progress/sync") {
       return handleProgressSync(request, env, headers);

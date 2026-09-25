@@ -1171,6 +1171,63 @@ items are unchanged and not claimed here: Stripe Connect onboarding, Workers Pai
 billing, `FACULTY_MODEL_KEY`, Mission-006 ratification, and the human mastery run + 10-learner
 quality gate.
 
+## v0.42 — 2026-09-25 — Founder handover + founder password sign-in
+
+Two things, both requested directly: the super-admin account moved, and a password was added as a
+second way to sign in as the founder.
+
+**Role handover** — `stickyptyltd@gmail.com` promoted to `founder`; `lecheyne24@gmail.com` demoted
+to `reviewer` (one atomic `UPDATE ... CASE` over D1, so it is idempotent and can't half-apply).
+Verified live across six expectations: the new founder passes `/api/admin/overview` and the
+founder-only `/api/faculty/log`; the demoted account is refused both with 403 but still gets 200 on
+`/api/faculty/reviews`, so the step-down cost decide rights and nothing else. This mirrors the
+`reviewer` step-down the role endpoint already models, and it was done in the database rather than
+through `POST /api/admin/role` because that endpoint needs an existing founder session and the point
+of the exercise was to change who holds it.
+
+**Password sign-in** — the app was passwordless by design (magic link only), so this is new surface,
+not a config change. Migration `0009_founder_passwords.sql` adds `founder_passwords` and
+`password_failures`.
+
+- `POST /api/auth/login` — email + password to a session cookie, same cookie the magic link issues.
+  Throttled twice: the existing per-IP KV bucket under its own `pwrl` prefix, **and** a per-account
+  counter in D1 that locks the account for 15 minutes after 5 failures. The per-account half is the
+  one that matters — a per-IP limit alone cannot stop a distributed guess at one known address, and
+  that test asserts a different IP is refused too.
+- `POST /api/auth/password` — founder-only set/change. Setting the *first* password needs only a
+  founder session; **changing** an existing one requires the current password, so a stolen session
+  cannot lock the founder out. A successful change drops every other session for the account.
+- `GET /api/auth/password` — `{ passwordSet: boolean }`, drives the account card.
+
+Deliberate properties: the founder types their password into the browser, so the plaintext never
+passes through me, a shell, a migration, or this repo. Only the PBKDF2 output is stored, in a table
+separate from `users` so a password can never be written against a learner row. Comparison is
+constant-time, and every "no such account" / "no password set" path still runs a dummy hash so those
+cases aren't distinguishable by response time.
+
+**The work factor is a real compromise, and the constraint is the Workers Free plan.** PBKDF2 at the
+OWASP-recommended 600,000 iterations *exceeds the 10ms CPU limit* — the Worker throws and every
+password call 500s. That shipped broken on the first deploy and was caught only by exercising the
+live endpoint; the unit tests all passed, because Node has no such limit. `PASSWORD_ITERATIONS`
+(default `10000`, clamped to 10k–600k) makes the cost configurable instead of hardcoded, so moving to
+Workers Paid is a one-line var change: the iteration count is stored per row and a successful login
+re-hashes at the current setting when it differs, so existing credentials upgrade themselves with no
+migration and no reset. Until that move, 10k is well under what a real password store would use, and
+that is the honest cost of staying on the free tier.
+
+Tests: 73 → 112, covering hash storage, session issuance, wrong password, unknown email, per-account
+lockout, lockout not bypassable by changing IP, current-password required to change, session
+invalidation, per-IP cap, and the clamp/auto-upgrade behaviour. A mock gap surfaced along the way —
+`INSERT INTO sessions` was never handled, meaning magic-link verify had no test coverage at all.
+
+Live: migration applied, Worker + Pages deployed, and a full set → login → wrong-password cycle
+exercised against `aifaculty.org`. The throwaway credential used for that was deleted afterwards;
+`founder_passwords` and `password_failures` are both empty, so the founder's first real password is
+still theirs to set.
+
+Founder-locked items unchanged and not claimed: Stripe Connect, Workers Paid + Cloudflare Email
+billing, `FACULTY_MODEL_KEY`, Mission-006 ratification, human mastery + 10-learner gate.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

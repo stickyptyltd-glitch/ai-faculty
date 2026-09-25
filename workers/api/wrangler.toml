@@ -41,6 +41,14 @@ STRIPE_PRICE_PRO_MONTHLY = ""
 STRIPE_PRICE_PRO_ANNUAL = ""
 STRIPE_PRICE_FOUNDING = ""
 
+# Founder password sign-in work factor. The Workers Free plan caps CPU at 10ms per request,
+# and PBKDF2-SHA256 at the OWASP-recommended 600k iterations blows straight through it (the
+# Worker throws, so every password call 500s). 10k is what fits the free-tier budget with
+# headroom. Raise this to "600000" once the account is on Workers Paid — credentials upgrade
+# themselves on the next successful sign-in, because the iteration count is stored per row and
+# a login re-hashes at the current setting when it differs. No migration, no reset.
+PASSWORD_ITERATIONS = "10000"
+
 # Phase 3 — Institutional AI Control Plane (docs/01-architecture.md §3). Assessments run on the
 # deterministic "dry-run" adapter until a model is configured; the same /api/faculty/assess endpoint
 # then uses the model and every call is audited to faculty_calls. To turn the model on:
