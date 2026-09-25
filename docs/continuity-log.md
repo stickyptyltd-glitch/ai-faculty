@@ -1417,6 +1417,45 @@ Tests 116 → 124.
 There are no real learner accounts yet, so this costs nothing today — but it is the reason task #2
 (now a two-minute config change, with the code already written) should not sit much longer.
 
+## v0.49 — 2026-09-25 — Real email sending is written, tested and ready to switch on
+
+The code for Cloudflare Email Service is now in place. The only thing left is a billing action I
+can't perform, and it is now four commands rather than a project.
+
+- `handleRequestLink` picks a provider in priority order: the `EMAIL` binding first (the chosen
+  provider), Resend second as a zero-cost fallback, dev links last. Adding the binding is the whole
+  activation step — nothing else needs to change, and dev links go quiet on their own the moment a
+  real sender exists, because no link is ever returned in a response body once a send succeeds.
+- The Cloudflare call uses the structured `send()` builder rather than the legacy MIME
+  `EmailMessage` API. That is deliberate: the legacy form requires `import ... from
+  "cloudflare:email"`, which would take the Node test runner down with it on every run.
+- The sign-in email now has a real HTML body — a button, a copyable fallback link, and an explicit
+  "if you didn't request this, ignore this" — instead of a bare URL on its own line.
+- **A failed send no longer degrades into an open sign-in oracle.** Previously the Resend response
+  was never checked, so a rejected or misconfigured send still returned `200 {sent:true}` and the
+  user was told to check an inbox that would stay empty. Now both providers throw on failure and
+  the endpoint returns `502 email_send_failed` with no link in the body. The client says "We
+  couldn't send that email just now — try again in a moment."
+- Added `MAIL_FROM = "accounts@aifaculty.org"`, which must be on the onboarded domain.
+
+The `[[send_email]]` block is committed **commented out**, with the activation steps inline.
+Deploying it while the account is on the Free plan fails outright, so shipping it live would have
+turned every future unrelated deploy into a broken one.
+
+**To activate (founder, ~5 minutes):**
+1. Upgrade the Cloudflare account to Workers Paid ($5/mo).
+2. Dashboard → Email → Email Sending → onboard `aifaculty.org`.
+3. Uncomment the `[[send_email]]` block at the bottom of `workers/api/wrangler.toml`.
+4. `./build.sh && npx wrangler deploy --config workers/api/wrangler.toml`
+5. Request a link from a signed-out browser and confirm it arrives.
+
+Production is verified unchanged in the meantime: anonymous requests still get `signin_unavailable`
+and no link, so #1's fix is not weakened by any of this.
+
+Tests 124 → 134. One of them caught a real defect in its own test: the old Resend stub passed
+requests through to the real API and never asserted a success status, which is precisely why the
+missing `res.ok` check had gone unnoticed. The stub now returns a real response.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

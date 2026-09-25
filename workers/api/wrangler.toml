@@ -24,16 +24,25 @@ id = "1764d7ac08d14438aa1179e4a748cbce"
 [vars]
 APP_ORIGIN = "https://aifaculty.org"
 RESEND_FROM = "AI Faculty <accounts@aifaculty.org>"
-# Real sign-in by email uses Cloudflare Email Service (founder chose it over Resend; needs Workers
-# Paid). Until that binding exists, RESEND_API_KEY is the fallback sender and stays empty.
+# Real sign-in by email uses Cloudflare Email Service (founder chose it over Resend). The binding
+# below is the whole remaining step, but it REQUIRES Workers Paid — deploying with it on the Free
+# plan fails. To switch it on:
+#   1. Upgrade the Cloudflare account to Workers Paid ($5/mo) in the dashboard.
+#   2. Onboard aifaculty.org to Email Service (dashboard > Email > Email Sending > Add domain).
+#   3. Uncomment the send_email block at the bottom of this file.
+#   4. ./build.sh && npx wrangler deploy --config workers/api/wrangler.toml
+# The worker already prefers this binding over Resend, so nothing else changes and dev links go
+# quiet automatically — once a real sender exists, no link is ever returned in a response body.
 #
-# Dev mode is now gated three ways, not two: RESEND_API_KEY empty AND DEV_LINKS "true" AND the
-# caller already holding a founder session. The third condition is the one that matters — the first
-# two were configuration, which anyone reaching the site could benefit from, but a founder session
-# is a credential, so dev links can no longer be minted for an address you don't already control.
-# That closed a full takeover of the /api/admin/* surface via the founder's own email address.
-# With no sender available, sign-in returns 503 rather than a link.
+# Resend is kept as a zero-cost fallback: set RESEND_API_KEY and it takes over if EMAIL is absent.
 RESEND_API_KEY = ""
+MAIL_FROM = "accounts@aifaculty.org"
+
+# With no sender bound, sign-in by link is dev-only and gated three ways: no RESEND key AND
+# DEV_LINKS "true" AND the caller already holding a founder session. The third condition is the one
+# that matters — the first two were public config switches, but a session is a credential, so dev
+# links can no longer be minted for an address you don't already control. That closed a full
+# takeover of the /api/admin/* surface via the founder's own email address.
 DEV_LINKS = "true"
 
 # Monetization (docs/11-monetization.md). Payments stay OFF until the Stripe secrets are set:
@@ -66,3 +75,12 @@ FACULTY_MODEL_NAME = ""
 [vars.rate_limit]
 window_seconds = 3600
 max_per_ip = 8
+
+# Cloudflare Email Service. UNCOMMENT ONLY after the account is on Workers Paid and aifaculty.org
+# is onboarded to Email Sending — deploying this on the Free plan fails outright, which is why it
+# ships commented out rather than being left in and failing the next unrelated deploy.
+# The worker checks for env.EMAIL first, so enabling this is all it takes to go live.
+#
+# [[send_email]]
+# name = "EMAIL"
+# remote = true

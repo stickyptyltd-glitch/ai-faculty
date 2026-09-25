@@ -173,16 +173,17 @@ async function handleRequestLink(request, env, headers) {
   // Decide how this link can be delivered BEFORE minting a token, so a request we're going to
   // refuse never leaves a live-but-undeliverable row behind in magic_links.
   //
-  // Real email needs a sender key. Dev mode needs no key AND an explicit DEV_LINKS=true AND an
-  // authenticated founder session. That last condition is the important one: without it, any
-  // anonymous visitor could request a link for the founder's address, verify it, and land with
-  // full /api/admin/* access. The founder signs in by password, so their own credential is what
-  // gates this rather than anything an attacker can satisfy.
-  const apiKey = env.RESEND_API_KEY || "";
-  const devMode = !apiKey && env.DEV_LINKS === "true";
+  // Cloudflare Email Service is the chosen provider (founder picked it over Resend); Resend stays
+  // wired as a fallback because it costs nothing to keep. With neither bound, the only way to get
+  // a link is dev mode, which needs an explicit DEV_LINKS=true AND an authenticated founder
+  // session. That second condition is the important one: the first was just a public config switch,
+  // and without it any anonymous visitor could request a link for the founder's address, verify it,
+  // and land with full /api/admin/* access. The founder signs in by password, so their own
+  // credential is what gates this.
+  const provider = env.EMAIL ? "cloudflare" : (env.RESEND_API_KEY || "") ? "resend" : null;
   const unavailable = () => json(503, { ok: false, error: "signin_unavailable" }, headers);
-  if (!apiKey && !devMode) return unavailable();
-  if (devMode) {
+  if (!provider) {
+    if (env.DEV_LINKS !== "true") return unavailable();
     const requester = await currentUser(request, env);
     if (!requester || requester.role !== "founder") return unavailable();
   }
@@ -195,20 +196,52 @@ async function handleRequestLink(request, env, headers) {
   ).bind(tokenHash, email, now.toISOString(), expires.toISOString()).run();
 
   const verifyUrl = `${env.APP_ORIGIN}/api/auth/verify?token=${token}`;
-  if (apiKey) {
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        from: env.RESEND_FROM,
-        to: [email],
-        subject: "Your AI Faculty sign-in link",
-        text: `Click to sign in (expires in 15 minutes):\n\n${verifyUrl}\n\nIf you didn't request this, ignore this email.`,
-      }),
-    });
+  if (provider) {
+    try {
+      await deliverSignInEmail(env, provider, email, verifyUrl);
+    } catch {
+      // Never fall back to handing back the link when a real send was attempted and failed —
+      // that would silently turn a mail outage into an open sign-in oracle. The token we minted
+      // is left unused and expires on its own; the sweep at the top of this handler clears it.
+      return json(502, { ok: false, error: "email_send_failed" }, headers);
+    }
     return json(200, { ok: true, sent: true }, headers);
   }
   return json(200, { ok: true, sent: false, dev_link: verifyUrl }, headers);
+}
+
+const SIGNIN_EMAIL_SUBJECT = "Your AI Faculty sign-in link";
+
+function signInEmailBody(verifyUrl) {
+  return {
+    text: `Click to sign in (expires in 15 minutes):\n\n${verifyUrl}\n\n`
+      + `If you didn't request this, ignore this email — nothing has changed on your account.`,
+    html: `<!doctype html><html><body style="margin:0;padding:24px;background:#f6f5f2;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#1c1b19">`
+      + `<div style="max-width:520px;margin:0 auto;background:#fff;border:1px solid #e2e0da;border-radius:12px;padding:28px">`
+      + `<h1 style="margin:0 0 6px;font-size:20px">Sign in to AI Faculty</h1>`
+      + `<p style="margin:0 0 20px;color:#5c5a54;font-size:15px">This link works once and expires in 15 minutes.</p>`
+      + `<p style="margin:0 0 24px"><a href="${verifyUrl}" style="display:inline-block;background:#1c1b19;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:15px">Sign in</a></p>`
+      + `<p style="margin:0 0 8px;color:#5c5a54;font-size:13px">If the button doesn't work, paste this into your browser:</p>`
+      + `<p style="margin:0 0 20px;font-size:13px;word-break:break-all"><a href="${verifyUrl}">${verifyUrl}</a></p>`
+      + `<p style="margin:0;color:#8a8780;font-size:12px">If you didn't request this, ignore this email — nothing has changed on your account.</p>`
+      + `</div></body></html>`,
+  };
+}
+
+async function deliverSignInEmail(env, provider, to, verifyUrl) {
+  const { text, html } = signInEmailBody(verifyUrl);
+  if (provider === "cloudflare") {
+    // Structured builder form — deliberately not the legacy EmailMessage MIME API, which would
+    // mean importing "cloudflare:email" and taking the Node test runner down with it.
+    await env.EMAIL.send({ to, from: env.MAIL_FROM, subject: SIGNIN_EMAIL_SUBJECT, text, html });
+    return;
+  }
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.RESEND_API_KEY}` },
+    body: JSON.stringify({ from: env.RESEND_FROM, to: [to], subject: SIGNIN_EMAIL_SUBJECT, text, html }),
+  });
+  if (!res.ok) throw new Error(`resend ${res.status}`);
 }
 
 async function handleVerify(request, env) {

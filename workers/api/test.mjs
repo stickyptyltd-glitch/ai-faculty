@@ -939,7 +939,15 @@ function strongSubmission() {
   // founder session, so gating the email path too would permanently break self-serve sign-in.
   const orig = globalThis.fetch;
   let sent = 0;
-  globalThis.fetch = async (url) => { if (String(url).startsWith("https://api.resend.com")) sent++; return orig(url); };
+  globalThis.fetch = async (url, opts) => {
+    if (String(url).startsWith("https://api.resend.com")) {
+      sent++;
+      const parsed = JSON.parse(opts.body);
+      check("resend gets the recipient and a real subject", parsed.to[0] === "newcomer@example.com" && !!parsed.subject);
+      return new Response(JSON.stringify({ id: "re_1" }), { status: 200 });
+    }
+    return orig(url, opts);
+  };
   try {
     const m = await makeEnv({ role: "learner" });
     m.env.RESEND_API_KEY = "re_test";
@@ -952,6 +960,50 @@ function strongSubmission() {
   } finally {
     globalThis.fetch = orig;
   }
+}
+
+// 33. Cloudflare Email Service is the preferred sender, and a failed send never leaks the link
+{
+  const sent = [];
+  const binding = (behaviour) => ({ send: async (msg) => { if (behaviour === "throw") throw new Error("smtp down"); sent.push(msg); return { messageId: "msg_1" }; } });
+
+  const f = await makeEnv({ role: "founder" });
+  f.env.EMAIL = binding();
+  f.env.MAIL_FROM = "accounts@aifaculty.org";
+  let r = await worker.fetch(await req("/api/auth/request-link",
+    { method: "POST", body: { email: "newcomer@example.com" } }), f.env);
+  let b = await r.json();
+  check("EMAIL binding sends without any session", r.status === 200 && b.sent === true && !b.dev_link);
+  check("the message went to the requested address", sent[0].to === "newcomer@example.com");
+  check("sender is the onboarded domain", sent[0].from === "accounts@aifaculty.org");
+  check("subject is set", sent[0].subject === "Your AI Faculty sign-in link");
+  check("both text and html bodies are present", !!sent[0].text && sent[0].html.includes("expires in 15 minutes"));
+  check("the link is in the html body", /href="https:\/\/aifaculty\.org\/api\/auth\/verify\?token=/.test(sent[0].html));
+
+  // It must win over Resend, which is only a fallback.
+  const both = await makeEnv({ role: "founder" });
+  both.env.EMAIL = binding();
+  both.env.RESEND_API_KEY = "re_test";
+  const before = sent.length;
+  const origFetch = globalThis.fetch;
+  let resendCalls = 0;
+  globalThis.fetch = async (url) => { if (String(url).startsWith("https://api.resend.com")) resendCalls++; return origFetch(url); };
+  try {
+    r = await worker.fetch(await req("/api/auth/request-link",
+      { method: "POST", body: { email: "second@example.com" } }), both.env);
+    check("EMAIL binding takes precedence over Resend", r.status === 200 && sent.length === before + 1 && resendCalls === 0);
+  } finally {
+    globalThis.fetch = origFetch;
+  }
+
+  // A send that throws must not degrade into handing the caller the link.
+  const broken = await makeEnv({ role: "founder" });
+  broken.env.EMAIL = binding("throw");
+  r = await worker.fetch(await req("/api/auth/request-link",
+    { method: "POST", body: { email: "third@example.com" } }), broken.env);
+  const failBody = await r.json();
+  check("a failed send returns 502", r.status === 502);
+  check("a failed send leaks no link", failBody.error === "email_send_failed" && !failBody.dev_link);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

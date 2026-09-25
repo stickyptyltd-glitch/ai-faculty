@@ -321,6 +321,7 @@
           const msg = res.error === "invalid_email" ? "That doesn't look like a valid email."
             : res.error === "rate_limited" ? rateLimitMessage(res)
             : res.error === "signin_unavailable" ? "Signing in by email link isn't switched on yet. Use your password above."
+            : res.error === "email_send_failed" ? "We couldn't send that email just now — try again in a moment."
             : "Something went wrong — try again.";
           box.innerHTML = `<div class="notice" style="border-color:var(--warn)">${esc(msg)}</div>`;
           return;
