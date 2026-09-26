@@ -469,3 +469,21 @@ test("learner-facing copy matches v0.63 semantics", async t => {
     assert.match(read("main.js"), /Challenge\s+evidence alone leaves it covered, not demonstrated/);
   });
 });
+
+test("the admin panel discloses what it excludes", async t => {
+  const { readFileSync } = await import("node:fs");
+  const { join, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "js", "main.js"), "utf8");
+
+  await t.test("staff exclusion is stated, not silently dropped", () => {
+    assert.match(src, /Counts are learners only\./, "panel must say the counts are learner-scoped");
+    assert.match(src, /founder QA activity is not learner engagement/);
+    assert.match(src, /d\.totals\.staffByRole/, "must be able to say how many of each staff role");
+  });
+
+  await t.test("an empty analytics table is not presented as 'no struggle found'", () => {
+    assert.match(src, /No learners yet, so the tables below are empty by\s*definition/);
+    assert.match(src, /not reporting that nobody struggled/);
+  });
+});

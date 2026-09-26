@@ -2353,6 +2353,68 @@ the module — already correct), and I did not change what a learner has to *do*
 the only route to the top state, and it is still one capstone. Every change here is about what the
 system is willing to *say*, except the two functions, which now say the true thing.
 
+## v0.64 — the admin dashboard was reporting the founder as a learner
+
+The founder dashboard is the one screen the founder is guaranteed to look at before talking to
+anyone about the product. It was the least trustworthy screen in the app.
+
+`handleAdminOverview` counted `users.length` as "learners", then derived active-today, active-this-week,
+plan mix, popular pathways and capability struggle from unfiltered `submissions` and `activity_log`.
+There is no role filter anywhere in it. Both seeded accounts are staff, so every headline number on
+that panel was the founder's own account:
+
+| Metric | Was | Is | It was actually |
+| --- | --- | --- | --- |
+| Learners | 2 | 0 | 1 founder, 1 reviewer |
+| Active today | 1 | 0 | founder's own browsing, 14 events |
+| Active this week | 2 | 0 | founder + reviewer |
+| Submissions | 1 | 0 | a founder QA run on C5 |
+
+Nothing was broken. The queries worked; they were just answering a different question — "how many
+accounts exist and how much have they touched" — and the UI labelled it "learners" and "active".
+On a real cohort the error would have been the mirror image: a platform that looked busy because the
+founder was clicking through it in another tab. Traction numbers that include the founder are not
+traction numbers.
+
+The fix scopes every learner-derived metric to `role = 'learner'`, by joining `submissions` and
+`activity_log` to `users`. Payments stay unfiltered, because lifetime revenue is genuinely revenue
+regardless of who paid; only the *learner* plan mix and paying-learner counts are scoped.
+
+Silently dropping the staff rows would have been half a fix — an empty table with no explanation is
+indistinguishable from broken instrumentation. The panel now says what it excluded and why:
+
+> Counts are learners only. 2 staff accounts (1 founder, 1 reviewer) excluded — founder QA activity
+> is not learner engagement.
+
+and, when there are no learners, states that the empty tables are empty by definition rather than
+reporting that nobody struggled. The response carries `staff`, `staffByRole` and
+`analyticsFromLearnersOnly` so the claim is checkable from the API and not just the markup.
+
+### The tests were asserting the bug
+
+`"learners counted"` asserted `body.totals.learners === 1` in an env whose only user was the founder.
+The test encoded the previous answer and would have failed on the fix. That is the failure mode worth
+naming: when a test pins a number that came from a definition nobody questioned, the test is a snapshot
+of the guess, not evidence for it.
+
+Replaced with the correct semantics, plus a regression that builds the exact production shape — one
+founder, one reviewer, one learner; staff browsing; a founder QA submission on C5; a learner browsing
+both today and a month ago — and asserts each number comes only from the learner. Every filter was
+mutation-checked by removing it and confirming the suite fails:
+
+- learner/staff split removed → 2 failures
+- activity role filter removed → 2 failures
+- submissions role filter removed → 2 failures
+
+The first two rounds of that check passed at 207/207 with the filter deleted, because the fake D1
+had no branch for bare `FROM activity_log`/`FROM submissions` and the only submission in the fixture
+belonged to the learner. A passing mutation check is not a passing test; the fixture had to serve
+unfiltered rows and carry a staff submission before the assertions could fail.
+
+**Gates:** frontend 56, API 209, signup 7, all passing. Worker `4750c656`; Pages `3c48d601`.
+Production verified: `learners: 0, staff: 2, staffByRole: {founder: 1, reviewer: 1}`,
+`activeToday: 0, activeWeek: 0, submissions: 0`, disclosure text rendered, no console errors.
+
 ## Open threads
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,

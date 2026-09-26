@@ -688,13 +688,22 @@ async function handleAdminOverview(request, env, headers) {
   const auth = await requireFounder(request, env, headers);
   if (auth.error) return auth.error;
 
-  const [{ results: users }, { results: subs }, { results: acts }, { results: planRows }, { results: payRows }] = await Promise.all([
-    env.DB.prepare("SELECT id, email, created_at, plan FROM users").all(),
-    env.DB.prepare("SELECT user_id, pathway_id, cap_id, band, duration_ms, completed_at FROM submissions").all(),
-    env.DB.prepare("SELECT user_id, ts FROM activity_log").all(),
-    env.DB.prepare("SELECT plan, COUNT(*) AS n FROM users GROUP BY plan").all(),
+  // Every metric below is scoped to role='learner'. Staff activity is the founder's own QA
+  // browsing, and counting it as learner engagement reported 2 learners and 2 active this week
+  // on a system that had none: every one of those numbers was a staff account. Staff are
+  // counted separately and surfaced as `staff` so the founder can see what was excluded.
+  const [{ results: roleRows }, { results: subs }, { results: acts }, { results: planRows }, { results: payRows }] = await Promise.all([
+    env.DB.prepare("SELECT role, COUNT(*) AS n FROM users GROUP BY role").all(),
+    env.DB.prepare("SELECT s.user_id AS user_id, s.pathway_id AS pathway_id, s.cap_id AS cap_id, s.band AS band, s.duration_ms AS duration_ms, s.completed_at AS completed_at FROM submissions s JOIN users u ON u.id = s.user_id WHERE u.role = 'learner'").all(),
+    env.DB.prepare("SELECT a.user_id AS user_id, a.ts AS ts FROM activity_log a JOIN users u ON u.id = a.user_id WHERE u.role = 'learner'").all(),
+    env.DB.prepare("SELECT plan, COUNT(*) AS n FROM users WHERE role = 'learner' GROUP BY plan").all(),
     env.DB.prepare("SELECT COALESCE(SUM(amount_cents), 0) AS total, COUNT(*) AS n FROM payments WHERE status = 'succeeded'").all(),
   ]);
+
+  const byRole = {};
+  for (const r of roleRows) byRole[r.role || "learner"] = r.n;
+  const learnerCount = byRole.learner || 0;
+  const staffCount = Object.entries(byRole).reduce((n, [role, c]) => (role === "learner" ? n : n + c), 0);
 
   const planCounts = {};
   for (const r of planRows) planCounts[r.plan || "free"] = r.n;
@@ -734,7 +743,15 @@ async function handleAdminOverview(request, env, headers) {
 
   return json(200, {
     ok: true,
-    totals: { learners: users.length, activeToday, activeWeek, submissions: subs.length },
+    totals: {
+      learners: learnerCount,
+      staff: staffCount,
+      staffByRole: byRole,
+      activeToday, activeWeek,
+      submissions: subs.length,
+    },
+    // Shown in the panel so an empty analytics table is never mistaken for "no struggle found".
+    analyticsFromLearnersOnly: true,
     planCounts,
     revenue,
     popularPathways,

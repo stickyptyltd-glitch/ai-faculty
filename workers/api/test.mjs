@@ -22,6 +22,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
   const payments = [];
   const facultyCalls = [];
   const submissions = [];
+  const activityRows = [];
   const facultyReviews = [];
   const founderPasswords = [];
   const passwordFailures = [];
@@ -80,6 +81,9 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
              fields_json, started_at, completed_at, duration_ms] = args;
       submissions.push({ id, user_id, kind, pathway_id, cap_id, challenge_id, checkpoint_id, band,
         confidence, fields_json, started_at, completed_at, duration_ms });
+    } else if (sql.startsWith("INSERT INTO activity_log")) {
+      const [id, user_id, ts, kind, detail] = args;
+      activityRows.push({ id, user_id, ts, kind, detail });
     } else if (sql.startsWith("INSERT INTO feedback")) {
       const [id, user_id, text, page_context, rating, created_at] = args;
       feedback.push({ id, user_id, text, page_context, rating, created_at });
@@ -155,14 +159,38 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
         }));
       return { results: rows };
     }
-    if (sql.includes("FROM users GROUP BY plan")) {
+    if (sql.includes("FROM users GROUP BY role")) {
       const m = {};
-      for (const u of usersRows) m[u.plan] = (m[u.plan] || 0) + 1;
+      for (const u of usersRows) m[u.role || "learner"] = (m[u.role || "learner"] || 0) + 1;
+      return { results: Object.entries(m).map(([role, n]) => ({ role, n })) };
+    }
+    if (sql.includes("FROM users") && sql.includes("GROUP BY plan")) {
+      const m = {};
+      for (const u of usersRows) {
+        if ((u.role || "learner") !== "learner") continue;
+        m[u.plan] = (m[u.plan] || 0) + 1;
+      }
       return { results: Object.entries(m).map(([plan, n]) => ({ plan, n })) };
     }
     if (sql.includes("FROM payments WHERE status")) {
       const paid = payments.filter(p => p.status === "succeeded");
       return { results: [{ total: paid.reduce((s, p) => s + p.amount_cents, 0), n: paid.length }] };
+    }
+    if (sql.includes("FROM submissions s JOIN users")) {
+      const u = new Map(usersRows.map(x => [x.id, x]));
+      return { results: submissions.filter(s2 => ((u.get(s2.user_id) || {}).role || "learner") === "learner") };
+    }
+    if (sql.includes("FROM activity_log") && !sql.includes("WHERE user_id = ?")) {
+      // unfiltered: serves every row, so dropping the role filter is observable in tests
+      if (sql.includes("JOIN users")) {
+        const u = new Map(usersRows.map(x => [x.id, x]));
+        return { results: activityRows.filter(a => ((u.get(a.user_id) || {}).role || "learner") === "learner") };
+      }
+      return { results: activityRows };
+    }
+    if (sql.includes("FROM activity_log a JOIN users")) {
+      const u = new Map(usersRows.map(x => [x.id, x]));
+      return { results: activityRows.filter(a => ((u.get(a.user_id) || {}).role || "learner") === "learner") };
     }
     if (sql.includes("FROM submissions")) {
       if (sql.includes("WHERE user_id = ?")) {
@@ -239,7 +267,7 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     };
     return stmt;
   }
-  return { prepare, _feedback: feedback, _submissions: submissions, _payments: payments, _users: usersRows, _faculty: facultyCalls, _reviews: facultyReviews, _passwords: founderPasswords, _fails: passwordFailures, _sessions: sessions };
+  return { prepare, _feedback: feedback, _submissions: submissions, _payments: payments, _users: usersRows, _faculty: facultyCalls, _reviews: facultyReviews, _activity: activityRows, _passwords: founderPasswords, _fails: passwordFailures, _sessions: sessions };
 }
 
 function makeKV() {
@@ -529,9 +557,62 @@ async function withStripe(handler) {
   const r = await worker.fetch(await req("/api/admin/overview", { token: rawToken }), env);
   const body = await r.json();
   check("200 overview as founder", r.status === 200 && body.ok === true);
-  check("learners counted", body.totals.learners === 1);
+  // The only account here is the founder. Reporting it as a learner is the bug v0.64 fixed.
+  check("founder is not counted as a learner", body.totals.learners === 0);
+  check("staff counted separately", body.totals.staff === 1);
   check("revenue total", body.revenue.lifetimeCents === 15000 && body.revenue.payments === 1);
-  check("free plan count", body.planCounts.free === 1);
+  check("plan count excludes staff", body.planCounts.free === undefined);
+}
+
+// 18b. the v0.64 defect: staff must not appear as learner engagement. On a system with a
+// founder and a reviewer and no learners, every headline number used to be a staff account.
+{
+  const tokenHash = await sha256Hex("tok-founder");
+  const tokenHash2 = await sha256Hex("tok-reviewer");
+  const founder = { id: "uf", email: "f@example.com", created_at: "2026-01-01T00:00:00.000Z", role: "founder" };
+  const reviewer = { id: "ur", email: "r@example.com", created_at: "2026-01-01T00:00:00.000Z", role: "reviewer" };
+  const learner = { id: "ul", email: "l@example.com", created_at: "2026-01-01T00:00:00.000Z", role: "learner" };
+  const env = {
+    DB: makeFakeDB({ users: [founder, reviewer, learner], sessions: [
+      { token_hash: tokenHash, user_id: "uf", created_at: "2026-01-01T00:00:00.000Z", expires_at: "2099-01-01T00:00:00.000Z" },
+      { token_hash: tokenHash2, user_id: "ur", created_at: "2026-01-01T00:00:00.000Z", expires_at: "2099-01-01T00:00:00.000Z" },
+    ] }),
+    SIGNUPS: makeKV(), RESEND_API_KEY: "", DEV_LINKS: "true", APP_ORIGIN: "https://aifaculty.org",
+    rate_limit: { window_seconds: 3600, max_per_ip: 3 },
+  };
+  const now = Date.now();
+  const iso = new Date(now - 60 * 60 * 1000).toISOString();
+  // founder and reviewer browsed; the learner did not
+  env.DB._activity.push({ id: "a1", user_id: "uf", ts: iso, kind: "view", detail: null });
+  env.DB._activity.push({ id: "a2", user_id: "ur", ts: iso, kind: "view", detail: null });
+  // the one real learner also browsed, an hour ago
+  env.DB._activity.push({ id: "a3", user_id: "ul", ts: iso, kind: "view", detail: null });
+  // and a learner who has not been seen for a month
+  env.DB._activity.push({ id: "a4", user_id: "ul", ts: new Date(now - 40 * 864e5).toISOString(), kind: "view", detail: null });
+  // ...and the learner has the only submission
+  env.DB._submissions.push({ id: "s1", user_id: "ul", kind: "challenge", pathway_id: "p1", cap_id: "C1",
+    challenge_id: "C1.1", checkpoint_id: null, band: "Meets", confidence: "medium",
+    fields_json: "{}", started_at: iso, completed_at: iso, duration_ms: 1000 });
+  // the founder ran their own QA pass on C5, which must not appear as a learner struggle point
+  env.DB._submissions.push({ id: "s2", user_id: "uf", kind: "challenge", pathway_id: "p1", cap_id: "C5",
+    challenge_id: "C5.1", checkpoint_id: null, band: "Not yet", confidence: "low",
+    fields_json: "{}", started_at: iso, completed_at: iso, duration_ms: 1000 });
+
+  const r = await worker.fetch(new Request("https://aifaculty.org/api/admin/overview", {
+    headers: { "Cookie": "af_session=tok-founder" },
+  }), env);
+  const b = await r.json();
+  check("counts only real learners", b.totals.learners === 1);
+  check("staff reported separately", b.totals.staff === 2 && b.totals.staffByRole.founder === 1);
+  check("active today counts the learner, not staff", b.totals.activeToday === 1,
+    `expected 1 active learner, got ${b.totals.activeToday}`);
+  check("active week counts the learner, not staff", b.totals.activeWeek === 1,
+    `expected 1 active learner this week, got ${b.totals.activeWeek}`);
+  check("analytics scoped to learners", b.analyticsFromLearnersOnly === true);
+  check("struggle only from learner submissions", b.struggle.length === 1 && b.struggle[0].capId === "C1",
+    `expected only C1 from the learner, got ${JSON.stringify(b.struggle.map(x => x.capId))}`);
+  check("submissions count excludes staff", b.totals.submissions === 1);
+  check("no learner has paying revenue implied", b.planCounts.pro === undefined);
 }
 
 // 19. Control Plane — assess requires auth

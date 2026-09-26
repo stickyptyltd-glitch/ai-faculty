@@ -1852,6 +1852,18 @@
     const planRows = d.planCounts
       ? Object.entries(d.planCounts).map(([plan, n]) => `<span class="pill pill--${plan === "free" ? "unknown" : "independent"}" style="margin-right:6px">${esc(plan)} ×${n}</span>`).join("")
       : "";
+    // Say what was excluded, so a dashboard reading zero cannot be mistaken for broken
+    // instrumentation rather than a system with no learners yet.
+    const staffNote = d.totals.staff
+      ? `<p class="hint" style="margin:0 0 16px">Counts are learners only. ${d.totals.staff} staff
+           account${d.totals.staff === 1 ? "" : "s"} (${Object.entries(d.totals.staffByRole || {})
+             .filter(([r]) => r !== "learner").map(([r, n]) => `${n} ${r}`).join(", ")}) excluded —
+           founder QA activity is not learner engagement.</p>`
+      : "";
+    const noLearners = d.totals.learners === 0
+      ? `<p class="hint" style="margin:0 0 16px">No learners yet, so the tables below are empty by
+           definition. They are not reporting that nobody struggled.</p>`
+      : "";
     const rev = (d.revenue && d.revenue.lifetimeCents > 0)
       ? `<div><div class="card__label">Lifetime revenue</div><strong style="font-size:22px">$${(d.revenue.lifetimeCents / 100).toFixed(2)}</strong>
            <span class="hint"> · ${d.revenue.payments} payment${d.revenue.payments === 1 ? "" : "s"}</span></div>`
@@ -1864,6 +1876,7 @@
         <div><div class="card__label">Submissions</div><strong style="font-size:22px">${d.totals.submissions}</strong></div>
         ${rev}
       </div>
+      ${staffNote}${noLearners}
       ${readinessState(readyRes.ok ? readyRes.data : null)}
       ${planRows ? `<p style="margin:0 0 16px">${planRows}</p>` : ""}
       <h2 style="font-size:16px">Pathway popularity</h2>
