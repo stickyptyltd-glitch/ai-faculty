@@ -60,6 +60,7 @@
     { test: p => p === "/admin/curriculum", view: viewAdminCurriculum },
     { test: p => p === "/admin/institution", view: viewAdminInstitution },
     { test: p => p === "/admin", view: viewAdminOverview },
+    { test: p => p === "/realtask", view: viewRealTask },
     { test: p => p.startsWith("/admin/learners/"), view: viewAdminLearnerDetail },
     { test: p => p === "/admin/learners", view: viewAdminLearners },
   ];
@@ -293,6 +294,16 @@
       });
       window.STORE.log("diagnostic", "completed");
       location.hash = window.STORE.get().projects.length ? "#/" : "#/projects";
+      return;
+    }
+
+    if (kind === "realtask") {
+      const task = (data.task || "").trim();
+      window.STORE.update(l => {
+        l.realTask = { kind: data.kind, task, why: (data.why || "").trim(), setAt: Date.now() };
+      });
+      window.STORE.log("realtask", "set");
+      location.hash = "#/";
       return;
     }
 
@@ -553,6 +564,32 @@
       return;
     }
 
+
+
+    if (kind === "grade") {
+      const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
+      if (!payload) return;
+      const btn = e.target.querySelector("button");
+      if (btn) { btn.disabled = true; btn.textContent = "Reading…"; }
+      const outcome = await gradeWithModel(payload);
+      const box2 = document.getElementById("resultBox");
+      if (!outcome || !outcome.result) {
+        if (btn) { btn.disabled = false; btn.textContent = "Get this read by a model"; }
+        if (box2) {
+          const why = (outcome && outcome.reason) || "Nothing read your answer.";
+          const fix = (outcome && outcome.remedy) ? `<br><span class="hint">${esc(outcome.remedy)}</span>` : "";
+          box2.insertAdjacentHTML("afterbegin",
+            `<div class="notice" style="border-color:var(--warn);margin-bottom:12px">${esc(why)}${fix}
+             <br><br>${esc("Nothing has been scored and no band has been assigned. This app will not guess at whether your answer is good.")}</div>`);
+        }
+        return;
+      }
+      const merged = { ...payload.result, ...outcome.result, awaitingModel: false, assessed: true };
+      sessionStorage.setItem("aifaculty.assess", JSON.stringify({ ...payload, result: merged }));
+      renderResult(merged, { scope: payload.scope, cap: payload.cap, ch: payload.ch, cp: payload.cp });
+      return;
+    }
+
     if (kind === "confirm") {
       const payload = JSON.parse(sessionStorage.getItem("aifaculty.assess") || "null");
       if (!payload || payload.result.verdict !== "ready") { location.hash = "#/"; return; }
@@ -642,6 +679,86 @@
 
   // Run the stricter second pass through the Control Plane when signed in; never let the
   // network block the flow — any failure falls back to the local strict heuristic.
+  // Send the learner's actual answer, plus the rubric it is being judged against, to a model.
+  // Returns null when no model is configured — the caller then says so plainly instead of
+  // falling back to a local guess. This is the only path that produces a real verdict.
+  async function gradeWithModel(payload) {
+    const { scope, cap, ch, cp, data } = payload;
+    if (!window.AUTH.get().user) {
+      // Signed out: no server round-trip available. Say why rather than silently degrading.
+      return { result: null, reason: "You are signed out, so there is no assessor to send this to.",
+               remedy: "Sign in and send it again." };
+    }
+    let body;
+    if (scope === "challenge") {
+      const def = C.challenge(cap, ch);
+      if (!def) return { result: null, reason: "That challenge no longer exists.", remedy: null };
+      const rubric = (def.rubric || []).map(r => r.label);
+      const criteria = (def.expected || []).map(e => ({ label: e.label, what: e.signals ? e.signals.slice(0, 4) : [] }));
+      body = {
+        kind: "challenge",
+        capId: cap,
+        challengeId: ch,
+        rubricDims: rubric.length ? rubric : (criteria.length ? criteria.map(c => c.label) : ["substance"]),
+        promptHint: def.title + " — " + (def.type === "critique" ? (def.ask || {}).label || "critique" : "written fields"),
+        submission: stripMeta(data),
+        criteria,
+        learnerTask: (window.STORE.get() || {}).realTask || null,
+      };
+    } else {
+      const def = C.checkpoint(cp);
+      if (!def) return { result: null, reason: "That checkpoint no longer exists.", remedy: null };
+      body = {
+        kind: "checkpoint",
+        cpId: cp,
+        rubricDims: def.rubricDims,
+        promptHint: def.title,
+        fields: def.fields.map(f => ({ key: f.key, label: f.label, minWords: f.minWords })),
+        submission: stripMeta(data),
+        learnerTask: (window.STORE.get() || {}).realTask || null,
+      };
+    }
+    const res = await window.AUTH.apiPost("/faculty/assess", body);
+    if (!res.ok || !res.data || !res.data.ok) {
+      // The Worker refuses to invent a verdict: 409 not_configured, 502 model_unavailable.
+      // Both arrive with a reason written for the learner, so pass it through rather than
+      // replacing it with a generic apology that hides which of the two happened.
+      const d = (res && res.data) || {};
+      return {
+        result: null,
+        reason: d.reason || (res && res.status === 0
+          ? "The assessment service could not be reached."
+          : "Nothing read your answer."),
+        remedy: d.remedy || null,
+        code: d.error || "unavailable",
+      };
+    }
+    const d = res.data;
+    // Rebuild the client-shaped result from the model's per-dimension bands.
+    const dims = d.bands ? Object.keys(d.bands) : (body.rubricDims || []);
+    const rubric = dims.map(label => {
+      const band = d.bands ? d.bands[label] : null;
+      return { label, band: band || null, ok: band ? BAND_ORDER.indexOf(band) >= 2 : null,
+               note: d.notes && d.notes[label] ? d.notes[label] : null };
+    });
+    // A real read is the only thing that can advance mastery. The unassessed result left
+    // stateTarget null, so a learner whose answer was genuinely graded well could still never
+    // raise a competency -- the model's opinion was displayed and then discarded.
+    const raisesTo = scope === "challenge" ? (C.challenge(cap, ch) || {}).raises : (C.checkpoint(cp) || {}).raisesTo;
+    return {
+      result: {
+        verdict: d.verdict || null,
+        confidence: d.confidence || null,
+        summary: d.summary || d.note || "A model read this answer.",
+        rubric,
+        modelSaid: d.note || d.summary || null,
+        assessedBy: d.model || "model",
+        stateTarget: raisesTo || null,
+        canConfirm: d.verdict === "ready",
+      },
+    };
+  }
+
   async function requestSecondAssessment(payload) {
     const cp = C.checkpoint(payload.cp);
     if (!cp) return F.assessCheckpoint(payload.cp, payload.data, true);
@@ -743,29 +860,60 @@
     if (!box) return; // page changed while an async assessment was in flight
     if (!result) { box.innerHTML = `<div class="notice">Could not assess — try again.</div>`; return; }
 
+    // r.ok === null means "not assessed". Rendering that as "needs work" would be a failing
+    // verdict invented from the absence of a reading, which is the whole thing being fixed.
+    const mark = (r) => r.band ? bandTag(r.band)
+      : (r.ok === true ? `<span class="ok">ok</span>`
+      : (r.ok === false ? `<span class="miss">needs work</span>`
+      : `<span class="hint">not assessed</span>`));
     const rows = result.fieldReports.map(r => `
-      <div class="row"><span>${esc(r.label)}</span>
-        <span>${r.band ? bandTag(r.band) : `<span class="${r.ok ? "ok" : "miss"}">${r.ok ? "ok" : "needs work"}</span>`}</span></div>
-      <div class="hint" style="padding-bottom:8px">${esc(r.note)}</div>`).join("");
+      <div class="row"><span>${esc(r.label)}</span><span>${mark(r)}</span></div>
+      <div class="hint" style="padding-bottom:8px">${esc(r.note || "")}</div>`).join("");
 
     const rubricTitle = ctx.scope === "checkpoint" ? "Mastery rubric" : "Rubric";
     const rubric = result.rubric.map(r => {
-      const mark = r.band ? bandTag(r.band) : (r.ok ? "✓" : "•");
-      return `<li class="${r.ok ? "ok" : "miss"}" style="display:flex;justify-content:space-between;gap:10px">
-        <span>${esc(r.label)}</span><span>${mark}</span></li>`;
+      const cls = r.ok === true ? "ok" : (r.ok === false ? "miss" : "");
+      const g = r.band ? bandTag(r.band) : (r.ok === true ? "✓" : (r.ok === false ? "•" : "—"));
+      return `<li class="${cls}" style="display:flex;justify-content:space-between;gap:10px">
+        <span>${esc(r.label)}</span><span>${g}</span></li>`;
     }).join("");
 
     const assessorLine = result.assessor
       ? `<p class="hint" style="margin:-4px 0 10px">Pass ${result.assessor} of 2${result.assessor === 2 ? " · stricter bar, same rubric engine — not a second assessor" : ""}</p>`
       : "";
 
-    const canConfirm = result.verdict === "ready";
+    // Nothing has been assessed yet. Offer the real thing, or say plainly that it is not wired up.
+    const awaiting = result.awaitingModel === true;
+    let awaitingModel = "";
+    if (awaiting) {
+      awaitingModel = `
+        <div class="card" style="border-color:var(--warn)">
+          <div class="card__label">Not assessed</div>
+          <p style="margin:0 0 8px">${esc(result.blocker || "A model has not read this yet.")}
+          ${result.canSubmitForAssessment ? "Your answer is complete enough to send." : "Fill in what's missing above first."}</p>
+          ${result.canSubmitForAssessment
+            ? `<form data-form="grade" style="margin:0">
+                 <button class="btn" type="submit">Get this read by a model</button>
+               </form>
+               <p class="hint" style="margin:8px 0 0">If no model is configured this will say so rather than
+               inventing a score. Nothing is marked until something has actually read it.</p>`
+            : ""}
+        </div>`;
+    }
+
+    const canConfirm = result.verdict === "ready" && !awaiting;
     const offerSecond = ctx.scope === "checkpoint" && result.verdict === "ready" && result.assessor === 1;
 
     // Mastery-rubric scoring summary — the banded verdict, dimension tally, and what a pass raises.
     const mastery = ctx.scope === "checkpoint" ? F.masterySummary(result) : null;
     let masteryScore = "";
-    if (mastery) {
+    if (mastery && mastery.assessed === false) {
+      masteryScore = `<div class="card">
+          <div class="card__label">Mastery rubric</div>
+          <p style="margin:0">These ${mastery.total} dimensions have not been assessed. There is no score
+          yet, because nothing has read the answer yet.</p>
+        </div>`;
+    } else if (mastery) {
       masteryScore = `
         <div class="card">
           <div class="card__label">Mastery rubric — scoring</div>
@@ -869,6 +1017,72 @@
 
   // ---- views -------------------------------------------------------
   function viewProgress(learner) { return window.PROGRESS.render(learner); }
+
+  // The one real task this learner is working on.
+  //
+  // C1's first challenge said "pick one task from your own life or work this week" with a
+  // blank textarea and no help. That is the single point in the course where a learner with no
+  // obvious answer in their head gets stuck, and it is why the rest felt unrelated: every
+  // later question was about a task they had never chosen.
+  //
+  // So the task is captured once, up front, from something they have already said, and reused
+  // from then on. Not a blank page with a demand.
+  const TASK_STARTERS = [
+    { label: "Something I keep putting off", hint: "The thing that has been on your list for weeks." },
+    { label: "Something I do badly and slowly", hint: "You know it could be done much better." },
+    { label: "Something I have to keep explaining to people", hint: "You are the bottleneck and you know it." },
+    { label: "Something I want to understand properly", hint: "You can do it roughly, not well." },
+    { label: "Something I am currently doing", hint: "On your plate this week." },
+    { label: "I'll describe it instead", hint: "Write it in your own words — there is no wrong shape." },
+  ];
+
+  function taskStarterOptions(selected) {
+    return TASK_STARTERS.map(s => `<option value="${esc(s.label)}"${selected === s.label ? " selected" : ""}>${esc(s.label)}</option>`).join("");
+  }
+
+  function viewRealTask(learner) {
+    const t = learner.realTask || {};
+    const seeded = (learner.intake && (learner.intake.e || learner.intake.a || "").trim())
+      ? ((learner.intake.e || "").trim() || (learner.intake.a || "").trim()) : "";
+    return `<h1>What are we actually working on?</h1>
+      <p class="lead">One real task, yours, carried through everything below. Everything you are asked
+        to do afterwards is about this, not about an example.</p>
+      ${seeded ? `<div class="card" style="margin-bottom:14px">
+        <div class="card__label">From your diagnostic</div>
+        <p style="margin:0 0 10px">You said: <em>“${esc(seeded)}”</em></p>
+        <p class="hint" style="margin:0">Start from that, or replace it with something better.</p>
+      </div>` : ""}
+      <form data-form="realtask">
+        <div class="field">
+          <label>It's closest to…</label>
+          <select name="kind">${taskStarterOptions(t.kind)}</select>
+          <div class="hint">Pick the one that fits, or choose the last and just describe it.</div>
+        </div>
+        <div class="field">
+          <label>The task, in your words</label>
+          <div class="hint">A sentence is plenty. What would you be doing, and what's the bit that
+            annoys you about doing it that way?</div>
+          <textarea name="task" rows="3" placeholder="e.g. I have to write a status update every Friday and it takes me an hour and it's always late">${esc(t.task || seeded || "")}</textarea>
+        </div>
+        <div class="field">
+          <label>Why does it matter to you?</label>
+          <div class="hint">What happens if it's still like this in six months? One line.</div>
+          <textarea name="why" rows="2">${esc(t.why || "")}</textarea>
+        </div>
+        <button class="btn" type="submit">Use this one</button>
+        <a class="btn btn--ghost" data-nav href="#/">Not now</a>
+      </form>`;
+  }
+
+  function taskBanner(learner) {
+    if (!learner.realTask || !(learner.realTask.task || "").trim()) return "";
+    return `<div class="card" style="margin-bottom:16px;border-left:3px solid var(--accent)">
+      <div class="card__label">What you're working on</div>
+      <p style="margin:0 0 6px">${esc(learner.realTask.task)}</p>
+      ${learner.realTask.why ? `<p class="hint" style="margin:0 0 6px">${esc(learner.realTask.why)}</p>` : ""}
+      <a class="btn btn--ghost btn--sm" data-nav href="#/realtask">Change it</a>
+    </div>`;
+  }
 
   function viewDiagnostic() {
     const q = C.DIAGNOSTIC.questions.map(item => {
@@ -1100,6 +1314,32 @@
            <p style="margin:8px 0 0">${esc(c.lesson.demonstrate.full)}</p>
          </details>` : "";
 
+    // Challenges that ask the learner to apply this to their own work need them to have
+    // chosen what that work is. This is the prompt the old course buried inside a sentence
+    // of instruction ("pick one task from your own life or work this week"), which is why
+    // people hit a blank page. It is now a named step with a way in.
+    // A multiple-choice scenario is answered from what the learner reads, not from their work,
+    // so demanding a real task first was a pointless gate on 82 of 258 challenges. Written
+    // fields and critiques do need it. An explicit ownTask on the challenge still overrides.
+    const WRITTEN_TYPES = { fields: true, critique: true };
+    const needsOwnTask = ch.ownTask !== undefined
+      ? ch.ownTask !== false
+      : !!WRITTEN_TYPES[ch.type];
+    const hasTask = !!(learner.realTask && (learner.realTask.task || "").trim());
+    const ownTaskPrompt = needsOwnTask && !hasTask
+      ? `<div class="notice" style="margin-bottom:14px">
+           This one is about <strong>your</strong> work, so it needs to know what that is first.
+           <a class="btn btn--sm" data-nav href="#/realtask">Pick your real task</a>
+         </div>`
+      : "";
+    const ownTaskHeader = needsOwnTask && hasTask
+      ? `<div class="card" style="margin-bottom:14px;border-left:3px solid var(--accent)">
+           <div class="card__label">Do this about your own task</div>
+           <p style="margin:0">${esc(learner.realTask.task)}</p>
+           <p class="hint" style="margin:6px 0 0"><a data-nav href="#/realtask">Not this one — change it</a></p>
+         </div>`
+      : "";
+
     let body = "";
     if (ch.type === "fields") {
       body = ch.fields.map(f => `
@@ -1140,10 +1380,12 @@
       </div>
       ${workedExample}
 
+      ${ownTaskPrompt}
       <form data-form="challenge" data-cap="${capId}" data-ch="${chId}">
+        ${ownTaskHeader}
         ${body}
         ${projectSelect(learner)}
-        <button class="btn" type="submit">Submit to Assessment Faculty</button>
+        <button class="btn" type="submit">Submit for assessment</button>
       </form>
       <div id="assessResult"></div>
     `;
@@ -1191,9 +1433,10 @@
       ${referencePanel}
       ${done ? `<div class="notice" style="margin-bottom:12px">You've already passed this. Resubmitting will record a new evidence version.</div>` : ""}
       <form data-form="checkpoint" data-cp="${cpId}">
+        ${taskBanner(learner)}
         ${fields}
         ${projectSelect(learner)}
-        <button class="btn" type="submit">Submit to Assessment Faculty</button>
+        <button class="btn" type="submit">Send this to be read</button>
       </form>
       <div id="assessResult"></div>
     `;
@@ -1258,7 +1501,7 @@
 
   function viewPathwayCatalogue(learner) {
     const fDone = M.foundationDone(learner);
-    const rec = fDone && !learner.pathway && learner.intake ? C.recommendPathway(learner.intake.b) : null;
+    const rec = fDone && !learner.pathway && learner.intake ? C.recommendPathway(learner.intake, learner.track) : null;
     const card = p => {
       const chosen = learner.pathway === p.id;
       const avail = p.status === "available";
@@ -1303,11 +1546,25 @@
         as the founder building this — skip ahead now.</p>
         <button class="btn btn--ghost btn--sm" data-action="skip-foundation">Skip foundation (founder)</button>
       </div>` : ""}
+      ${(learner.realTask && (learner.realTask.task || "").trim()) ? taskBanner(learner) : `
+        <div class="card next" style="margin-bottom:14px">
+          <div class="card__label">Start here</div>
+          <p style="margin:0 0 10px">Everything below is about one real task of yours. Pick it once
+            and it carries through every module, so nothing is asked about a made-up example.
+            <a data-nav href="#/realtask">Choose your task</a> — takes a minute.</p>
+        </div>`}
       ${rec ? `<div class="card next" style="margin-bottom:14px">
-        <div class="card__label">Recommended for you</div>
-        <p style="margin:0 0 10px">Based on what you told the diagnostic about your professional
-          goals, <strong>${esc(rec.title)}</strong> looks like a good fit — ${esc(rec.tagline)}</p>
+        <div class="card__label">Suggested for you</div>
+        <p style="margin:0 0 10px"><strong>${esc(rec.title)}</strong> — ${esc(rec.tagline)}</p>
+        <p class="hint" style="margin:0 0 10px">Matched on ${rec.consideredAnswers} of your diagnostic
+          answers${(rec.fromAnswer || []).length ? ", from " + esc((rec.fromAnswer || [])
+            .map(f => `your ${f.label} (${(f.matched || []).map(m => `“${esc(m)}”`).join(", ")})`)
+            .join("; ")) : ""}.
+          ${(rec.fromTrack && rec.fromTrack.note) ? esc(rec.fromTrack.note) + " " : ""}This is a keyword
+          match over what you typed, not a judgement about you — if it is wrong,
+          pick any pathway yourself.</p>
         <a class="btn" data-nav href="#/pathway/${rec.id}">View ${esc(rec.title)}</a>
+        <a class="btn btn--ghost" data-nav href="#/pathways">Browse all pathways</a>
       </div>` : ""}
       ${window.PLANS.tier() === "free" ? `<div class="card next" style="margin-bottom:14px;border-color:var(--warn)">
         <div class="card__label">Free plan</div>
@@ -1316,6 +1573,7 @@
           other pathway is Pro — payment widens access, it never buys a grade.</p>
         <a class="btn btn--sm" data-nav href="#/account">Upgrade to Pro</a>
       </div>` : ""}
+      ${group("personal", "AI outside work", "For your own life rather than a job — health, money, learning, home. You are the only reviewer, which raises the stakes rather than lowering them.")}
       ${group("work", "Using AI at work", "Take the foundation skills into the real tasks of your role.")}
       ${group("build", "Building AI", "The technical track — how models work, and how to build systems on them.")}`;
   }
@@ -1896,6 +2154,11 @@
     if (!box || !window.AUTH.get().user) return;
     const res = await window.AUTH.apiGet("/admin/learners");
     if (!res.ok) { box.innerHTML = adminErrorHtml(res); return; }
+    const staffNoteL = res.data.staff
+      ? `<p class="hint" style="margin:0 0 16px">This table lists learners only. ${res.data.staff} staff
+           account${res.data.staff === 1 ? " is" : "s are"} excluded, so founder and reviewer accounts do not
+           appear as cohort members.</p>`
+      : "";
     const rows = res.data.learners.map(l => `
       <tr>
         <td ${TD}><a data-nav href="#/admin/learners/${l.id}">${esc(l.email)}</a></td>
@@ -1905,6 +2168,10 @@
         <td ${TD}>${fmtWhen(l.lastActive)}</td>
       </tr>`).join("") || `<tr><td colspan="5" class="hint" ${TD}>No learners yet.</td></tr>`;
     box.innerHTML = `
+      ${staffNoteL}
+      ${res.data.learners.length === 0
+        ? `<div class="notice">No learners have signed up yet. An empty table here means the cohort has not started, not that anyone is disengaged.</div>`
+        : ""}
       <table style="width:100%;border-collapse:collapse">
         <thead><tr>
           <th ${TH}>Email</th><th ${TH}>Time on platform</th><th ${TH}>Competencies done</th>
@@ -2042,6 +2309,7 @@
         <div><div class="card__label">Competencies seen</div><strong style="font-size:22px">${d.totals.competenciesSeen}</strong></div>
       </div>
       ${empty ? `<div class="notice">No learner submissions yet. Every number below is zero because there is nothing to measure, not because the cohort did well.</div>` : ""}
+      ${d.totals && d.totals.staff ? `<p class="hint" style="margin:0 0 16px">Counts are learners only. ${d.totals.staff} staff account${d.totals.staff === 1 ? "" : "s"} (${Object.entries(d.totals.staffByRole || {}).filter(([r]) => r !== "learner").map(([r, n]) => `${n} ${r}`).join(", ")}) excluded from cohort reach and funnel.</p>` : ""}
       <h2 style="font-size:16px">Stage reach (M1 funnel)</h2>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr><th ${TH}>Stage</th><th ${TH}>Learners</th><th ${TH}>Share of cohort</th></tr></thead>

@@ -2415,7 +2415,204 @@ unfiltered rows and carry a staff submission before the assertions could fail.
 Production verified: `learners: 0, staff: 2, staffByRole: {founder: 1, reviewer: 1}`,
 `activeToday: 0, activeWeek: 0, submissions: 0`, disclosure text rendered, no console errors.
 
+## v0.65 — the other two admin tabs had it too, and one listed the founder's email
+
+v0.64 fixed the overview panel. The audit then checked the two tabs either side of it, on the
+assumption the bug had been isolated. It had not. The same missing role filter was in
+`handleAdminCurriculum` and `handleAdminLearners`, and it was worse in the second.
+
+`/admin/learners` rendered a cohort table with columns Email, Time on platform, Competencies done,
+Avg band, Last active — sourced from `SELECT id, email, created_at FROM users` with no role filter.
+Live production showed:
+
+```
+stickyptyltd@gmail.com | 33m | 1 | 2 | 9/25/2026, 9:39:20 PM
+lecheyne24@gmail.com   |  —  | 0 |   |
+```
+
+The founder's own QA session, in a table headed Email, with a time-on-platform figure and an average
+band score of 2 computed from it. The reviewer row sat underneath. If the founder had screenshotted
+that table for a mentor, the mentor would have seen two learners, and one of them would have been the
+founder. `handleAdminLearnerDetail` did select `role`, so the founder could open either account and
+inspect it as though it were a learner's history.
+
+`/admin/curriculum` reported `Learners 2` and an M1 funnel of `CONS1 — 1 learner — 50% of cohort`,
+where the single counted attempt was the founder's own C5 click. The reach and funnel percentages
+were the worst of it: arithmetically correct, drawn from the wrong population, and formatted to look
+exactly like real cohort analytics. `totalLearners` was `users.length`, and every capability table,
+the funnel, and all checkpoint pass rates derived from it.
+
+Both are now joined to `users` and scoped to `role = 'learner'`. The Learners tab states that staff
+are excluded, and its empty state says an empty table means the cohort has not started rather than
+that anyone is disengaged — the two readings are far apart from each other. Curriculum keeps its
+existing honest empty notice and gains the staff disclosure.
+
+`handleAdminReadiness` was checked too and is clean: it counts faculty calls, reviews and migrations,
+and touches no user data.
+
+### Four tests were asserting the bug
+
+Not one — four, across the curriculum and checkpoint tests. `"learner total counts all users"` asserted
+`learners === 2` in an env holding one founder and one learner. The checkpoint pass-rate test built its
+two CP1 attempts from the founder and one learner. Both were pinning the wrong number, and both broke
+on the fix. Rewritten so the submissions come from real learners and the founder's submissions are
+present specifically to be excluded.
+
+`/api/admin/learners` had no test at all. It is the only admin endpoint that exposes a user's email
+address to another user, and it was untested.
+
+### A third vacuous mutation check
+
+Removing the role filter from `/admin/learners` left the suite at 212/212. Two more false passes,
+from the same cause as v0.64: the fake D1 had no branch for the new queries, so the mutations changed
+no data.
+
+Getting real coverage needed the fake to understand `WHERE role = 'learner'`, `WHERE role != 'learner'`
+for `COUNT(*)` via `first()`, and role-filtered joins on both tables. One of those first landed in
+`all()` where `first()` never sees it, because the fake wires `first()` to a separate function.
+Then two assertions were wrong on my side: `sumActiveMs` sums the *gaps* between events rather than
+durations, and a learner with a single timestamp has no gap at all, so the row read 0ms. Both were my
+arithmetic, not a product bug — fixed by giving the learner a real two-event session.
+
+All five role filters are now mutation-checked:
+
+| Mutation | Result |
+| --- | --- |
+| overview: learner total includes staff | 2 failures |
+| overview: activity role filter dropped | 2 failures |
+| overview/curriculum: submissions filter dropped | 2–4 failures |
+| curriculum: submissions filter dropped | 4 failures |
+| learners: users filter dropped | 1 failure |
+| learners: activity filter dropped | 2 failures |
+| learners: submissions filter dropped | 4 failures |
+
+**Gates:** frontend 56, API 216, signup 7, all passing. Worker `d25f5768`; Pages `fd22483f`.
+Production verified: all three tabs report 0 learners and 0 submissions, no staff emails in the cohort
+table, disclosures present on each tab, no console errors.
+
+## v0.66 — the questions made no sense, because they were not about the learner
+
+The complaint was not "the content is bad." It was "these questions are irrelevant to what I
+want to learn." Both were true, and they were separate problems.
+
+**The learning engine was grading itself.** `app/js/faculty.js` built competency verdicts from
+answer length and keyword hits. A learner could write "I asked the AI to summarise the four
+articles and compared each summary against the original" and pass a competency, because the
+sentence contained the right words. `masterySummary` then turned those fabricated bands into
+failing verdicts for competencies nobody had assessed. All of it is now honest: unassessed
+means `verdict: null`, `assessed: false`, and mechanical completion feedback only. No local
+heuristic produces a verdict.
+
+**The server was doing the same thing, and worse.** `/api/faculty/assess` shipped a word-count
+scorer as if it were the assessment. With no model configured — including the
+`FACULTY_ADAPTER = "dry-run"` that production still pins — it now returns HTTP 409
+`not_configured` with no bands and a stated remedy. A model failure returns HTTP 502
+`model_unavailable` and no substituted scores. There is no path by which a heuristic reaches
+a learner as a verdict. Challenge assessments now carry the learner's real task and the
+criteria the learner is actually being asked to meet.
+
+**Every question assumed a job.** The foundation asked about "your Q3 report," a colleague, a
+mailing list, a customer refund. Someone learning AI to get in shape, plan a holiday, or study
+got questions about none of their life. The foundation is rebuilt in
+`app/js/subjects/foundation-core.js` around seven competencies that teach how models behave:
+goal definition, structuring work, giving AI a role, verification, testing, improvement, and
+limits. The substance is the point — models confabulate citations, output is not reproducible
+across runs, and sending a prompt is a disclosure to a provider whose retention and training
+terms you have not read. The learner carries one real task through the system, and scenarios
+are about AI decisions rather than office politics.
+
+**Content is now lintable.** 24 pathway competency arrays moved out of a 12,000-line
+`content.js` into `app/js/subjects/*.js` that self-register. Before the foundation was
+deliberately rewritten, a deep comparison against git HEAD found zero differences across 126
+structures. Tests now fail if foundation content reintroduces workplace framing, if a
+competency stops describing AI behaviour, if a field hint goes vague, if a distractor's
+explanation merely asserts instead of saying what is actually true, or if a scenario's correct
+option is removed.
+
+Mutation checks: reintroducing workplace material, deleting an option's `ok` flag, and
+shortening a field hint each fail the suite. Rewriting a lesson heading, or gutting one
+sentence inside an otherwise sound explanation, do not — a keyword lint cannot judge prose.
+That limit is recorded rather than papered over.
+
+**Recommendation was blind to what the learner wants.** The diagnostic stores a `track`
+(`personal`, `professional`, `mixed`) and `recommendPathway(intake, track)` weights pathways by
+it, returning the full pathway object with an explanation of the match. The vocabulary was then
+168 profession and specialism terms, so an ordinary personal answer — a prescription,
+homework, a holiday budget — matched nothing and got the browse-all fallback. There is now a
+`personal` group with its own browse section, a capstone, and personal-life vocabulary, and the
+test that used to assert `null` now asserts a resolution.
+
+The personal pathway deliberately exposes the *same seven competency objects* as the foundation.
+Those were rewritten to be about AI rather than office life, so this is the same capability, not
+a thinner one with the nouns swapped — and sharing the objects means progress carries over.
+It is not a dedicated personal subject; that is recorded as an open thread rather than claimed.
+
+A `personal` multiplier was added to `TRACK_GROUP_PRIOR` and then removed: measured across 36
+realistic personal goals on both the personal and mixed tracks, it changed no recommendation at
+all, because the new vocabulary already wins on merit. Unjustified weight is harder to reason
+about than none, so the table is back to three entries and says why.
+
+**The front door asked everyone for a job.** Before anyone chooses a pathway, an audit of every
+question a learner sees found the diagnostic asking, of all of them, "what would you most like AI
+to help you accomplish professionally?" — plus three foundation quick checks that assumed a
+client, a colleague, or a job. Someone not working has no answer to give to the first one. It now
+asks about their own life, then about work/study/anything they are responsible for, and offers
+"none right now" as a real answer rather than a skip.
+
+**Scenario challenges still graded prose by word count.** The fields and critique paths were
+fixed; the scenario path was missed. Its verdict was
+`correct && wc(justify) >= minWords ? "ready" : ...`, so a correct answer was downgraded to
+"revise" purely on length, and thirty characters of filler was reported to the learner as
+"Reasoning is substantive". The existing test asserted exactly that — it passed
+`"x".repeat(30)` and expected "ready" — so the bug was pinned by a test.
+
+Now the verdict comes from the author's answer key alone, which is a genuine assessment of the
+call. The justification is reported as a mechanical completeness fact that claims nothing about
+quality and says plainly that no model has read it; `assessedBy` reads "author answer key
+(choice only)" and `justificationAssessed` is false. The test was replaced, not adjusted.
+
+**A green test that asserted nothing, and what it was hiding.** The scenario tests above pinned
+`C2.1` with a guard `if (ch.type !== "scenario") return;`. `C2.1` is a *fields* challenge, so all
+three tests returned on the first line, asserted nothing, and passed. Four separate mutations of
+the code under test survived, which is how the vacuity was eventually noticed.
+
+With a real scenario fixture the same tests immediately crashed on
+`o.id.toUpperCase()`. **Every foundation scenario was broken**: the new foundation-core options were
+written without `id`, `scenarioChallenge` passed them straight through, and since `assessChallenge`
+matches a submission by `o.id === submission.choice`, no option could ever be selected as correct
+and the rubric line threw. C3.2, C5.2, C6.2 and C7.3 were unanswerable, and the test meant to prove
+they worked was silently skipping them.
+
+Fixed at the source rather than per subject: `scenarioChallenge` now assigns ids to any option
+missing one, so no future subject can reintroduce this, and `faculty.js` falls back to a positional
+letter rather than throwing. A test now pins the challenge ids this file hard-codes and fails
+loudly if one changes type, so a fixture can never quietly become a no-op again.
+
+One mutation survives: removing the `faculty.js` positional-letter fallback. It is unreachable while
+the helper guarantees ids, so it is defence in depth with no test. Left in deliberately, recorded
+here rather than claimed as covered.
+
+**Gates:** frontend 110, API 242, signup 7, all passing; syntax clean; `./build.sh` ships 25
+subject files and now fails if `dist/app/index.html` references a script that was not copied.
+Not deployed — no model credentials exist (`npx wrangler secret list` is empty), so live
+assessment still returns `not_configured` in production.
+
 ## Open threads
+- **Corrected: the pathway subjects were not the problem.** I claimed the 24 pathway subjects
+  still needed the foundation's rewrite. Measured instead of assumed: all 25 pathways came back at
+  100%, with every competency lesson grounding itself in how a model behaves. They are AI
+  curricula with a profession attached, not professions with AI bolted on. The workplace framing in
+  a Real Estate or Customer Support scenario is appropriate, because that learner chose it.
+  What was genuinely broken was the part everyone sees before choosing: the diagnostic and the
+  foundation quick checks. Both are fixed. A test now locks all of this in.
+- **"AI Outside Work" reuses the foundation's competencies.** That is deliberate — those seven were
+  rewritten to be about AI rather than office life, so it is the same capability rather than a
+  thinner one with the nouns swapped. It is still not a *dedicated* personal subject. A real one
+  would teach what is genuinely different when you are the only reviewer: verifying against an
+  authoritative source instead of a colleague, personal and sometimes irreversible stakes, and
+  what must never be sent to a provider.
+- **Content quality is partly keyword-checked.** Several mutations survive because a presence test
+  cannot judge whether prose is true or clear. Needs human reading.
 - **Cloudflare Email Service for real magic-link email** — founder chose this over Resend
   (2026-09-12). Needs the account upgraded to Workers Paid ($5/mo) first — I can't do that part,
   it's a billing/payment-method action. Once upgraded: onboard `aifaculty.org` to Email Service,

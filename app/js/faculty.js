@@ -45,194 +45,196 @@ window.FACULTY = (function () {
   const BANDS = ["Not yet", "Developing", "Meets", "Exceeds"];
   const bandIndex = b => BANDS.indexOf(b);
 
-  // Band one field's answer. `strict` = the second pass at a higher bar. Same engine, not a second assessor.
-  function fieldBand(f, val, strict) {
+  // What we can honestly say about a field without reading it.
+  //
+  // This used to return competency bands. It graded length plus a regex for digits, weekdays,
+  // month names and the words "because|so|since|unless". Any answer over the word floor came
+  // back "Meets", which is why the questions had to be written to trip a regex: the questions
+  // were reverse-engineered from the checker rather than from anything a learner needs.
+  //
+  // What is left here is only what is mechanically true — was it answered, how long is it.
+  // It makes no claim about quality, and it is not a competency band. Whether an answer is
+  // any good is a reading task, and reading is what the model in `gradeWithModel` is for.
+  // With no model configured these return no band at all, and the UI says so.
+  function fieldBand(f, val) {
     if (!val || !val.trim() || placeholderish(val)) return "Not yet";
     const n = wc(val);
-    const min = strict ? Math.ceil(f.minWords * 1.4) : f.minWords;
-    if (n < min) return "Developing";
-    // Broadened once already (spelled-out numbers, more connectors, quoted detail) after a
-    // walkthrough found a genuinely detailed answer capped for missing "instead of" by one
-    // word ("instead"). Second walkthrough pass found the same failure again on different
-    // wording ("since", "so there is") — a fixed phrase list will always miss some genuine
-    // way of writing a reason. Real fix: a phrase list should raise the band, never be the
-    // only way to avoid being capped. An answer already well past the word floor (strict or
-    // not) is itself evidence of real engagement, not padding — the floor above already
-    // screens out padding — so length alone is enough to clear "Developing" under strict;
-    // the phrase match now only decides Meets vs. Exceeds.
-    const specific =
-      /\d/.test(val) ||
-      /\b(because|so|since|given that|due to|as a result|which means|means that|so that|trade-?off|instead of|whereas|rather than|in order to|for example|for instance|such as|specifically|in practice|as opposed to|in particular)\b/i.test(val) ||
-      /\b(two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand)\b/i.test(val) ||
-      /["“][^"”]{3,}["”]/.test(val) ||
-      /\b(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day\b/.test(val) ||
-      /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/.test(val);
-    if (n >= min * 2 && specific) return "Exceeds";
-    if (strict && !specific && n < min * 2) return "Developing";
-    return "Meets";
+    if (n < f.minWords) return "Developing";
+    return "Answered";
   }
 
-  function fieldReport(f, val, strict) {
-    const b = fieldBand(f, val, strict);
+  function fieldReport(f, val) {
+    const b = fieldBand(f, val);
     const n = wc(val);
     let note;
     if (b === "Not yet") note = !val || !val.trim() ? "Not answered yet." : "Reads as a placeholder — give this a real answer.";
-    else if (b === "Developing") note = `Too thin${strict ? " for the stricter pass" : ""}. ${f.hint || ""}`.trim() + (n ? ` (${n} words)` : "");
-    else if (b === "Meets") note = "Concrete and usable.";
-    else note = "Specific and well-reasoned — names, numbers or trade-offs are explicit.";
-    return { key: f.key, label: f.label, band: b, ok: bandIndex(b) >= 2, note };
-  }
-
-  // Derive a verdict from a set of banded reports.
-  function verdictFromBands(reports, kind, strict) {
-    const idx = reports.map(r => bandIndex(r.band));
-    const allMeet = idx.every(i => i >= 2);
-    const noDeveloping = idx.every(i => i >= 2);
-    const majorityPresent = idx.filter(i => i >= 1).length >= Math.ceil(reports.length * 0.6);
-    const ready = strict ? (allMeet && noDeveloping && idx.some(i => i >= 3)) : allMeet;
-
-    if (ready) {
-      return { verdict: "ready", confidence: strict ? "high" : "medium",
-        summary: kind === "checkpoint"
-          ? (strict
-              ? "Second assessment agrees: this meets the mastery rubric on every dimension, specifically. Confirm to record it."
-              : "This holds together as a whole workflow and meets the rubric. You can confirm now, or request a stricter second pass.")
-          : "Every rubric dimension is met. Records as evidence for this challenge — confirm below." };
-    }
-    if (majorityPresent) {
-      return { verdict: "revise", confidence: "low",
-        summary: strict
-          ? "The second assessor wants more here — the dimensions marked below are present but not specific enough for a mastery pass. Add detail and resubmit."
-          : "You're close. The dimensions marked below are too thin to verify or build on. Fill them in and resubmit." };
-    }
-    return { verdict: "more", confidence: "low",
-      summary: "Not enough here yet. Go back to the teaching, then try again on a real task." };
+    else if (b === "Developing") note = `Below the ${f.minWords}-word floor for this field (${n} words). ${f.hint || ""}`.trim();
+    else note = `Answered — ${n} words. Not yet assessed.`;
+    return { key: f.key, label: f.label, band: b, ok: null, note };
   }
 
   // ---- Assessment Faculty (formative) -------------------------------
-  // assess a competency challenge (type: fields | critique | scenario)
+  //
+  // Assessment is a reading task. It is not done by counting words or looking for keywords.
+  //
+  // The previous implementation decided quality by `text.includes("result")` against 211
+  // hand-written signal lists, and for fields-challenges by a regex for digits and the word
+  // "because". Both produced bands, so the app could show "Meets" on evidence that was never
+  // read. That is the same defect v0.60-v0.63 removed from the evidence portfolio, one layer
+  // down and still live: a learner saw a verdict, and no model had looked at their words.
+  //
+  // So: `assessChallenge` now returns mechanical facts only, plus an explicit
+  // `assessed: false`. There is no verdict and no band until a model has read the answer.
+  // `gradeWithModel` (async, in main.js, via /api/faculty/assess) turns a challenge into a
+  // real verdict once a model is configured. Until then the UI shows the rubric and the
+  // learner's own answer and tells them nothing has been assessed yet.
+  //
+  // A note on "scenario" challenges: multiple choice with one correct option is not a reading
+  // task and does not need a keyword list — `option.ok` is the author's answer key, and
+  // guessing it is exactly what the justification field is there to make visible. It keeps a
+  // verdict. That is a genuine assessment, not a proxy for one.
+
   function assessChallenge(capId, chId, submission) {
     const ch = C.challenge(capId, chId);
     if (!ch) return null;
 
-    if (ch.type === "fields") {
-      const reports = ch.fields.map(f => fieldReport(f, submission[f.key], false));
-      const v = verdictFromBands(reports, "challenge", false);
-      const rubric = ch.rubric.map((item, i) => ({
-        label: item.label,
-        band: reports[i] ? reports[i].band : "Meets",
-        ok: reports[i] ? reports[i].ok : true,
-      }));
-      return { ...v, kind: "fields", stateTarget: v.verdict === "ready" ? ch.raises : (v.verdict === "revise" ? "guided" : "emerging"),
-               fieldReports: reports, rubric };
-    }
-
-    if (ch.type === "critique") {
-      const text = norm(submission.critique);
-      const enough = wc(submission.critique) >= ch.ask.minWords && !placeholderish(submission.critique);
-      const rubric = ch.expected.map(e => ({
-        label: e.label,
-        ok: enough && (e.signals || []).some(sig => text.includes(sig)),
-      }));
-      const caught = rubric.filter(r => r.ok).length;
-      const reports = [{
-        key: "critique", label: ch.ask.label,
-        ok: enough && caught >= Math.ceil(ch.expected.length * 0.6),
-        note: !enough
-          ? `Say more — at least ${ch.ask.minWords} words, working through each problem.`
-          : `You identified ${caught} of ${ch.expected.length} problems. ${caught < ch.expected.length ? "Look again at the unticked items below." : "All of them — good."}`,
-      }];
-      // enough words but few catches => "more"; most catches => ready
-      const verdict = !enough ? "more"
-        : caught >= Math.ceil(ch.expected.length * 0.75) ? "ready"
-        : caught >= Math.ceil(ch.expected.length * 0.5) ? "revise" : "more";
-      return {
-        verdict,
-        confidence: verdict === "ready" ? "medium" : "low",
-        summary: verdict === "ready"
-          ? "You found the substance of what's wrong and how to fix it. Records as evidence."
-          : verdict === "revise"
-            ? "You've got some of it. The rubric below shows what you missed — add those and resubmit."
-            : "Not enough of the real problems identified yet. Re-read the teaching and look at the rubric below.",
-        kind: "critique",
-        stateTarget: verdict === "ready" ? ch.raises : (verdict === "revise" ? "guided" : "emerging"),
-        fieldReports: reports,
-        rubric,
-      };
-    }
-
     if (ch.type === "scenario") {
       const chosen = ch.options.find(o => o.id === submission.choice);
+      // The choice is the author's answer key, so it is a real assessment. The justification is
+      // prose, and a word count is not a reading of it -- thirty characters of filler used to be
+      // enough to report "Reasoning is substantive" and to downgrade a correct call to "revise".
+      // So the verdict comes from the choice alone, and the justification is reported as a
+      // mechanical completeness fact with nothing claimed about its quality.
       const justifyOk = wc(submission.justify) >= ch.ask.minWords && !placeholderish(submission.justify);
       const correct = chosen && chosen.ok;
-      let verdict;
-      if (correct && justifyOk) verdict = "ready";
-      else if (correct && !justifyOk) verdict = "revise";
-      else verdict = "more";
+      const verdict = correct ? "ready" : "more";
       const reports = [
         { key: "choice", label: "Your choice", ok: !!correct,
           note: chosen ? chosen.feedback : "No option selected." },
         { key: "justify", label: ch.ask.label, ok: justifyOk,
-          note: justifyOk ? "Reasoning is substantive." : `Give real reasoning — at least ${ch.ask.minWords} words.` },
+          note: justifyOk
+            ? "Written. Not assessed — no model has read your reasoning."
+            : `Too short to show your reasoning — at least ${ch.ask.minWords} words.` },
       ];
       return {
         verdict,
+        assessed: true,
+        // Scoped honestly: the key graded the call, not the argument for it.
+        assessedBy: "author answer key (choice only)",
+        justificationAssessed: false,
         confidence: verdict === "ready" ? "medium" : "low",
         summary: verdict === "ready"
-          ? "Right call, and you can say why. Records as evidence."
-          : verdict === "revise"
-            ? "Right call — now write the reasoning that makes it a decision rather than a guess."
-            : "Not the strongest option. Read the feedback on your choice, then pick again and justify it.",
+          ? (justifyOk
+              ? "Right call. Your reasoning for it hasn't been read yet, so nothing has checked that you know why."
+              : "Right call. Nothing has checked your reasoning for it — write it down when you're ready.")
+          : "Not the strongest option. Read the feedback on your choice, then pick again.",
         kind: "scenario",
         stateTarget: verdict === "ready" ? ch.raises : "emerging",
         fieldReports: reports,
-        rubric: ch.options.map(o => ({ label: `${o.id.toUpperCase()}. ${o.label}`, ok: o.ok })),
+        rubric: ch.options.map((o, i) => ({
+          label: `${String(o.id || String.fromCharCode(65 + i)).toUpperCase()}. ${o.label}`, ok: o.ok,
+        })),
       };
     }
 
-    return null;
+    // fields + critique: mechanical facts, no verdict.
+    const answered = [];
+    const rubric = [];
+    if (ch.type === "fields") {
+      for (const f of ch.fields) answered.push(fieldReport(f, submission[f.key]));
+      ch.rubric.forEach(item => rubric.push({ label: item.label, band: null, ok: null, note: null }));
+    } else {
+      const text = submission.critique || "";
+      const enough = wc(text) >= ch.ask.minWords && !placeholderish(text);
+      answered.push({
+        key: "critique", label: ch.ask.label, band: enough ? "Answered" : "Developing", ok: null,
+        note: enough
+          ? `${wc(text)} words written. Not yet assessed.`
+          : `Say more — at least ${ch.ask.minWords} words, working through each problem. (${wc(text)} so far.)`,
+      });
+      (ch.expected || []).forEach(e => rubric.push({ label: e.label, band: null, ok: null, note: null }));
+    }
+
+    const missing = answered.filter(a => a.band === "Not yet").length;
+    const thin = answered.filter(a => a.band === "Developing").length;
+    const blocker = missing || thin
+      ? `Not assessed. ${missing ? `${missing} field${missing === 1 ? "" : "s"} still empty. ` : ""}${thin ? `${thin} below the word floor.` : ""}`
+      : "Not assessed yet — a model has not read this answer.";
+
+    return {
+      verdict: null,
+      assessed: false,
+      blocker,
+      canSubmitForAssessment: !missing && !thin,
+      confidence: null,
+      summary: blocker,
+      kind: ch.type,
+      stateTarget: null,
+      fieldReports: answered,
+      rubric,
+      awaitingModel: true,
+    };
   }
 
   // ---- Assessment Faculty — checkpoint (mastery-rubric) -------------
-  // pass strict:true for the stricter second pass (Assessment Resolution Protocol).
+  //
+  // Checkpoints had the same defect plus one more. `verdictFromBands` returned "ready" whenever
+  // every field cleared a word floor, and the "stricter second pass" raised the same floor by 40%
+  // on the same engine — so the second pass could confidently report agreement with a judgement
+  // that had never been made. That is the v0.62 lie one level down.
+  //
+  // `strict` is now carried through to the model call rather than applied to a word count.
+  // Locally this returns mechanical facts and withholds the verdict, exactly as challenges do.
   function assessCheckpoint(cpId, submission, strict) {
     const cp = C.checkpoint(cpId);
     if (!cp) return null;
-    const reports = cp.fields.map(f => fieldReport(f, submission[f.key], !!strict));
-    const v = verdictFromBands(reports, "checkpoint", !!strict);
-    // map rubric dimensions onto field bands; dimensions beyond the field count
-    // inherit the weakest band observed (transparent, conservative).
-    const minBand = BANDS[Math.min(...reports.map(r => bandIndex(r.band)))];
-    const rubric = cp.rubricDims.map((dim, i) => {
-      const b = reports[i] ? reports[i].band : minBand;
-      return { label: dim, band: b, ok: bandIndex(b) >= 2 };
-    });
+    const reports = cp.fields.map(f => fieldReport(f, submission[f.key]));
+    const missing = reports.filter(r => r.band === "Not yet").length;
+    const thin = reports.filter(r => r.band === "Developing").length;
+    const blocker = missing || thin
+      ? `Not assessed. ${missing ? `${missing} field${missing === 1 ? "" : "s"} still empty. ` : ""}${thin ? `${thin} below the word floor.` : ""}`
+      : "Not assessed yet — a model has not read this checkpoint.";
+
     return {
-      ...v,
+      verdict: null,
+      assessed: false,
+      blocker,
+      canSubmitForAssessment: !missing && !thin,
+      confidence: null,
+      summary: blocker,
       kind: "checkpoint",
       assessor: strict ? 2 : 1,
-      stateTarget: v.verdict === "ready" ? cp.raisesTo : (v.verdict === "revise" ? "independent" : "guided"),
+      stateTarget: null,
       fieldReports: reports,
-      rubric,
+      rubric: cp.rubricDims.map(dim => ({ label: dim, band: null, ok: null, note: null })),
+      awaitingModel: true,
     };
   }
 
   // Roll-up of a checkpoint/multi-dim result onto the mastery rubric: per-band counts, the
   // dimensions that fell below Meets, and the banded verdict (08-assessment-model §3). Shared by
   // the master rubric scoring UI and the Assessment Resolution Protocol's reasoned review.
+  // A rubric whose bands are all null has not been assessed. Summing that as "all dimensions
+  // weak, verdict: more" would manufacture a failing result out of the absence of a reading —
+  // so an unassessed rubric returns null and the caller has to say so.
   function masterySummary(result) {
     if (!result || !Array.isArray(result.rubric) || !result.rubric.length) return null;
+    const banded = result.rubric.filter(d => d && bandIndex(d.band) >= 0);
+    if (!banded.length) {
+      return { counts: null, weak: null, total: result.rubric.length, met: null,
+               ready: null, verdict: null, weakestBand: null, assessed: false };
+    }
     const counts = { "Not yet": 0, "Developing": 0, "Meets": 0, "Exceeds": 0 };
     const weak = [];
-    result.rubric.forEach(d => {
+    banded.forEach(d => {
       counts[d.band] = (counts[d.band] || 0) + 1;
       if (bandIndex(d.band) < 2) weak.push(d);
     });
-    const met = result.rubric.length - weak.length;
+    const met = banded.length - weak.length;
     return {
-      counts, weak, total: result.rubric.length, met,
+      counts, weak, total: banded.length, met, assessed: true,
       ready: weak.length === 0,
-      verdict: weak.length === 0 ? "ready" : (met * 2 >= result.rubric.length ? "revise" : "more"),
+      verdict: weak.length === 0 ? "ready" : (met * 2 >= banded.length ? "revise" : "more"),
       weakestBand: weak.length ? weak.reduce((a, b) => bandIndex(a.band) <= bandIndex(b.band) ? a : b).band : null,
     };
   }

@@ -11,7 +11,19 @@ import vm from "node:vm";
 const here = dirname(fileURLToPath(import.meta.url));
 const jsDir = join(here, "..", "js");
 
-export function loadApp(files = ["content.js", "model.js", "pathway.js", "export.js", "progress.js"]) {
+// Subject files must load before content.js: each one self-registers a factory that content.js
+// then calls. So they are prepended here rather than appended.
+const SUBJECT_IDS = [
+  "foundation-core",
+  "agents", "consulting", "content", "design", "edleadership", "education", "engineering",
+  "finance", "foundations", "health", "hr", "journalism", "legal", "ml", "ops", "pm", "public",
+  "realestate", "research", "safety", "sales", "salesengineering", "software", "support",
+];
+
+export function loadApp(files = [
+  ...SUBJECT_IDS.map(id => `../js/subjects/${id}.js`),
+  "content.js", "model.js", "pathway.js", "export.js", "progress.js", "faculty.js",
+]) {
   const win = {};
   const sandbox = {
     window: win,

@@ -245,43 +245,53 @@ window.MODEL = (function () {
     };
   }
 
+  // Wording for what actually assessed a record. As of v0.66 the local rubric engine no longer
+  // produces verdicts at all — it only reports whether a field was answered. A verdict comes from
+  // a model reading the answer, and two passes are the same model twice, which is correlated by
+  // construction. Until a model is configured there is no verdict to describe at all.
   const ARP = {
     secondPass: "stricter second pass",
-    basis: "the same local rubric engine re-run at a higher bar",
-    disclaimer: "No independent human or AI assessor is connected yet, so nothing here is a "
-      + "corroborated second opinion. Disagreement is detected by re-running one rubric, not by "
-      + "asking a second judge.",
+    basis: "the same model reading it a second time at a higher bar",
+    disclaimer: "No independent human or AI assessor is connected, so nothing here is a "
+      + "corroborated second opinion. Two passes by one model are correlated, not independent: "
+      + "same model, same rubric, same context. Until a model is configured, nothing is assessed "
+      + "at all rather than being scored locally.",
   };
 
   // Derive an honest assessors line from a record rather than trusting whatever string was
   // persisted. Records written by earlier builds stored a line claiming two independent
   // assessors agreed, and a learner who upgrades must not keep asserting that.
   function assessorLineFor(ev) {
-    if (!ev) return "local rubric";
+    if (!ev) return "not assessed";
     const a = ev.assessors || "";
     if (/1\s*\+\s*2/.test(a)) {
-      return "local rubric + " + ARP.secondPass
+      const who = a.match(/model\s+([^,]+)/i);
+      return (who ? who[1].trim() : "one model") + " + " + ARP.secondPass
         + (ev.lineage ? " (via Control Plane)" : "")
         + " — " + ARP.basis;
     }
-    if (/\b1\b/.test(a)) return "local rubric, single pass";
-    return a.replace(/\s*\(independent\)\s*/g, " ").trim() || "local rubric";
+    if (/\b1\b/.test(a)) {
+      const who1 = a.match(/model\s+([^,]+)/i);
+      return who1 ? who1[1].trim() + ", single pass" : "one model, single pass";
+    }
+    return a.replace(/\s*\(independent\)\s*/g, " ").trim() || "not assessed";
   }
 
   // Honest assessors line for an evidence record. Never says "independent".
   function assessorLine(result, lineage) {
-    if (!result) return "local rubric";
-    if (result.assessor !== 2) return "local rubric, single pass";
-    return "local rubric + " + ARP.secondPass
+    if (!result || result.verdict === null || result.assessed === false) return "not assessed";
+    const who = result.assessedBy ? String(result.assessedBy) : "one model";
+    if (result.assessor !== 2) return who + ", single pass";
+    return who + " + " + ARP.secondPass
       + (lineage ? " (via Control Plane)" : "")
       + " — " + ARP.basis;
   }
 
   const PROVENANCE_NOTE =
     "A capability state is only as strong as the evidence named on it. Formative evidence is a "
-    + "competency challenge: self-confirmed, scored by local heuristics, and not a judgement. "
-    + "Assessed evidence is a checkpoint passed on the local mastery rubric; where a second pass "
-    + "is shown it is " + ARP.basis + ", not an independent assessor. " + ARP.disclaimer;
+    + "competency challenge: self-confirmed, and a judgement only if a model has read the answer. "
+    + "Assessed evidence is a checkpoint a model has read against the mastery rubric; where a second "
+    + "pass is shown it is " + ARP.basis + ", not an independent assessor. " + ARP.disclaimer;
 
   return {
     levelIndex, levelLabel, raise, markTaught, addEvidence, evidenceFor,

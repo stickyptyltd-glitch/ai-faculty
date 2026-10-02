@@ -541,13 +541,20 @@ async function handleAdminCurriculum(request, env, headers) {
 
   const [{ results: subs }, { results: users }] = await Promise.all([
     env.DB.prepare(
-      `SELECT user_id, kind, cap_id, challenge_id, checkpoint_id, band, confidence, duration_ms, completed_at
-       FROM submissions`
+      `SELECT s.user_id AS user_id, s.kind AS kind, s.cap_id AS cap_id, s.challenge_id AS challenge_id,
+              s.checkpoint_id AS checkpoint_id, s.band AS band, s.confidence AS confidence,
+              s.duration_ms AS duration_ms, s.completed_at AS completed_at
+       FROM submissions s JOIN users u ON u.id = s.user_id WHERE u.role = 'learner'`
     ).all(),
-    env.DB.prepare("SELECT id FROM users").all(),
+    env.DB.prepare("SELECT role, COUNT(*) AS n FROM users GROUP BY role").all(),
   ]);
 
-  const totalLearners = users.length;
+  // Learner-scoped for the same reason as the overview panel: reach% and the M1 funnel
+  // otherwise report the founder's own QA clicks as cohort performance.
+  const byRole = {};
+  for (const r of users) byRole[r.role || "learner"] = r.n;
+  const totalLearners = byRole.learner || 0;
+  const staffCount = Object.entries(byRole).reduce((n, [role, c]) => (role === "learner" ? n : n + c), 0);
   const BAND_ORDER = ["Not yet", "Developing", "Meets", "Exceeds"];
   const byCap = {};
   for (const s of subs) {
@@ -606,7 +613,14 @@ async function handleAdminCurriculum(request, env, headers) {
 
   return json(200, {
     ok: true,
-    totals: { learners: totalLearners, submissions: subs.length, competenciesSeen: competencies.length },
+    totals: {
+      learners: totalLearners,
+      staff: staffCount,
+      staffByRole: byRole,
+      submissions: subs.length,
+      competenciesSeen: competencies.length,
+    },
+    analyticsFromLearnersOnly: true,
     competencies,
     funnel,
     checkpoints: Object.values(checkpoints).map((c) => ({
@@ -814,11 +828,16 @@ async function handleAdminLearners(request, env, headers) {
   const auth = await requireFounder(request, env, headers);
   if (auth.error) return auth.error;
 
+  // Staff accounts are not learners. Listing the founder's and reviewer's own addresses in a
+  // cohort table, with time-on-platform and average band computed from their QA sessions, is
+  // the same false claim as the overview counts one screen over.
   const [{ results: users }, { results: subs }, { results: acts }] = await Promise.all([
-    env.DB.prepare("SELECT id, email, created_at FROM users").all(),
-    env.DB.prepare("SELECT user_id, band, duration_ms, completed_at FROM submissions").all(),
-    env.DB.prepare("SELECT user_id, ts FROM activity_log").all(),
+    env.DB.prepare("SELECT id, email, created_at FROM users WHERE role = 'learner'").all(),
+    env.DB.prepare("SELECT s.user_id AS user_id, s.band AS band, s.duration_ms AS duration_ms, s.completed_at AS completed_at FROM submissions s JOIN users u ON u.id = s.user_id WHERE u.role = 'learner'").all(),
+    env.DB.prepare("SELECT a.user_id AS user_id, a.ts AS ts FROM activity_log a JOIN users u ON u.id = a.user_id WHERE u.role = 'learner'").all(),
   ]);
+  const staffRow = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE role != 'learner'").first();
+  const staffCount = staffRow ? Number(staffRow.n || 0) : 0;
 
   const bandScore = { "Not yet": 0, "Developing": 1, "Meets": 2, "Exceeds": 3 };
   const byUserSubs = {}, byUserActs = {};
@@ -842,7 +861,7 @@ async function handleAdminLearners(request, env, headers) {
     };
   }).sort((a, b) => (b.lastActive || "").localeCompare(a.lastActive || ""));
 
-  return json(200, { ok: true, learners }, headers);
+  return json(200, { ok: true, learners, staff: staffCount }, headers);
 }
 
 async function handleAdminLearnerDetail(request, env, headers, userId) {
@@ -1121,8 +1140,16 @@ function facultyConfigured(env) {
   return !!(env.FACULTY_MODEL_KEY && env.FACULTY_MODEL_BASE_URL && env.FACULTY_MODEL_NAME);
 }
 
-// ---- dry-run scoring: mirrors app/js/faculty.js strict checkpoint banding (fieldBand(..., true)).
-// Kept as the regression oracle + offline fallback; the model adapter replaces it when configured.
+// ---- The old word-count scorer.
+//
+// This is NOT an assessor and must never be returned to a learner as one. It banded answers by
+// word count plus a list of "specific" tokens ("because", "two", a weekday, a month), which
+// rewarded looking like the rubric rather than being right: padding a field with the word
+// "because" three times moved it up a band, and a correct short answer moved it down.
+//
+// It is retained only as a regression oracle for the tests, so the model path can be shown to
+// disagree with the heuristic rather than merely to exist. Nothing in the request path calls it;
+// handleFacultyAssess returns not_configured instead when there is no live model.
 const fwc = s => (s || "").trim().split(/\s+/).filter(Boolean).length;
 const fPlaceholderish = v => /^(n\/?a|none|-|\.|idk|nothing)$/i.test((v || "").trim()) || (v || "").trim().length < 3;
 function fSpecific(val) {
@@ -1172,7 +1199,7 @@ function dryRunAssess({ fields, rubricDims, submission }) {
 
 // OpenAI-compatible chat-completions adapter. Throws on failure; the dispatcher falls back to the
 // dry-run result and flags `degraded` so the lineage is honest about what actually happened.
-async function modelAssess(env, { kind, rubricDims, submission }) {
+async function modelAssess(env, { kind, rubricDims, submission, criteria, promptHint, learnerTask }) {
   const spike = await fetch(`${env.FACULTY_MODEL_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.FACULTY_MODEL_KEY}` },
@@ -1184,8 +1211,20 @@ async function modelAssess(env, { kind, rubricDims, submission }) {
         { role: "user", content: JSON.stringify({
             assessmentKind: kind,
             rubricDimensions: rubricDims,
+            // What the learner was actually asked to do, so the model grades the work rather
+            // than the abstract prompt.
+            prompt: promptHint || undefined,
+            // For challenges: the written criteria, each with what a strong answer contains.
+            criteria: criteria || undefined,
+            // The learner's own real task, when they have one. Grading against the task they
+            // brought is the whole point; without it the model can only judge the prompt.
+            learnerTask: learnerTask && learnerTask.task
+              ? { task: learnerTask.task, why: learnerTask.why || undefined, context: learnerTask.kind || undefined }
+              : undefined,
             submission,
-            instruction: "Band each dimension against the policy and return only the strict JSON the policy describes.",
+            instruction: "Band each dimension against the policy and return only the strict JSON the policy describes."
+              + " Judge the work against the criteria, not against length, formatting or confident phrasing."
+              + " A correct short answer must not be banded below a padded one.",
           }) },
       ],
     }),
@@ -1211,14 +1250,51 @@ async function modelAssess(env, { kind, rubricDims, submission }) {
   };
 }
 
+// Returns { http, payload, lineage }. There is deliberately no heuristic branch: a learner is
+// told a model has not read their answer, rather than being shown a word count wearing the
+// vocabulary of assessment. A model failure is reported as a failure, not papered over with the
+// scorer -- falling back would mean a verdict attributed to a model that never answered.
 async function facultyAssess(env, body) {
-  let out = dryRunAssess(body);
-  let degraded = false;
-  if (facultyConfigured(env) && env.FACULTY_ADAPTER !== "dry-run") {
-    try { out = await modelAssess(env, body); }
-    catch (e) { degraded = true; } // honest fallback: keep the dry-run result, mark the degradation
+  if (!facultyConfigured(env) || env.FACULTY_ADAPTER === "dry-run") {
+    return {
+      http: 409,
+      payload: {
+        ok: false,
+        error: "not_configured",
+        adapter: env.FACULTY_ADAPTER || "none",
+        model: null,
+        assessed: false,
+        // Say what would change this, so the client can tell the user rather than shrugging.
+        reason: env.FACULTY_ADAPTER === "dry-run"
+          ? "The assessment adapter is pinned to dry-run. A word-count scorer is not an assessor, so no verdict is produced."
+          : "No assessment model is configured.",
+        remedy: "Set FACULTY_MODEL_KEY, FACULTY_MODEL_BASE_URL and FACULTY_MODEL_NAME, then set FACULTY_ADAPTER to openai-compatible.",
+      },
+      lineage: { adapter: "none", model: null, verdict: null, confidence: null, degraded: 0, status: "not_configured" },
+    };
   }
-  return { ...out, degraded };
+  try {
+    const out = await modelAssess(env, body);
+    return {
+      http: 200,
+      payload: { ...out, ok: true, assessed: true, degraded: false },
+      lineage: { adapter: out.adapter, model: out.model, verdict: out.verdict, confidence: out.confidence, degraded: 0, status: "ok" },
+    };
+  } catch (e) {
+    return {
+      http: 502,
+      payload: {
+        ok: false,
+        error: "model_unavailable",
+        assessed: false,
+        degraded: true,
+        detail: String(e && e.message ? e.message : e).slice(0, 200),
+        reason: "The assessment model was contacted and did not return a usable result. No verdict is produced, because none was given.",
+        remedy: "Try again, or read the rubric yourself while the model is unavailable.",
+      },
+      lineage: { adapter: "openai-compatible", model: env.FACULTY_MODEL_NAME, verdict: null, confidence: null, degraded: 1, status: "error" },
+    };
+  }
 }
 
 async function handleFacultyAssess(request, env, headers) {
@@ -1230,7 +1306,8 @@ async function handleFacultyAssess(request, env, headers) {
   let body;
   try { body = await request.json(); } catch { return json(400, { ok: false, error: "invalid_json" }, headers); }
 
-  const cpId = String(body.cpId || "").slice(0, 40);
+  const isChallenge = body.kind === "challenge";
+  const cpId = String(body.cpId || body.challengeId || "").slice(0, 40);
   const rubricDims = Array.isArray(body.rubricDims)
     ? body.rubricDims.map(d => String(d).slice(0, 64)).filter(Boolean) : null;
   const fields = Array.isArray(body.fields)
@@ -1239,18 +1316,46 @@ async function handleFacultyAssess(request, env, headers) {
         label: String(f.label || f.key || "").slice(0, 80),
         minWords: Number(f.minWords),
       })) : null;
+  // A challenge has no minWords-per-field rubric: it is graded against written criteria, so it
+  // carries `criteria` instead of `fields`. Requiring fields for both kinds meant every challenge
+  // read was rejected with invalid_rubric and the model's opinion of a challenge was unreachable.
+  const criteria = Array.isArray(body.criteria)
+    ? body.criteria.map(c => ({
+        label: String(c.label || "").slice(0, 80),
+        what: Array.isArray(c.what) ? c.what.map(w => String(w).slice(0, 120)).slice(0, 12) : [],
+      })).filter(c => c.label) : null;
   const submission = body.submission && typeof body.submission === "object" ? body.submission : null;
-  if (!rubricDims || !rubricDims.length || !fields || !fields.length || !submission) {
+  const promptHint = String(body.promptHint || "").slice(0, 300);
+  // The learner's own real task travels with the submission so the model grades the work they
+  // actually did, rather than an abstract answer to an abstract prompt.
+  const learnerTask = body.learnerTask && typeof body.learnerTask === "object"
+    ? {
+        task: String(body.learnerTask.task || "").slice(0, 600),
+        kind: String(body.learnerTask.kind || "").slice(0, 40),
+        why: String(body.learnerTask.why || "").slice(0, 600),
+      } : null;
+
+  if (!rubricDims || !rubricDims.length || !submission) {
     return json(400, { ok: false, error: "invalid_rubric" }, headers);
   }
-  if (!fields.every(f => f.key && Number.isFinite(f.minWords) && f.minWords >= 1)) {
-    return json(400, { ok: false, error: "invalid_fields" }, headers);
+  if (isChallenge) {
+    if (!criteria || !criteria.length) {
+      return json(400, { ok: false, error: "invalid_criteria" }, headers);
+    }
+  } else {
+    if (!fields || !fields.length) {
+      return json(400, { ok: false, error: "invalid_fields" }, headers);
+    }
+    if (!fields.every(f => f.key && Number.isFinite(f.minWords) && f.minWords >= 1)) {
+      return json(400, { ok: false, error: "invalid_fields" }, headers);
+    }
   }
 
-  const kind = body.kind === "challenge" ? "challenge-strict" : "checkpoint-strict";
+  const kind = isChallenge ? "challenge-strict" : "checkpoint-strict";
   const started = Date.now();
-  const out = await facultyAssess(env, { kind, fields, rubricDims, submission });
+  const out = await facultyAssess(env, { kind, fields, criteria, rubricDims, submission, promptHint, learnerTask });
   const lineageId = crypto.randomUUID();
+  const lin = out.lineage;
   await env.DB.prepare(
     `INSERT INTO faculty_calls
        (id, kind, user_id, cp_id, rubric_dims, submission_json, policy_id, adapter, model,
@@ -1258,14 +1363,19 @@ async function handleFacultyAssess(request, env, headers) {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     lineageId, kind, auth.user.id, cpId, JSON.stringify(rubricDims), JSON.stringify(submission),
-    "checkpoint-strict", out.adapter, out.model, JSON.stringify(out.bands), out.verdict,
-    out.confidence, out.degraded ? 1 : 0, "ok", Date.now() - started, new Date().toISOString()
+    kind, lin.adapter, lin.model, JSON.stringify(out.payload.bands || null), lin.verdict,
+    lin.confidence, lin.degraded ? 1 : 0, lin.status, Date.now() - started, new Date().toISOString()
   ).run();
 
+  // Not configured and model-failed are recorded in the lineage so the admin view shows the gap
+  // rather than showing a tidy table of verdicts that were never really given.
+  if (out.http !== 200) return json(out.http, { ...out.payload, lineageId }, headers);
+
   return json(200, {
-    ok: true, lineageId, adapter: out.adapter, model: out.model,
-    verdict: out.verdict, confidence: out.confidence, note: out.note,
-    bands: out.bands, weakDims: out.weakDims, degraded: out.degraded,
+    ok: true, lineageId, adapter: lin.adapter, model: lin.model,
+    verdict: out.payload.verdict, confidence: out.payload.confidence, note: out.payload.note,
+    bands: out.payload.bands, weakDims: out.payload.weakDims, degraded: out.payload.degraded,
+    assessed: true,
   }, headers);
 }
 
@@ -1276,8 +1386,11 @@ async function handleFacultyLog(request, env, headers) {
     `SELECT faculty_calls.id, faculty_calls.kind, faculty_calls.user_id, faculty_calls.cp_id,
             faculty_calls.policy_id, faculty_calls.adapter, faculty_calls.model, faculty_calls.verdict,
             faculty_calls.confidence, faculty_calls.degraded, faculty_calls.latency_ms, faculty_calls.created_at,
+            -- status distinguishes "assessed and this was the verdict" from "never assessed":
+            -- not_configured and error rows have a null verdict and must not read as successes.
+            faculty_calls.status,
             users.email
-     FROM faculty_calls LEFT JOIN users ON users.id = faculty_calls.user_id
+     FROM faculty_calls LEFT JOIN users ON faculty_calls.user_id = users.id
      ORDER BY faculty_calls.created_at DESC LIMIT 200`
   ).all();
   return json(200, { ok: true, calls: results }, headers);

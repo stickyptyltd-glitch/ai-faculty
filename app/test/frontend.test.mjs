@@ -6,12 +6,16 @@
 // with no dependencies, no build step and no network.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadApp } from "./load.mjs";
 
 const win = loadApp();
 const C = win.CONTENT;
 const M = win.MODEL;
 const E = win.EXPORT;
+const F = win.FACULTY;
 
 function newLearner() {
   const capabilities = {};
@@ -309,12 +313,13 @@ test("the second pass is never called independent", async t => {
     }
     assert.match(single, /single pass/);
     assert.match(both, /stricter second pass/);
-    assert.match(both, /same local rubric engine/, "must name the engine honestly");
+    assert.match(both, /same model reading it a second time/, "must name what assesses honestly");
   });
 
   await t.test("provenance note says what assessed does and does not mean", () => {
-    assert.match(M.PROVENANCE_NOTE, /same local rubric engine re-run at a higher bar/);
-    assert.match(M.PROVENANCE_NOTE, /No independent human or AI assessor is connected yet/);
+    assert.match(M.PROVENANCE_NOTE, /same model reading it a second time at a higher bar/);
+    assert.match(M.PROVENANCE_NOTE, /No independent human or AI assessor is connected/);
+    assert.match(M.PROVENANCE_NOTE, /Until a model is configured, nothing is assessed at all/);
   });
 
   await t.test("no learner-facing source string claims an independent assessor", async () => {
@@ -331,16 +336,40 @@ test("the second pass is never called independent", async t => {
     }
   });
 
-  await t.test("the two passes really are the same engine at two thresholds", async () => {
-    // Guards the claim itself: if these ever diverge into genuinely different logic, the
-    // honest wording above becomes under-stated and the docs need revisiting.
+  await t.test("no local verdict path exists any more", async () => {
+    // The stronger guarantee. There used to be exactly one local verdict implementation shared
+    // by both passes, which made "same engine, higher bar" defensible. Now there is no local
+    // verdict at all: a verdict can only come from a model reading the answer. If this ever
+    // fails, a word-count heuristic is grading again and the wording above is a lie.
     const { readFileSync } = await import("node:fs");
     const { join, dirname } = await import("node:path");
     const { fileURLToPath } = await import("node:url");
     const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "js", "faculty.js"), "utf8");
-    assert.match(src, /function fieldBand\(f, val, strict\)/);
-    assert.match(src, /const ready = strict \?/,
-      "verdict must be one code path with a strict flag, not a separate assessor implementation");
+
+    assert.doesNotMatch(src, /function verdictFromBands/,
+      "a local band-aggregator must not be reintroduced as a verdict path");
+    assert.doesNotMatch(src, /verdict:\s*bandIndex/,
+      "no verdict may be derived from a band index without a model having graded it");
+    assert.doesNotMatch(src, /\.signals\s*\|\|\s*\[\]\)\s*\.some\(/,
+      "keyword signal matching must not come back as grading");
+    assert.doesNotMatch(src, /text\.includes\(sig\)/,
+      "substring keyword matching must not come back as grading");
+    assert.match(src, /awaitingModel:\s*true/,
+      "an ungraded result must declare that it is waiting on a model");
+  });
+
+  await t.test("an unassessed rubric is never summarised as a failing one", async () => {
+    // Every dimension ungraded must not roll up to "all weak, verdict: more" — that manufactures
+    // a failure out of the absence of a reading.
+    const { readFileSync } = await import("node:fs");
+    const { join, dirname } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "js", "faculty.js"), "utf8");
+    const body = src.slice(src.indexOf("function masterySummary"), src.indexOf("return { lesson"));
+    assert.match(body, /if\s*\(!banded\.length\)/,
+      "must detect a rubric with no graded dimension before tallying");
+    assert.match(body, /assessed:\s*false/,
+      "an ungraded rubric must report assessed:false");
   });
 });
 
@@ -422,7 +451,7 @@ test("records saved by earlier builds cannot keep claiming independence", async 
 
   await t.test("legacy strings map to honest ones", () => {
     assert.match(M.assessorLineFor(legacy[0]), /stricter second pass/);
-    assert.match(M.assessorLineFor(legacy[0]), /same local rubric engine/);
+    assert.match(M.assessorLineFor(legacy[0]), /same model reading it a second time/);
     assert.match(M.assessorLineFor(legacy[1]), /via Control Plane/);
     assert.match(M.assessorLineFor(legacy[2]), /single pass/);
     legacy.forEach(ev => assert.doesNotMatch(M.assessorLineFor(ev), /independent/i));
@@ -485,5 +514,544 @@ test("the admin panel discloses what it excludes", async t => {
   await t.test("an empty analytics table is not presented as 'no struggle found'", () => {
     assert.match(src, /No learners yet, so the tables below are empty by\s*definition/);
     assert.match(src, /not reporting that nobody struggled/);
+  });
+});
+
+test("assessment withholds a verdict until something has read the answer", async t => {
+  await t.test("a complete fields answer is answered but not assessed", () => {
+    const def = C.challenge("C1", "C1.1");
+    const full = {};
+    // Real space-separated words: "a".repeat(40) is a single token, so it would fail the floor
+    // for the wrong reason and this test would pass without the answer being complete.
+    for (const f of def.fields) {
+      full[f.key] = ("a clear specific outcome with named constraints stated in full on Tuesday "
+        + "because the budget is fixed and two people must approve it before anyone ships it").repeat(3);
+    }
+    const r = F.assessChallenge("C1", "C1.1", full);
+    assert.equal(r.verdict, null, "no verdict may be invented locally");
+    assert.equal(r.assessed, false);
+    assert.equal(r.awaitingModel, true);
+    assert.equal(r.canSubmitForAssessment, true, "a complete answer should be sendable to a model");
+  });
+
+  await t.test("length alone never produces a competency band", () => {
+    const def = C.challenge("C1", "C1.1");
+    const full = {};
+    // Deliberately padded with filler and no substance, no keywords, no numbers.
+    for (const f of def.fields) full[f.key] = "this is just padding text ".repeat(12);
+    const r = F.assessChallenge("C1", "C1.1", full);
+    assert.equal(r.verdict, null);
+    assert.ok(!r.fieldReports.some(x => x.band === "Meets" || x.band === "Exceeds"),
+      "padding must not be banded as Meets or Exceeds: " + JSON.stringify(r.fieldReports.map(x => x.band)));
+  });
+
+  await t.test("a critique with none of the keyword signals is still unassessed, not failed", () => {
+    const def = C.challenge("C1", "C1.2");
+    const text = "I think this goal statement is quite weak and could be much better if it were " +
+      "rewritten in a clearer fashion with attention to what actually matters here, which the " +
+      "original text does not really achieve at any point in its current form, unfortunately.";
+    const r = F.assessChallenge("C1", "C1.2", { critique: text });
+    assert.equal(r.verdict, null, "keyword absence must not become a failing verdict");
+    assert.equal(r.assessed, false);
+  });
+
+  await t.test("an empty answer is blocked from submission with a reason", () => {
+    const def = C.challenge("C1", "C1.1");
+    const r = F.assessChallenge("C1", "C1.1", {});
+    assert.equal(r.canSubmitForAssessment, false);
+    assert.match(r.blocker, /still empty|Not assessed/);
+  });
+
+  await t.test("checkpoints also withhold the verdict", () => {
+    const cp = C.checkpoint("CP1");
+    const full = {};
+    for (const f of cp.fields) full[f.key] = "a".repeat(40) + " with specifics on Monday and 5 numbers";
+    const r = F.assessCheckpoint("CP1", full, false);
+    assert.equal(r.verdict, null, "the stricter second pass must not be a local word-count check");
+    assert.equal(r.assessed, false);
+    assert.ok(r.rubric.every(x => x.band === null));
+  });
+
+  // A real scenario, found rather than hard-coded, and asserted to exist. The previous version of
+  // these tests used C2.1 with `if (ch.type !== "scenario") return;` -- C2.1 is a fields
+  // challenge, so all three tests returned immediately, asserted nothing, and passed green. Four
+  // separate mutations of the code under test survived because of it.
+  function aScenario() {
+    for (const c of C.COMPETENCIES) {
+      for (const ch of c.challenges || []) {
+        if (ch.type === "scenario" && ch.options.some(o => o.ok) && ch.options.some(o => !o.ok)) {
+          return { capId: c.id, ch };
+        }
+      }
+    }
+    throw new Error("no scenario challenge with a real answer key exists to test");
+  }
+
+  await t.test("scenario challenges keep a real verdict, from the key alone", () => {
+    const { capId, ch } = aScenario();
+    const good = ch.options.find(o => o.ok);
+    const bad = ch.options.find(o => !o.ok);
+
+    const right = F.assessChallenge(capId, ch.id, {
+      choice: good.id, justify: "Because ".concat("x".repeat(30)),
+    });
+    assert.equal(right.verdict, "ready");
+    assert.equal(right.assessed, true);
+
+    const wrong = F.assessChallenge(capId, ch.id, {
+      choice: bad.id, justify: "Because ".concat("x".repeat(30)),
+    });
+    assert.equal(wrong.verdict, "more");
+  });
+
+  await t.test("a correct choice is not downgraded by word count", () => {
+    // This used to return "revise" purely because the justification was short, and thirty
+    // characters of filler used to earn "Reasoning is substantive". Both were word-count
+    // assessments of prose.
+    const { capId, ch } = aScenario();
+    const good = ch.options.find(o => o.ok);
+
+    const short = F.assessChallenge(capId, ch.id, { choice: good.id, justify: "yes" });
+    assert.equal(short.verdict, "ready", "a short justification must not change the verdict");
+
+    // Real prose, long enough to clear the length gate. Deliberately not "x".repeat(n): the
+    // placeholder check already catches repeated filler, so that string never reaches the branch
+    // under test. Both branches are asserted below.
+    const prose = "Because the model guesses at anything it cannot verify, so the cheapest thing "
+      + "to check first is whether the number in the output is the number in the source at all.";
+    assert.ok(prose.split(/\s+/).length >= ch.ask.minWords, "fixture prose must clear minWords");
+
+    const written = F.assessChallenge(capId, ch.id, { choice: good.id, justify: prose });
+    const report = written.fieldReports.find(f => f.key === "justify");
+    assert.equal(report.ok, true, "prose that clears the gate should be marked written");
+    assert.doesNotMatch(report.note, /substantive/i,
+      "word count must not be reported as evidence of reasoning");
+    assert.match(report.note, /not assessed/i,
+      "the justification must say plainly that nothing has read it");
+
+    const filler = F.assessChallenge(capId, ch.id, {
+      choice: good.id, justify: "x".repeat(ch.ask.minWords * 3),
+    });
+    assert.equal(filler.verdict, "ready",
+      "placeholder filler must not change the verdict either");
+    assert.equal(filler.fieldReports.find(f => f.key === "justify").ok, false,
+      "repeated filler is not a justification");
+  });
+
+  await t.test("what was assessed is stated, and the justification is excluded", () => {
+    const { capId, ch } = aScenario();
+    const good = ch.options.find(o => o.ok);
+    const r = F.assessChallenge(capId, ch.id, { choice: good.id, justify: "Because ".repeat(20) });
+    assert.match(r.assessedBy, /choice only/i,
+      "assessment scope must say the argument was not graded");
+    assert.equal(r.justificationAssessed, false);
+    assert.doesNotMatch(r.summary, /records as evidence/i,
+      "a length gate must not be described as recording evidence");
+    assert.match(r.summary, /hasn.t been read|hasn.t checked/i);
+  });
+
+  await t.test("no test silently skips because a fixture changed shape", () => {
+    // The failure mode this guards: a guard clause that returns early turns a test into a no-op
+    // that stays green forever. Any challenge id this file hard-codes must still exist and still
+    // be the type the test assumes.
+    const pinned = [
+      ["C2", "C2.1", "fields"],
+      ["C3", "C3.2", "scenario"],
+      ["C5", "C5.2", "scenario"],
+      ["C7", "C7.3", "scenario"],
+    ];
+    for (const [capId, chId, type] of pinned) {
+      const ch = C.challenge(capId, chId);
+      assert.ok(ch, `pinned challenge ${chId} no longer exists`);
+      assert.equal(ch.type, type, `pinned challenge ${chId} changed type`);
+    }
+  });
+
+  await t.test("masterySummary refuses to score an ungraded rubric", () => {
+    const s = F.masterySummary({ rubric: [{ label: "A", band: null }, { label: "B", band: null }] });
+    assert.equal(s.assessed, false);
+    assert.equal(s.verdict, null, "an ungraded rubric must not roll up to a verdict");
+    assert.equal(s.ready, null);
+  });
+
+  await t.test("masterySummary still scores a graded rubric", () => {
+    const s = F.masterySummary({ rubric: [{ label: "A", band: "Meets" }, { label: "B", band: "Exceeds" }] });
+    assert.equal(s.assessed, true);
+    assert.equal(s.ready, true);
+    assert.equal(s.met, 2);
+  });
+});
+
+test("the pathway recommendation uses every diagnostic answer", async t => {
+  await t.test("a goal stated only in answer A is considered", () => {
+    // This is the defect: A is what the learner said they want in their real life, and the old
+    // implementation never read it. A was collected, stored, and thrown away.
+    const only = C.recommendPathway({ a: "I want help with coding and debugging my python scripts",
+                                      b: "", c: "", d: "2", e: "" });
+    assert.ok(only && only.id === "software",
+      "answer A alone must be able to drive the recommendation, got " + JSON.stringify(only && only.id));
+  });
+
+  await t.test("a goal stated only in answer C is considered", () => {
+    const only = C.recommendPathway({ a: "", b: "", c: "ship features and debug code with a pair",
+                                      d: "", e: "" });
+    assert.ok(only && only.id === "software", "answer C alone must count");
+  });
+
+  await t.test("a real task in answer E is considered", () => {
+    const only = C.recommendPathway({ a: "", b: "", c: "", d: "", e: "I used it to write a newsletter draft" });
+    assert.ok(only && only.id === "content", "answer E alone must count, got " + JSON.stringify(only && only.id));
+  });
+
+  await t.test("answers matching nothing recommend nothing", () => {
+    // No keywords matched. The old code would still have picked the first pathway with any
+    // overlap, or nothing at all silently. Returning null and letting the learner browse is
+    // the honest outcome — a bad match is worse than no match when it gets presented as
+    // "recommended for you".
+    const rec = C.recommendPathway({ a: "help me plan my week", b: "nothing in particular really" });
+    assert.equal(rec, null, "must not invent a recommendation from a non-match");
+  });
+
+  await t.test("a specific goal in one answer beats a vague professional answer", () => {
+    const rec = C.recommendPathway({
+      a: "I want to ship features and debug code",
+      b: "general productivity",
+    });
+    assert.ok(rec && rec.id === "software", JSON.stringify(rec && rec.id));
+  });
+
+  await t.test("it reports which answer drove it, so the learner can check", () => {
+    const rec = C.recommendPathway({ a: "help me with coding", b: "", c: "", d: "", e: "" });
+    assert.ok(rec.fromAnswer && rec.fromAnswer.length, "must attribute the match to an answer");
+    assert.ok(rec.matchedOn && rec.matchedOn.length, "must show the words that matched");
+    assert.equal(rec.consideredAnswers, 1);
+  });
+
+  await t.test("no answers gives no recommendation, not a default pick", () => {
+    assert.equal(C.recommendPathway({ a: "", b: "", c: "", d: "", e: "" }), null);
+    assert.equal(C.recommendPathway(null), null);
+  });
+
+  await t.test("a bare string still works, so old callers cannot crash", () => {
+    const rec = C.recommendPathway("I want to write code and debug things");
+    assert.ok(rec && rec.id === "software");
+  });
+});
+
+test("subjects are independent files and lose nothing", async t => {
+  const { readdirSync, existsSync, readFileSync } = await import("node:fs");
+  const { join, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const jsDir = join(dirname(fileURLToPath(import.meta.url)), "..", "js");
+  const subjDir = join(jsDir, "subjects");
+
+  await t.test("every pathway has a subject file, and every subject file a pathway", () => {
+    const files = readdirSync(subjDir).filter(f => f.endsWith(".js")).map(f => f.replace(/\.js$/, ""));
+    const ids = C.PATHWAYS.map(p => p.id);
+    // A pathway may legitimately have no competencies of its own (none today), but any
+    // subject file with no pathway is content nobody can reach.
+    // A subject is reachable if a pathway uses it, or if it is the foundation. Anything else is
+    // content shipped to the browser that no learner can ever be routed to.
+    const foundation = C.COMPETENCIES.length ? "foundation-core" : null;
+    const orphans = files.filter(f => !ids.includes(f) && f !== foundation);
+    assert.deepEqual(orphans, [], "subject files nothing can reach: " + orphans.join(", "));
+    for (const f of files) {
+      assert.ok(existsSync(join(subjDir, f + ".js")), f);
+    }
+  });
+
+  await t.test("a subject file is loadable on its own, with only helpers passed in", async () => {
+    // This is the whole point of the split: a subject must not reach into content.js.
+    const src = readFileSync(join(subjDir, "software.js"), "utf8");
+    assert.ok(!/window\.CONTENT/.test(src), "subject must not read window.CONTENT");
+    assert.ok(!/\bCONTENT\./.test(src), "subject must not reference CONTENT");
+    assert.match(src, /function \(h\)/, "subject takes its helpers as a parameter");
+  });
+
+  await t.test("adding a subject does not require editing content.js", async () => {
+    // The structural claim behind "add a plethora of subjects". A subject registers itself;
+    // content.js only holds the pathway table and calls the factories.
+    const content = readFileSync(join(jsDir, "content.js"), "utf8");
+    const factoryCalls = (content.match(/factory\(\{/g) || []).length;
+    assert.equal(factoryCalls, 1,
+      "content.js should compose subjects through one generic loop, not per-subject wiring");
+    assert.ok(!/const [A-Z_0-9]+_COMPETENCIES = \[/.test(content),
+      "content.js must not hold inline competency bodies again");
+  });
+
+  await t.test("no subject body is left behind in content.js", async () => {
+    const content = readFileSync(join(jsDir, "content.js"), "utf8");
+    // The foundation moved out too, so content.js should now hold zero competency bodies -- only
+    // the challenge helpers, the pathway table and the registry that composes the subject files.
+    const inline = (content.match(/canDo:/g) || []).length;
+    assert.equal(inline, 0, `content.js should hold no competency bodies, found ${inline}`);
+    assert.ok(C.COMPETENCIES.length >= 7, "the foundation must still be wired in and non-empty");
+  });
+});
+
+test("track steers the recommendation away from job-role content", async t => {
+  // A deliberately balanced fixture: one answer is pure build content ("how ai works"), one is
+  // pure job-role content ("teacher"). Both weigh 3, both match exactly one keyword, so the only
+  // thing that can decide the winner is the track prior.
+  const INTAKE = { a: "i want to understand how ai works", b: "i am a teacher", c: "", d: "3", e: "" };
+
+  await t.test("professional track prefers the job-role pathway", () => {
+    const rec = C.recommendPathway(INTAKE, "professional");
+    assert.equal(rec.group, "work", `expected a work pathway, got ${rec.id} (${rec.group})`);
+    assert.equal(rec.fromTrack.multiplier, 1.5);
+  });
+
+  await t.test("personal track flips the same answers to the build pathway", () => {
+    const rec = C.recommendPathway(INTAKE, "personal");
+    assert.equal(rec.group, "build", `expected a build pathway, got ${rec.id} (${rec.group})`);
+    assert.equal(rec.fromTrack.multiplier, 2.5);
+  });
+
+  await t.test("the demoted pathway was a real contender, not an absent one", () => {
+    // If education never scored, "personal" would trivially pick foundations and this test would
+    // pass for the wrong reason. Confirm the losing side is genuinely in play.
+    const pro = C.recommendPathway(INTAKE, "professional");
+    assert.ok(pro.recommend.includes("teacher"));
+    assert.ok(C.PATHWAYS.find(p => p.id === pro.id).group === "work");
+  });
+
+  await t.test("track can arrive inside the intake object instead of as an argument", () => {
+    const viaArg = C.recommendPathway(INTAKE, "personal");
+    const viaObj = C.recommendPathway({ ...INTAKE, track: "personal" });
+    assert.equal(viaObj.id, viaArg.id);
+    assert.deepEqual(viaObj.fromTrack, viaArg.fromTrack);
+  });
+
+  await t.test("the prior is explained rather than applied silently", () => {
+    const rec = C.recommendPathway(INTAKE, "personal");
+    assert.match(rec.fromTrack.note, /You chose personal/);
+    assert.match(rec.fromTrack.note, /weighted/);
+  });
+
+  await t.test("no track means no prior and no claim about one", () => {
+    assert.equal(C.recommendPathway(INTAKE).fromTrack, null);
+  });
+
+  await t.test("the full pathway is returned, not a partial subset", () => {
+    const rec = C.recommendPathway(INTAKE, "professional");
+    const real = C.PATHWAYS.find(p => p.id === rec.id);
+    for (const k of ["id", "group", "status", "prereq", "capstoneId", "rubricEmphasis", "tagline"]) {
+      assert.equal(rec[k], real[k], `recommendation lost pathway field: ${k}`);
+    }
+    assert.equal(rec.competencies, real.competencies, "should be the same competency objects");
+  });
+
+  await t.test("unknown or absent answers give no recommendation, not a wrong one", () => {
+    assert.equal(C.recommendPathway({}, "personal"), null);
+    assert.equal(C.recommendPathway({ a: "   ", b: "" }, "professional"), null);
+  });
+});
+
+test("nothing asks every learner to have a job", async t => {
+  // Measured, then fixed. An audit of every question a learner sees before choosing a pathway
+  // found the diagnostic asked, of everyone, "what would you most like AI to help you accomplish
+  // professionally?" and three foundation quick checks assumed a client, a colleague, or a job.
+  // That is the "irrelevant questions" complaint at the front door: it is the first thing the
+  // system says, and someone who is not working has no answer to give.
+
+  const WORK = /\b(colleague|manager|client|customer|CRM|KPI|stakeholder|coworker|workplace|timesheet|onboarding|inbox|mailing list|spreadsheet|invoice|headcount|roadmap|sprint|OKR|deliverable|employee|employer|professionally)\b/i;
+
+  await t.test("no diagnostic question assumes the learner works", () => {
+    for (const q of C.DIAGNOSTIC.questions) {
+      assert.doesNotMatch(q.label + " " + (q.hint || ""), WORK,
+        `diagnostic ${q.key} assumes a job: ${q.label}`);
+    }
+  });
+
+  await t.test("the diagnostic lets a learner say they have no work context", () => {
+    // A question with no valid answer for a real learner is a broken question, not a hard one.
+    const b = C.DIAGNOSTIC.questions.find(q => q.key === "b");
+    assert.ok(b, "diagnostic lost question b");
+    assert.match(b.hint, /none right now/i,
+      "question b must offer a legitimate 'none of this applies' answer");
+  });
+
+  await t.test("no foundation quick check assumes a job", () => {
+    // Only the foundation. A learner who chose Customer Support or Real Estate should be asked
+    // about customers and properties; a learner on the foundation has not opted into any of that.
+    for (const cap of ["C1", "C2", "C3", "C4", "C5", "C6", "C7"]) {
+      for (const q of C.QUICK_CHECKS[cap] || []) {
+        assert.doesNotMatch(JSON.stringify(q), WORK,
+          `foundation quick check ${cap} assumes a job: ${q.q}`);
+      }
+    }
+  });
+
+  await t.test("every pathway lesson actually teaches AI, not just the job", async t => {
+    // The suspicion was that a profession subject taught the profession with AI attached. Measured
+    // across all 25 pathways, every single competency lesson already grounds itself in how models
+    // behave, so this locks that in rather than assuming it.
+    const AI = /\b(model|context|prompt|token|confabulat|hallucinat|retriev|ground(ed|ing)?|inference|fine-?tun|embedding|eval(uation)?|training data|rag|tool call|system prompt|temperature|deterministic|verif(y|ication)|bias|jailbreak|classifier)\b/i;
+    const weak = [];
+    for (const p of C.PATHWAYS) {
+      for (const c of p.competencies) {
+        if (!AI.test(JSON.stringify(c.lesson || {}))) weak.push(`${p.id}/${c.id}`);
+      }
+    }
+    assert.equal(weak.join(","), "",
+      `these competencies teach a job but never how a model behaves: ${weak.join(", ")}`);
+  });
+});
+
+test("a personal goal gets a personal pathway, not a blank", async t => {
+  // This used to assert null. The vocabulary was 168 profession and specialism terms, so a
+  // learner who answered honestly about their own life got no recommendation at all -- which is
+  // the "irrelevant questions" problem in its sharpest form. There is now a personal pathway and
+  // personal-life vocabulary, so these must resolve.
+
+  const personal = "sort out my prescriptions, help my kids with homework, plan a holiday on a budget";
+  const rec = C.recommendPathway({ a: personal }, "personal");
+  assert.ok(rec, "an ordinary personal goal still gets no recommendation");
+  assert.equal(rec.id, "personal");
+  assert.equal(rec.group, "personal");
+  assert.ok(rec.matchedOn.length, "a personal match must say what it matched on");
+
+  await t.test("a range of personal goals all resolve", () => {
+    const goals = [
+      "understand my medication instructions",
+      "get in shape and stop guessing",
+      "budget for a holiday",
+      "help my kids with homework",
+      "sort out my mortgage",
+      "my sleep and my anxiety",
+      "learn a language",
+    ];
+    for (const g of goals) {
+      const r = C.recommendPathway({ a: g }, "personal");
+      assert.ok(r, `personal goal got no recommendation: ${g}`);
+      assert.equal(r.id, "personal", `personal goal routed elsewhere: ${g} -> ${r.id}`);
+    }
+  });
+
+  await t.test("the personal pathway is the real foundation capability, not a stub", () => {
+    const p = C.pathway("personal");
+    assert.ok(p, "no personal pathway registered");
+    assert.equal(p.competencies, C.COMPETENCIES,
+      "personal pathway should expose the same capability objects the foundation does");
+    assert.equal(p.competencies.length, 7);
+    assert.equal(p.capstoneId, "PERCAP");
+    assert.equal(C.checkpoint("PERCAP").pathway, "personal");
+    assert.equal(C.checkpointsFor("personal").map(c => c.id).join(","), "PERCAP",
+      "the personal pathway must resolve its own capstone, or it renders with no checkpoint");
+  });
+
+  await t.test("choosing the personal track does not hijack a work goal", () => {
+    const r = C.recommendPathway({ a: "write code and ship features" }, "personal");
+    assert.equal(r.id, "software");
+    assert.equal(r.fromTrack.multiplier, 0.3, "work should stay demoted on the personal track");
+  });
+
+  await t.test("genuinely unmatchable input still falls back honestly", () => {
+    // The browse-all route must survive, for answers that genuinely match nothing.
+    assert.equal(C.recommendPathway({ a: "zxqv frobnicate" }, "personal"), null);
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "js", "main.js"), "utf8");
+    assert.match(src, /Browse all pathways/);
+    assert.match(src, /\$\{rec \? /, "recommendation must stay conditional on a match");
+  });
+
+  await t.test("the browse view offers the personal group", () => {
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "js", "main.js"), "utf8");
+    assert.match(src, /group\("personal"/, "no personal section in the browse view");
+  });
+});
+
+test("the foundation teaches AI, not office life", async t => {
+  // The foundation used to assume a job, a team and a document: "get the Q3 report done", "post
+  // it on social media", "draft a customer refund email". A learner who wanted to understand AI,
+  // or who was not working at all, was asked questions about a world they had not opted into.
+  // These assertions are deliberately blunt about that.
+
+  await t.test("every foundation competency teaches something about AI itself", () => {
+    for (const c of C.COMPETENCIES) {
+      const lesson = JSON.stringify(c.lesson).toLowerCase();
+      assert.ok(
+        /model|context|prompt|confabulat|invent|retriev|ground|hallucinat|training|token|source|citation|tool use|fine-?tun/.test(lesson),
+        `${c.id} (${c.name}) teaches no AI behaviour: its lesson never mentions how a model actually behaves`);
+    }
+  });
+
+  await t.test("critique material does not assume the learner has a job", () => {
+    // Allowed in a lesson as a deliberate counter-example, which is how C1.2 teaches. Not allowed
+    // as the material a learner is handed to analyse, because that assumes their working life.
+    const ASSUMES_JOB = /\b(Q3|quarter[ -]report|colleague|mailing list|customer refund|CRM|stakeholder|coworker|workplace|team meeting|timesheet)\b/i;
+    for (const c of C.COMPETENCIES) {
+      for (const ch of c.challenges || []) {
+        if (ch.type !== "critique") continue;
+        assert.ok(!ASSUMES_JOB.test(String(ch.material || "")),
+          `${ch.id} hands the learner workplace material: ${String(ch.material).slice(0, 90)}`);
+      }
+    }
+  });
+
+  await t.test("the critiques teach real AI failure modes", () => {
+    const critiques = C.COMPETENCIES.flatMap(c => (c.challenges || []).filter(ch => ch.type === "critique"));
+    assert.ok(critiques.length >= 3, "expected several critiques to teach from");
+    const all = JSON.stringify(critiques).toLowerCase();
+    for (const concept of ["context", "invent", "correct", "source"]) {
+      assert.ok(all.includes(concept),
+        `the critiques never touch "${concept}" — they are not teaching AI behaviour, just process`);
+    }
+  });
+
+  await t.test("written challenges are about the learner's own task, not a hypothetical", () => {
+    for (const c of C.COMPETENCIES) {
+      for (const ch of c.challenges || []) {
+        if (ch.type !== "fields") continue;
+        const brief = String(ch.brief || "");
+        assert.ok(!/pick one task from your own life or work this week/i.test(brief),
+          `${ch.id} still tells the learner to invent a task instead of using the one they captured: ${brief.slice(0, 80)}`);
+      }
+    }
+  });
+
+  await t.test("scenarios are about AI judgement, not office politics", () => {
+    const ASSUMES_JOB = /\b(Q3|customer refund|mailing list|crm|ticket queue|refund email)\b/i;
+    for (const c of C.COMPETENCIES) {
+      for (const ch of c.challenges || []) {
+        if (ch.type !== "scenario") continue;
+        assert.ok(!ASSUMES_JOB.test(JSON.stringify(ch)),
+          `${ch.id} is an office scenario rather than an AI judgement: ${ch.title}`);
+      }
+    }
+  });
+
+  await t.test("every foundation challenge asks for a specific, answerable thing", () => {
+    for (const c of C.COMPETENCIES) {
+      for (const ch of c.challenges || []) {
+        if (ch.type === "fields") {
+          assert.ok(ch.fields.length >= 2, `${ch.id} has too few fields to be substantive`);
+          for (const f of ch.fields) {
+            assert.ok(f.hint && f.hint.length > 30, `${ch.id}/${f.key} has no usable hint`);
+          }
+        }
+        if (ch.type === "critique") {
+          assert.ok((ch.expected || []).length >= 3, `${ch.id} gives the learner fewer than 3 things to look for`);
+        }
+        if (ch.type === "scenario") {
+          assert.ok((ch.options || []).length === 4, `${ch.id} should offer 4 options`);
+          assert.ok((ch.options || []).some(o => o.ok), `${ch.id} has no correct option`);
+          assert.ok((ch.options || []).filter(o => o.ok).length === 1, `${ch.id} must have exactly one right answer`);
+          assert.ok((ch.options || []).every(o => o.why && o.why.length > 20),
+            `${ch.id} has an option with no real explanation of why it is wrong`);
+          // Each explanation must be its own. A duplicated or generic "why" is the shape a
+          // distractor takes when nobody actually worked out why it is wrong.
+          const whys = (ch.options || []).map(o => o.why);
+          assert.equal(new Set(whys).size, whys.length, `${ch.id} repeats an explanation across options`);
+          // A distractor is explained by saying what is actually true instead. If a wrong option's
+          // explanation does not push back at all, the learner is left to guess why it lost.
+          const PUSHES_BACK = /\b(not|no|nothing|never|nobody|does not|doesn\u2019t|is not|was not|too absolute|punts|premium|unlikely|instead|rather|length is|publicly available is)\b/i;
+          for (const o of (ch.options || [])) {
+            if (o.ok) continue;
+            assert.match(o.why, PUSHES_BACK,
+              `${ch.id}: the wrong option "${o.label.slice(0, 40)}" is not explained — its why just asserts something: ${o.why.slice(0, 80)}`);
+          }
+        }
+      }
+    }
   });
 });

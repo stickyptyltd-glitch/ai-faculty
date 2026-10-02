@@ -15,6 +15,7 @@ window.STORE = (function () {
       createdAt: now,
       updatedAt: now,
       intake: null,          // filled by the diagnostic
+      realTask: null,        // the one real task this learner is working on, reused everywhere
       track: null,           // personal | professional | mixed
       module: "foundation",  // "foundation" | <pathwayId> — what the learner is working now
       pathway: null,         // chosen work pathway id (once foundation is done)

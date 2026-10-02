@@ -43,6 +43,9 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
     if (flat.includes("FROM users WHERE stripe_customer_id")) {
       return usersRows.find(u => u.stripe_customer_id === args[0]) || null;
     }
+    if (flat.includes("FROM users") && flat.includes("role != 'learner'")) {
+      return { n: usersRows.filter(u => (u.role || "learner") !== "learner").length };
+    }
     if (flat.includes("FROM founder_passwords WHERE user_id")) {
       return founderPasswords.find(p => p.user_id === args[0]) || null;
     }
@@ -207,6 +210,9 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
       return { results: facultyCalls.slice().sort((a, b) =>
         String(b.created_at || "").localeCompare(String(a.created_at || ""))) };
     }
+    if (sql.includes("FROM users") && sql.includes("role = 'learner'") && !sql.includes("GROUP BY") && !sql.includes("COUNT")) {
+      return { results: usersRows.filter((u) => (u.role || "learner") === "learner").map((u) => ({ id: u.id, email: u.email, created_at: u.created_at })) };
+    }
     if (sql.includes("FROM users") && !sql.includes("LEFT JOIN")) return { results: usersRows };
     if (sql.includes("LEFT JOIN faculty_reviews") && sql.includes("reviewer.email")) {
       const rows = facultyCalls
@@ -244,10 +250,21 @@ function makeFakeDB({ users = [], sessions = [] } = {}) {
         .map(fc => ({
           id: fc.id, kind: fc.kind, user_id: fc.user_id, cp_id: fc.cp_id, policy_id: fc.policy_id,
           adapter: fc.adapter, model: fc.model, verdict: fc.verdict, confidence: fc.confidence,
-          degraded: fc.degraded, latency_ms: fc.latency_ms, created_at: fc.created_at,
+          degraded: fc.degraded, latency_ms: fc.latency_ms, created_at: fc.created_at, status: fc.status,
           email: (usersRows.find(u => u.id === fc.user_id) || {}).email,
         }));
-      return { results: rows };
+      // Honour the projection. This fake used to return every column regardless of what the
+      // SELECT asked for, which made it impossible to fail a test by dropping a column from the
+      // query: the fake supplied it anyway and the assertion passed. Real D1 does not do that, so
+      // a test could pass here and fail in production on exactly the field it claimed to check.
+      const sel = sql.slice(sql.indexOf("SELECT") + 6, sql.indexOf("FROM faculty_calls"));
+      const cols = sel.split(",").map(c => c.trim()).filter(Boolean)
+        .map(c => { const t = c.split(/\s+/).pop(); return t.split(".").pop(); });
+      return { results: rows.map(r => {
+        const out = {};
+        for (const c of cols) if (c in r) out[c] = r[c];
+        return out;
+      }) };
     }
     return { results: [] };
   }
@@ -288,6 +305,11 @@ async function makeEnv({ role = "learner" } = {}) {
     SIGNUPS: makeKV(),
     RESEND_API_KEY: "", DEV_LINKS: "true", APP_ORIGIN: "https://aifaculty.org",
     rate_limit: { window_seconds: 3600, max_per_ip: 3 },
+    // Mirrors workers/api/wrangler.toml. Tests that want the model path call modelEnv() to
+    // override this; leaving it unset meant the suite never exercised the adapter setting
+    // that production actually ships with.
+    FACULTY_ADAPTER: "dry-run",
+    FACULTY_MODEL_BASE_URL: "", FACULTY_MODEL_NAME: "", FACULTY_MODEL_KEY: "",
   };
   return { env, rawToken, user };
 }
@@ -636,7 +658,10 @@ function strongSubmission() {
   check("401 assess without auth", r.status === 401);
 }
 
-// 20. Control Plane — dry-run strict pass + lineage recorded
+// 20. Control Plane — with no model configured, nothing is assessed. This used to assert
+// "strict verdict ready on strong answer" off a word count, which is the fabrication the whole
+// rebuild is removing: a strong answer scored ready before any model read it, and a learner was
+// told a competent faculty had judged them.
 {
   const { env, rawToken } = await makeEnv();
   const r = await worker.fetch(await req("/api/faculty/assess", {
@@ -644,29 +669,36 @@ function strongSubmission() {
     body: { ...cpRubric, fields: cpFields(), submission: strongSubmission() },
   }), env);
   const body = await r.json();
-  check("200 assess signed-in", r.status === 200 && body.ok === true);
-  check("dry-run adapter by default", body.adapter === "dry-run");
-  check("strict verdict ready on strong answer", body.verdict === "ready" && body.confidence === "high");
-  check("every dimension banded", ["Clarity", "Structure", "Reasoning", "Safety"].every(d => body.bands && body.bands[d]));
-  check("lineage id returned", typeof body.lineageId === "string" && body.lineageId.length > 0);
-  check("call audited", env.DB._faculty.length === 1 && env.DB._faculty[0].verdict === "ready"
-    && env.DB._faculty[0].user_id === "u1" && env.DB._faculty[0].policy_id === "checkpoint-strict"
-    && env.DB._faculty[0].degraded === 0);
-  check("audit keeps submission snapshot", env.DB._faculty[0].submission_json.includes("week") || env.DB._faculty[0].submission_json.length > 10);
+  check("409 not configured, not 200", r.status === 409 && body.ok === false);
+  check("no model configured returns no verdict", body.verdict === undefined);
+  check("no model configured returns no bands", body.bands === undefined);
+  check("explicitly marked unassessed", body.assessed === false && body.error === "not_configured");
+  check("says a word-count scorer is not an assessor", /not an assessor/.test(body.reason || ""));
+  check("names the remedy", /FACULTY_MODEL_KEY/.test(body.remedy || ""));
+  check("lineage id still returned", typeof body.lineageId === "string" && body.lineageId.length > 0);
+  check("gap is audited rather than hidden", env.DB._faculty.length === 1
+    && env.DB._faculty[0].verdict === null && env.DB._faculty[0].degraded === 0
+    && env.DB._faculty[0].status === "not_configured" && env.DB._faculty[0].adapter === "none");
+  check("submission snapshot still kept", env.DB._faculty[0].submission_json.length > 10);
 }
 
-// 21. Control Plane — thin answer is not a strict pass (disagreement seam is reachable)
+// 21. Control Plane — answer length must not change what comes back when no model is configured.
+// The old scorer banded this thin answer "revise" and a padded one "ready". Both are now the
+// same honest answer, because neither has been read by anything that knows the subject.
 {
   const { env, rawToken } = await makeEnv();
   const thin = {};
   cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
-  const r = await worker.fetch(await req("/api/faculty/assess", {
-    method: "POST", token: rawToken,
-    body: { ...cpRubric, fields: cpFields(), submission: thin },
+  const rThin = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken, body: { ...cpRubric, fields: cpFields(), submission: thin },
   }), env);
-  const body = await r.json();
-  check("thin answer not ready under strict bar", r.status === 200 && body.ok === true && body.verdict !== "ready");
-  check("revise note names wanted dims", body.verdict === "revise" ? (body.weakDims.length > 0 && body.note.toLowerCase().includes("wanted more on")) : true);
+  const rFat = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken, body: { ...cpRubric, fields: cpFields(), submission: strongSubmission() },
+  }), env);
+  const bThin = await rThin.json(), bFat = await rFat.json();
+  check("both unconfigured reads are 409", rThin.status === 409 && rFat.status === 409);
+  check("padding earns nothing", bThin.verdict === undefined && bFat.verdict === undefined);
+  check("neither is banded", !bThin.bands && !bFat.bands);
 }
 
 // 22. Control Plane — bad rubric payload rejected
@@ -679,17 +711,64 @@ function strongSubmission() {
   check("400 invalid fields", r.status === 400);
 }
 
-// 23. Control Plane — must match submitted fields against every rubric dim added beyond fields
+const RUBRIC = ["Clarity", "Specificity"];
+const FIELDS = [{ key: "a", label: "A", minWords: 10 }, { key: "b", label: "B", minWords: 10 }];
+const SUBMISSION = {
+  a: "We split intake into three steps because triage was slow; specifically the reviewer queue grew by 40 each Monday.",
+  b: "We measure it as median handoff time, which was 6 hours on the Tuesday of week two because nobody owned the queue.",
+};
+function withFetch(handler, fn) {
+  const real = globalThis.fetch;
+  globalThis.fetch = handler;
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => { globalThis.fetch = real; });
+}
+function modelEnv(env, over = {}) {
+  env.FACULTY_MODEL_KEY = "sk-test";
+  env.FACULTY_MODEL_BASE_URL = "https://model.test/v1";
+  env.FACULTY_MODEL_NAME = "assessor-1";
+  env.FACULTY_ADAPTER = "openai-compatible";
+  Object.assign(env, over);
+  return env;
+}
+function modelReply(content) {
+  return async (url, init) => {
+    modelReply.last = { url, init };
+    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
+  };
+}
+function bandsReply(bands, extra = {}) {
+  return modelReply(JSON.stringify({
+    bands, verdict: "ready", note: "model note", confidence: "high", ...extra,
+  }));
+}
+async function assess(env, rawToken, body = {}) {
+  const res = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: rawToken,
+    body: { cpId: "CP1", rubricDims: RUBRIC, fields: FIELDS, submission: SUBMISSION, ...body },
+  }), env);
+  return { res, body: await res.json() };
+}
+const GOOD = { Clarity: "Meets", Specificity: "Exceeds" };
+// A model reply that bands the checkpoint rubric as needing work, so review cases have a real
+// disagreement to dispute.
+const THIN_BANDS = { Clarity: "Developing", Structure: "Developing", Reasoning: "Not yet", Safety: "Meets" };
+
+// 23. Control Plane — a rubric dimension the model was not sent a field for is still banded,
+// and the model may band a dimension independently of the fields it was given.
 {
   const { env, rawToken } = await makeEnv();
-  const r = await worker.fetch(await req("/api/faculty/assess", {
-    method: "POST", token: rawToken,
-    body: { cpId: "CP1", rubricDims: ["Clarity", "Structure", "Reasoning", "Safety", "Evidence"],
-            fields: cpFields(), submission: strongSubmission() },
-  }), env);
-  const body = await r.json();
-  check("extra dim beyond fields inherits weakest band", r.status === 200 && body.bands && body.bands.Evidence
-    && ["Not yet", "Developing", "Meets", "Exceeds"].includes(body.bands.Evidence));
+  const bands = { Clarity: "Meets", Structure: "Meets", Reasoning: "Meets", Safety: "Meets", Evidence: "Developing" };
+  const { res, body } = await withFetch(bandsReply(bands),
+    () => assess(modelEnv(env), rawToken, {
+      rubricDims: ["Clarity", "Structure", "Reasoning", "Safety", "Evidence"],
+      fields: cpFields(), submission: strongSubmission(),
+    }));
+  check("every requested dimension comes back banded", res.status === 200
+    && ["Clarity", "Structure", "Reasoning", "Safety", "Evidence"].every(d => body.bands && body.bands[d]));
+  check("the extra dimension keeps the model's band", body.bands.Evidence === "Developing");
+  check("a weak dimension drags the verdict off ready", body.verdict !== "ready");
 }
 
 // 24. Control Plane — admin lineage log is founder-only and lists calls
@@ -700,17 +779,29 @@ function strongSubmission() {
 
   const envF = await makeEnv({ role: "founder" });
   const founderToken = (envF.rawToken);
-  const res = await worker.fetch(await req("/api/faculty/assess", {
-    method: "POST", token: founderToken,
-    body: { ...cpRubric, fields: cpFields(), submission: strongSubmission() },
-  }), envF.env);
-  const body = await res.json();
+  const { res, body } = await withFetch(bandsReply(GOOD),
+    () => assess(modelEnv(envF.env), founderToken, {
+      cpId: "CP1", rubricDims: RUBRIC, fields: FIELDS, submission: SUBMISSION }));
   const log = await worker.fetch(await req("/api/faculty/log", { token: founderToken }), envF.env);
   const logBody = await log.json();
   check("200 log as founder", log.status === 200 && logBody.ok === true && Array.isArray(logBody.calls));
   check("log carries the audited call with email", logBody.calls.length === 1
     && logBody.calls[0].id === body.lineageId && logBody.calls[0].email === "learner@example.com"
-    && logBody.calls[0].adapter === "dry-run");
+    && logBody.calls[0].adapter === "openai-compatible" && logBody.calls[0].model === "assessor-1");
+
+  // An unconfigured read must also show up in the founder's log, marked as the gap it is.
+  const { env: envU, rawToken: tokU } = await makeEnv({ role: "founder" });
+  const un = await worker.fetch(await req("/api/faculty/assess", {
+    method: "POST", token: tokU, body: { ...cpRubric, fields: cpFields(), submission: strongSubmission() },
+  }), envU);
+  const log2 = await (await worker.fetch(await req("/api/faculty/log", { token: tokU }), envU)).json();
+  check("the unconfigured gap is visible in the log, not hidden", un.status === 409
+    && log2.calls.length === 1 && log2.calls[0].status === "not_configured"
+    && log2.calls[0].verdict === null && log2.calls[0].adapter === "none");
+  // A row with a null verdict must be distinguishable from a row the model genuinely judged.
+  check("the log never presents an unassessed row as assessed",
+    log2.calls[0].status !== "ok" && logBody.calls[0].status === "ok"
+    && logBody.calls[0].verdict === "ready");
 }
 
 // 25. founder may not be downgraded by anyone except themselves; role endpoint is founder-only
@@ -744,14 +835,17 @@ function strongSubmission() {
 {
   // learner with a disputed (revise) call on the plane
   const learnerE = await makeEnv(); // u1 learner
-  const call = await worker.fetch(await req("/api/faculty/assess", {
-    method: "POST", token: learnerE.rawToken,
-    body: { ...cpRubric, fields: cpFields(), submission: (() => {
-      const thin = {}; cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
-      return thin;
-    })() },
-  }), learnerE.env);
-  const callBody = await call.json();
+  // A review row needs a real verdict to dispute. The thin answer is now banded by a model, so
+  // the disagreement being reviewed is a genuine one rather than the word-count scorer's.
+  modelEnv(learnerE.env);
+  const { res: call, body: callBody } = await withFetch(bandsReply(THIN_BANDS), () =>
+    assess(learnerE.env, learnerE.rawToken, {
+      cpId: "CP1", rubricDims: cpRubric.rubricDims, fields: cpFields(),
+      submission: (() => {
+        const thin = {}; cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
+        return thin;
+      })(),
+    }));
   check("disputed call produced", call.status === 200 && callBody.verdict !== "ready" && typeof callBody.lineageId === "string");
 
   // reviewer (role granted by the founder — the grant endpoint itself is covered in block 25)
@@ -820,14 +914,15 @@ function strongSubmission() {
 
   // a disputed call + a decided review move the numbers the panel shows; the founder is
   // reviewer-capable, so the decision can be recorded from the same env
-  const call = await worker.fetch(await req("/api/faculty/assess", {
-    method: "POST", token: founderE.rawToken,
-    body: { ...cpRubric, fields: cpFields(), submission: (() => {
-      const thin = {}; cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
-      return thin;
-    })() },
-  }), founderE.env);
-  const callBody = await call.json();
+  modelEnv(founderE.env);
+  const { res: call, body: callBody } = await withFetch(bandsReply(THIN_BANDS), () =>
+    assess(founderE.env, founderE.rawToken, {
+      cpId: "CP1", rubricDims: cpRubric.rubricDims, fields: cpFields(),
+      submission: (() => {
+        const thin = {}; cpFields().forEach(f => { thin[f.key] = "I would check my work because it matters and fix errors and detail repeat"; });
+        return thin;
+      })(),
+    }));
   check("founder disputed call produced", call.status === 200 && callBody.verdict !== "ready");
   const decide = await worker.fetch(await req("/api/faculty/reviews", {
     method: "POST", token: founderE.rawToken,
@@ -1173,7 +1268,6 @@ function strongSubmission() {
   }), env)).status === 400);
 }
 
-
 // 35. GET /api/admin/curriculum — auth gate matches every other admin view
 {
   const { env, rawToken } = await makeEnv({ role: "learner" });
@@ -1186,24 +1280,33 @@ function strongSubmission() {
 {
   const { env, rawToken } = await makeEnv({ role: "founder" });
   env.DB._users.push({ id: "u2", email: "second@example.com", role: "learner" });
+  env.DB._users.push({ id: "u3", email: "third@example.com", role: "learner" });
   // C1: 2 learners, one Meets, one below. C2: 1 learner, Exceeds. So C1 must sort first
-  // (100% below Meets) and C2 second (0%).
-  const sub = (o) => ({ id: "s" + Math.random(), user_id: "u1", cap_id: "C1", challenge_id: null,
+  // (100% below Meets) and C2 second (0%). u1 is the founder and also submits, to prove
+  // that staff QA runs do not reach the curriculum tables.
+  const sub = (o) => ({ id: "s" + Math.random(), user_id: "u2", cap_id: "C1", challenge_id: null,
     checkpoint_id: null, band: "Meets", confidence: "high", duration_ms: 1000,
     completed_at: "2026-02-01T00:00:00.000Z", ...o });
   env.DB._submissions.push(
-    sub({}), sub({ user_id: "u2", band: "Not yet" }),
+    sub({}), sub({ user_id: "u3", band: "Not yet" }),
     sub({ cap_id: "C2", band: "Exceeds" }),
+    sub({ user_id: "u1", band: "Exceeds" }),
+    sub({ user_id: "u1", cap_id: "C2", band: "Exceeds" }),
+    sub({ user_id: "u1", cap_id: "C5", band: "Not yet" }),
   );
   const r = await worker.fetch(await req("/api/admin/curriculum", { token: rawToken }), env);
   const b = await r.json();
   check("200 admin/curriculum as founder", r.status === 200 && b.ok === true);
-  check("learner total counts all users", b.totals.learners === 2);
+  check("learner total excludes the founder", b.totals.learners === 2 && b.totals.staff === 1);
   check("hardest competency sorts first", b.competencies[0].capId === "C1" && b.competencies[1].capId === "C2");
   const c1 = b.competencies[0];
   check("below-Meets is a share of attempts, not a learner count", c1.belowMeetsPct === 50);
   check("band counts are kept separately", c1.bands["Meets"] === 1 && c1.bands["Not yet"] === 1);
   check("reach counts distinct learners, not attempts", c1.learnersReached === 2 && c1.reachPct === 100);
+  check("curriculum excludes staff submissions", b.totals.submissions === 3 && !b.competencies.some((c) => c.capId === "C5"),
+    `expected 3 learner submissions and no C5, got ${b.totals.submissions} / ${JSON.stringify(b.competencies.map((c) => c.capId))}`);
+  check("M1 funnel is learner-scoped", b.funnel.every((f) => f.reachPct === 100 || f.reachPct === 50),
+    JSON.stringify(b.funnel));
 }
 
 // 37. GET /api/admin/curriculum — empty cohort must not divide by zero
@@ -1217,17 +1320,22 @@ function strongSubmission() {
 // 38. GET /api/admin/curriculum — checkpoint pass rate counts learners, and is 0-safe
 {
   const { env, rawToken } = await makeEnv({ role: "founder" });
-  const base = { user_id: "u1", cap_id: "C1", challenge_id: null, band: "Meets", confidence: "high",
+  const base = { user_id: "u2", cap_id: "C1", challenge_id: null, band: "Meets", confidence: "high",
     duration_ms: 1000, completed_at: "2026-02-01T00:00:00.000Z" };
-  // Two attempts at CP1, one per learner: one passed, one did not -> 50%.
+  // Two attempts at CP1, one per learner: one passed, one did not -> 50%. u1 is the founder
+  // and also attempts CP1, which must not enter the pass rate.
   env.DB._submissions.push(
     { ...base, id: "p1", checkpoint_id: "CP1" },
-    { ...base, id: "p2", checkpoint_id: "CP1", user_id: "u2", band: "Not yet" },
+    { ...base, id: "p2", checkpoint_id: "CP1", user_id: "u3", band: "Not yet" },
+    { ...base, id: "p3", checkpoint_id: "CP1", user_id: "u1", band: "Exceeds" },
   );
   env.DB._users.push({ id: "u2", email: "second@example.com", role: "learner" });
+  env.DB._users.push({ id: "u3", email: "third@example.com", role: "learner" });
   const b = await (await worker.fetch(await req("/api/admin/curriculum", { token: rawToken }), env)).json();
   const cp1 = b.checkpoints.find((c) => c.checkpointId === "CP1");
-  check("checkpoint pass rate is per learner", cp1 && cp1.learners === 2 && cp1.attempts === 2 && cp1.passRatePct === 50);
+  check("checkpoint pass rate is per learner", cp1 && cp1.learners === 2 && cp1.attempts === 2 && cp1.passRatePct === 50,
+    JSON.stringify(cp1));
+  check("checkpoint pass rate ignores staff attempts", cp1 && cp1.attempts === 2, JSON.stringify(cp1));
 }
 
 // 39. GET /api/admin/institution — auth gate
@@ -1278,62 +1386,19 @@ function strongSubmission() {
     && b.totals.unreviewed === 0 && b.avgLatencyMs === null && b.lineage.length === 0);
 }
 
-
-// 42. The openai-compatible model adapter. This path is what item #10 turns on, and it has
-// never been exercised: the deployed adapter is "dry-run", so nothing here runs in production
-// yet. Flipping FACULTY_ADAPTER should not be the first time this code has ever executed.
-const RUBRIC = ["Clarity", "Specificity"];
-const FIELDS = [{ key: "a", label: "A", minWords: 10 }, { key: "b", label: "B", minWords: 10 }];
-const SUBMISSION = {
-  a: "We split intake into three steps because triage was slow; specifically the reviewer queue grew by 40 each Monday.",
-  b: "We measure it as median handoff time, which was 6 hours on the Tuesday of week two because nobody owned the queue.",
-};
-function withFetch(handler, fn) {
-  const real = globalThis.fetch;
-  globalThis.fetch = handler;
-  return Promise.resolve()
-    .then(fn)
-    .finally(() => { globalThis.fetch = real; });
-}
-function modelEnv(env, over = {}) {
-  env.FACULTY_MODEL_KEY = "sk-test";
-  env.FACULTY_MODEL_BASE_URL = "https://model.test/v1";
-  env.FACULTY_MODEL_NAME = "assessor-1";
-  env.FACULTY_ADAPTER = "openai-compatible";
-  Object.assign(env, over);
-  return env;
-}
-function modelReply(content) {
-  return async (url, init) => {
-    modelReply.last = { url, init };
-    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200 });
-  };
-}
-function bandsReply(bands, extra = {}) {
-  return modelReply(JSON.stringify({
-    bands, verdict: "ready", note: "model note", confidence: "high", ...extra,
-  }));
-}
-async function assess(env, rawToken, body = {}) {
-  const res = await worker.fetch(await req("/api/faculty/assess", {
-    method: "POST", token: rawToken,
-    body: { cpId: "CP1", rubricDims: RUBRIC, fields: FIELDS, submission: SUBMISSION, ...body },
-  }), env);
-  return { res, body: await res.json() };
-}
-const GOOD = { Clarity: "Meets", Specificity: "Exceeds" };
-
 // 43. unconfigured -> dry-run, and the model is never contacted
 {
   const { env, rawToken } = await makeEnv();
   let called = false;
   const { res, body } = await withFetch(async () => { called = true; throw new Error("must not be called"); },
     () => assess(env, rawToken));
-  check("200 assess", res.status === 200);
-  check("no key -> dry-run adapter", body.adapter === "dry-run" && body.model === null);
+  check("assess is not 200 when no model can read it", res.status === 409);
+  check("no key -> 409 not_configured", res.status === 409 && body.error === "not_configured");
   check("unconfigured adapter never calls the model", called === false);
-  check("dry-run result is not flagged degraded", body.degraded === false);
-  check("lineage records the dry-run adapter", env.DB._faculty[0].adapter === "dry-run");
+  check("nothing is assessed and nothing is banded", body.assessed === false
+    && body.verdict === undefined && body.bands === undefined && body.degraded === undefined);
+  check("lineage records the gap, not a verdict", env.DB._faculty[0].adapter === "none"
+    && env.DB._faculty[0].verdict === null && env.DB._faculty[0].status === "not_configured");
 }
 
 // 44. configured -> the model decides, and the lineage says so
@@ -1368,7 +1433,13 @@ const GOOD = { Clarity: "Meets", Specificity: "Exceeds" };
   check("confidence follows the recomputed verdict", body.confidence === "low");
 }
 
-// 46. degraded fallbacks — the model cannot be trusted to be well-formed, and the lineage must not lie
+// 46. A malformed model reply must produce NO verdict.
+//
+// These five cases used to assert "falls back and flags degraded ... 200" — the endpoint caught a
+// bad reply and substituted the word-count scorer, so a learner was shown "Meets" and "Exceeds"
+// attributed to a faculty member, on an answer the model had failed to grade. The degraded flag
+// was honest about the plumbing and dishonest about the content: the bands were still fiction.
+// A model that cannot answer has not assessed anything, so the response says exactly that.
 const badModel = [
   ["a band outside the scale", bandsReply({ Clarity: "Brilliant", Specificity: "Meets" })],
   ["a dimension missing from the reply", bandsReply({ Clarity: "Meets" })],
@@ -1381,24 +1452,32 @@ for (const [label, handler] of badModel) {
   modelEnv(env);
   const { res, body } = await withFetch(handler, () => assess(env, rawToken));
   const call = env.DB._faculty[0];
-  check(`falls back and flags degraded: ${label}`,
-    res.status === 200 && body.degraded === true && body.adapter === "dry-run" && call.degraded === 1);
-  check(`the model's bad bands never reach the learner: ${label}`,
-    body.bands.Clarity === "Exceeds" || body.bands.Clarity === "Meets");
+  check(`no verdict on ${label}`, res.status === 502 && body.ok === false
+    && body.error === "model_unavailable" && body.assessed === false);
+  check(`no bands reach the learner on ${label}`, body.bands === undefined && body.verdict === undefined);
+  check(`the heuristic scorer is not substituted on ${label}`, body.adapter === undefined);
+  check(`lineage records the failure on ${label}`, call.degraded === 1 && call.status === "error"
+    && call.verdict === null && call.adapter === "openai-compatible");
+  check(`the learner is told no verdict was given on ${label}`, /No verdict is produced/.test(body.reason || ""));
 }
 
-// 47. a transport failure degrades rather than 500s — a dead provider must not cost a learner their result
+// 47. a transport failure is reported, not substituted. A dead provider costs the learner their
+// verdict — which is the point. Silently degrading would hand them someone else's.
 {
   const { env, rawToken } = await makeEnv();
   modelEnv(env);
   const boom = async () => { throw new Error("ECONNREFUSED"); };
   const { res, body } = await withFetch(boom, () => assess(env, rawToken));
-  check("network throw degrades instead of 500ing", res.status === 200 && body.degraded === true);
+  check("network throw reports 502 rather than 500ing", res.status === 502 && body.degraded === true);
+  check("network throw yields no verdict", body.verdict === undefined && body.bands === undefined);
+  check("network throw detail is carried for debugging", /ECONNREFUSED/.test(body.detail || ""));
+  check("network throw offers a way forward", /rubric yourself/.test(body.remedy || ""));
+
   const { env: env2, rawToken: t2 } = await makeEnv();
   modelEnv(env2);
   const http500 = async () => new Response("upstream boom", { status: 500 });
   const b2 = await withFetch(http500, () => assess(env2, t2));
-  check("http 500 degrades instead of 500ing", b2.res.status === 200 && b2.body.degraded === true);
+  check("http 500 reports 502 with no verdict", b2.res.status === 502 && b2.body.verdict === undefined);
 }
 
 // 48. the config flag, not just the key, turns the model on
@@ -1416,7 +1495,11 @@ for (const [label, handler] of badModel) {
   let called = false;
   const { body } = await withFetch(async () => { called = true; return new Response("{}", { status: 200 }); },
     () => assess(env, rawToken));
-  check("a partial config (no model name) stays on dry-run", body.adapter === "dry-run" && called === false);
+  // A half-configured model is still no model. It must not be half-used, and the scorer must not
+  // be quietly promoted into its place.
+  check("a partial config (no model name) is not_configured, not dry-run",
+    body.error === "not_configured" && body.adapter === "openai-compatible" && called === false);
+  check("a partial config produces no verdict", body.verdict === undefined && body.bands === undefined);
 }
 
 // 49. fenced JSON is a normal model failure mode and is handled, not treated as garbage
@@ -1447,6 +1530,55 @@ for (const [label, handler] of badModel) {
   const live = await (await worker.fetch(await req("/api/admin/readiness", { token: rawToken }), env)).json();
   check("readiness: only a non-dry-run adapter reports live",
     live.controls.faculty.adapter === "openai-compatible" && live.controls.faculty.modelConfigured === true);
+}
+
+// 43. GET /api/admin/learners — the cohort table must not list staff accounts.
+// The founder's own QA session used to appear as a learner, complete with time on platform,
+// competencies done and an average band.
+{
+  const tokenHash = await sha256Hex("tk-f");
+  const env = {
+    DB: makeFakeDB({ users: [
+      { id: "uf", email: "founder@example.com", created_at: "2026-01-01T00:00:00.000Z", role: "founder" },
+      { id: "ur", email: "reviewer@example.com", created_at: "2026-01-01T00:00:00.000Z", role: "reviewer" },
+      { id: "ul", email: "learner@example.com", created_at: "2026-01-02T00:00:00.000Z", role: "learner" },
+    ], sessions: [
+      { token_hash: tokenHash, user_id: "uf", created_at: "2026-01-01T00:00:00.000Z", expires_at: "2099-01-01T00:00:00.000Z" },
+    ] }),
+    SIGNUPS: makeKV(), RESEND_API_KEY: "", DEV_LINKS: "true", APP_ORIGIN: "https://aifaculty.org",
+    rate_limit: { window_seconds: 3600, max_per_ip: 3 },
+  };
+  // The founder has the richer history, so a leak is obvious: 3 submissions and a 5 minute
+  // session, against the learner's 1 submission and a 1 second session.
+  const t0 = Date.now() - 600000;
+  const at = (off) => new Date(t0 + off).toISOString();
+  env.DB._activity.push({ id: "x1", user_id: "uf", ts: at(0), kind: "view", detail: null });
+  env.DB._activity.push({ id: "x2", user_id: "uf", ts: at(300000), kind: "view", detail: null });
+  env.DB._submissions.push({ id: "x3", user_id: "uf", kind: "challenge", cap_id: "C5", challenge_id: "C5.1",
+    checkpoint_id: null, band: "Exceeds", confidence: "high", fields_json: "{}", duration_ms: 90000,
+    started_at: at(0), completed_at: at(300000) });
+  env.DB._submissions.push({ id: "x3b", user_id: "uf", kind: "challenge", cap_id: "C6", challenge_id: "C6.1",
+    checkpoint_id: null, band: "Exceeds", confidence: "high", fields_json: "{}", duration_ms: 90000,
+    started_at: at(0), completed_at: at(300000) });
+  env.DB._submissions.push({ id: "x3c", user_id: "uf", kind: "challenge", cap_id: "C7", challenge_id: "C7.1",
+    checkpoint_id: null, band: "Exceeds", confidence: "high", fields_json: "{}", duration_ms: 90000,
+    started_at: at(0), completed_at: at(300000) });
+  env.DB._activity.push({ id: "x5", user_id: "ul", ts: at(0), kind: "view", detail: null });
+  env.DB._submissions.push({ id: "x4", user_id: "ul", kind: "challenge", cap_id: "C1", challenge_id: "C1.1",
+    checkpoint_id: null, band: "Meets", confidence: "medium", fields_json: "{}", duration_ms: 1000,
+    started_at: at(0), completed_at: at(1000) });
+
+  const r = await worker.fetch(await req("/api/admin/learners", { token: "tk-f" }), env);
+  const b = await r.json();
+  check("200 admin/learners as founder", r.status === 200 && b.ok === true);
+  check("cohort table lists only learners",
+    b.learners.length === 1 && b.learners[0].email === "learner@example.com",
+    JSON.stringify(b.learners.map((l) => l.email)));
+  check("staff reported separately, not listed", b.staff === 2, `staff=${b.staff}`);
+  // sumActiveMs sums the gaps between events, so a 1s session is 1000 and the founder's is 300000.
+  check("staff activity does not reach the cohort row",
+    b.learners[0].timeOnPlatformMs === 1000 && b.learners[0].competenciesDone === 1,
+    `time=${b.learners[0].timeOnPlatformMs} done=${b.learners[0].competenciesDone}`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

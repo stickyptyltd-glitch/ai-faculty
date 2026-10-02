@@ -8,7 +8,8 @@
 # No toolchain: plain copy + a generated _headers / robots.txt. Output: dist/
 #
 # Tests are separate from the build:
-#   node --test app/test/frontend.test.mjs   frontend logic (content/model/pathway/export)
+#   node --test app/test/frontend.test.mjs   frontend logic (content/model/pathway/export/faculty)
+#                                          plus the per-subject files under app/js/subjects/
 #   node workers/api/test.mjs   Worker
 #   node workers/signup/test.mjs
 # app/test/ ships in dist/ so the suite travels with the code it covers.
@@ -24,6 +25,21 @@ cp landing/index.html landing/app.js landing/styles.css dist/
 
 # --- prototype under /app/ ---
 cp -r app/. dist/app/
+
+# app/js/subjects/*.js are loaded by index.html before content.js and must exist in dist.
+# cp -r above already copies them; this asserts it rather than trusting it, because a missing
+# subject file surfaces as a blank pathway at runtime and nothing else.
+missing=0
+while read -r src; do
+  if [ ! -f "dist/app/$src" ]; then
+    echo "MISSING in dist: $src" >&2
+    missing=1
+  fi
+done < <(grep -o 'src="js/[^"]*"' dist/app/index.html | sed 's/^src="//; s/"$//')
+if [ "$missing" -ne 0 ]; then
+  echo "build failed: a script referenced by index.html is absent from dist" >&2
+  exit 1
+fi
 rm -f dist/app/README.md
 
 # --- headers -----------------------------------------------------------------
