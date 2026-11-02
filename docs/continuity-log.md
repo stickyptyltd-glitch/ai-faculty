@@ -2658,6 +2658,21 @@ All follow the proven-learning pattern from v0.68: each competency has `resource
 
 Validation: frontend 110/110, API 242/242, build OK; node --check clean on all new files.
 
+## v0.70 — Data Science — the first mainstream data-analysis pathway
+
+Added the **Data Science** subject (`data-science`, group `build`) per the expansion map Phase B:
+
+- **Data Science** (`data-science`, group `build`): DS1 (query data with SQL) → DS2 (clean, analyse,
+  visualise), each a full lesson + two challenges (fields + scenario) + resources + selfCheck, plus
+  the DSCAP capstone (answer a real question from a real dataset).
+
+Wired into SUBJECT_IDS, PATHWAYS, PATHWAY_CHECKPOINTS, app/index.html, and app/test/load.mjs —
+the same finish-off-the-last-subject pattern as v0.69's batch. The subject file itself was drafted
+already (`app/js/subjects/data-science.js`, DS1 + DS2 + DSCAP) but left unwired, which is what had
+the suite red: the reachability test found a subject file with no pathway to put it in.
+
+Validation: frontend 110/110, API 242/242, signup 7/7, build OK; node --check clean.
+
 ## Open threads
 - **Corrected: the pathway subjects were not the problem.** I claimed the 24 pathway subjects
   still needed the foundation's rewrite. Measured instead of assumed: all 25 pathways came back at

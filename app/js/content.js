@@ -1997,6 +1997,7 @@ window.CONTENT = (function () {
     "android-development",
     "business",
     "cooking",
+    "data-science",
     "cybersecurity",
     "fitness",
     "graphic-design",
@@ -2248,6 +2249,16 @@ window.CONTENT = (function () {
       status: "available", prereq: "foundation",
       competencies: subjectData["foundations"].competencies, capstoneId: "FNDCAP",
       rubricEmphasis: ["Clarity", "Reasoning"],
+    },
+    {
+      id: "data-science", group: "build",
+      title: "Data Science",
+      tagline: "Ask a real question, answer it from real data — SQL, cleaning, analysis, visualisation.",
+      forRoles: "anyone who wants to make sense of data in their own life or work",
+      recommend: ["data science", "data analysis", "sql", "statistics", "data", "analytics", "visualisation"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["data-science"].competencies, capstoneId: "DSCAP",
+      rubricEmphasis: ["Verification", "Evidence"],
     },
     {
       id: "ml", group: "build",
@@ -2734,6 +2745,25 @@ window.CONTENT = (function () {
         { key: "integrity", label: "The integrity rules + AI-proof check", hint: "Allowed use + why; how the real capability is verified.", minWords: 10 },
       ],
       rubricDims: ["Clarity", "Safety", "Verification", "Reasoning", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "DSCAP",
+      pathway: "data-science",
+      title: "Capstone — answer a real question from a real dataset",
+      after: ["DS1", "DS2"],
+      stage: "Demonstration",
+      brief:
+        "Take a real dataset you have (or a public sample) and a real question you actually want answered. Answer it end to end: get the data into a queryable form, analyse it, visualise the finding, and log the query, the analysis, and the answer.",
+      whatGood:
+        "A real dataset; a real question with a decision attached; the query/analysis steps shown; a finding with a chart or summary; and what was verified along the way.",
+      fields: [
+        { key: "dataset", label: "The dataset", hint: "Source and what it contains.", minWords: 8 },
+        { key: "question", label: "The real question", hint: "What you wanted to know and why.", minWords: 8 },
+        { key: "query", label: "The query / analysis", hint: "The SQL or steps used, and the finding.", minWords: 10 },
+        { key: "finding", label: "The finding and next question", hint: "The answer plus what you'd check next.", minWords: 8 },
+      ],
+      rubricDims: ["Verification", "Evidence", "Reasoning"],
       raisesTo: "advanced",
     },
     {

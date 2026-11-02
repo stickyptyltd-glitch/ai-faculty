@@ -479,6 +479,19 @@ For every additional subject with measurable demand: apply the same template —
 
 ---
 
+### 5.23 — Data Science & analytics (shipped)
+
+**Demand signal:** data literacy is among the highest-enrolled lifelong-learning categories, and the
+spreadsheet → SQL → analysis → visualisation arc has a large audience.
+
+Authored as the first mainstream data pathway (v0.70): DS1 (query data with SQL) → DS2 (clean,
+analyse, visualise) + DSCAP capstone, using the v0.68 pedagogy pattern (resources + selfCheck,
+external learning links, honest withholding of model verdicts until `FACULTY_MODEL_KEY` is live).
+
+**Capstone:** answer a real question from a real dataset.
+
+---
+
 ## 6. Cross-subject capability graph (Phase C)
 
 Shared capabilities transfer across all domains. The graph from [03-competency-framework.md] §7 extends beyond AI:
