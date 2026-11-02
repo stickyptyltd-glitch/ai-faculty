@@ -2673,6 +2673,22 @@ the suite red: the reachability test found a subject file with no pathway to put
 
 Validation: frontend 110/110, API 242/242, signup 7/7, build OK; node --check clean.
 
+## v0.71 — Skilled Trades & DIY — plan, execute, finish
+
+Added the **Skilled Trades & DIY** subject (`skilled-trades`, group `life`) per the expansion map
+Phase B:
+
+- **Skilled Trades & DIY** (`skilled-trades`, group `life`): SK1 (plan safely and precisely) -> SK2
+  (execute the technique cleanly) -> SK3 (inspect, finish and know when to hand off), plus the SKCAP
+  capstone (plan, execute and finish one real job).
+
+Follows the proven-learning pattern from v0.68/v0.69: each competency has `resources` (authoritative
+external learning materials), `selfCheck`, a full lesson and two challenges (fields + scenario).
+Structural sweep clean (lesson steps, guided key match, rubric <= fields, scenario single ok, every
+pathway has a checkpoint); no orphan subject files.
+
+Validation: frontend 110/110, API 242/242, signup 7/7, build OK; vm-load sweep clean.
+
 ## Open threads
 - **Corrected: the pathway subjects were not the problem.** I claimed the 24 pathway subjects
   still needed the foundation's rewrite. Measured instead of assumed: all 25 pathways came back at

@@ -2009,6 +2009,7 @@ window.CONTENT = (function () {
     "software",
     "software-engineering",
     "support",
+    "skilled-trades",
     "writing",
   ];
 
@@ -2087,6 +2088,16 @@ window.CONTENT = (function () {
       status: "available", prereq: "foundation",
       competencies: subjectData["cooking"].competencies, capstoneId: "COOKCAP",
       rubricEmphasis: ["Verification", "Safety"],
+    },
+    {
+      id: "skilled-trades", group: "life",
+      title: "Skilled Trades & DIY",
+      tagline: "Plan, execute and finish real physical work - from first fix to finished repair.",
+      forRoles: "DIYers, aspiring tradespeople, repairers working on their own home",
+      recommend: ["skilled trades", "diy", "repair", "handyman", "home improvement", "renovation", "building", "woodworking", "electrical repair", "plumbing repair"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["skilled-trades"].competencies, capstoneId: "SKCAP",
+      rubricEmphasis: ["Safety", "Verification", "Evidence"],
     },
     {
       id: "language-learning", group: "life",
@@ -2764,6 +2775,25 @@ window.CONTENT = (function () {
         { key: "finding", label: "The finding and next question", hint: "The answer plus what you'd check next.", minWords: 8 },
       ],
       rubricDims: ["Verification", "Evidence", "Reasoning"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "SKCAP",
+      pathway: "skilled-trades",
+      title: "Capstone — plan, execute and finish one real job",
+      after: ["SK1", "SK2", "SK3"],
+      stage: "Demonstration",
+      brief:
+        "Take one real physical job — repair, build, install. Plan it safely, execute the technique, inspect and finish, and decide where the DIY stops.",
+      whatGood:
+        "The job is scoped and planned with measurements; the technique was applied cleanly; the finish was inspected and defects fixed; and the DIY/professional boundary was respected.",
+      fields: [
+        { key: "job", label: "The real job", hint: "What you did.", minWords: 8 },
+        { key: "plan", label: "The plan", hint: "Safety + measurements.", minWords: 8 },
+        { key: "execute", label: "The execution", hint: "Technique, tools, redo-free.", minWords: 8 },
+        { key: "finish", label: "The finish", hint: "Inspect, fix, clean, hand off.", minWords: 8 },
+      ],
+      rubricDims: ["Safety", "Verification", "Evidence"],
       raisesTo: "advanced",
     },
     {
