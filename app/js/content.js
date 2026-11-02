@@ -2008,6 +2008,7 @@ window.CONTENT = (function () {
     "software",
     "software-engineering",
     "support",
+    "writing",
   ];
 
   const subjectData = {};
@@ -2154,6 +2155,16 @@ window.CONTENT = (function () {
       recommend: ["photography", "camera", "photo", "exposure", "composition", "lighting", "photoshop", "lightroom"],
       status: "available", prereq: "foundation",
       competencies: subjectData["photography"].competencies, capstoneId: "PHOCAP",
+      rubricEmphasis: ["Verification", "Clarity"],
+    },
+    {
+      id: "writing", group: "creative",
+      title: "Writing & Publishing",
+      tagline: "Write clearly, edit ruthlessly, and publish to a real audience.",
+      forRoles: "writers, bloggers, content creators, anyone who writes",
+      recommend: ["writing", "blog", "publishing", "content writing", "copywriting", "essay", "article"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["writing"].competencies, capstoneId: "WRICAP",
       rubricEmphasis: ["Verification", "Clarity"],
     },
     {
@@ -3126,6 +3137,14 @@ window.CONTENT = (function () {
       brief: "Shoot 10 photos in manual mode with deliberate composition, then edit one to final.",
       whatGood: "10 manual-mode photos with composition, one edited to final, settings and techniques logged.",
       fields: [{ key: "photos", label: "The 10 photos", hint: "Settings and techniques.", minWords: 10 }, { key: "edit", label: "The edited photo", hint: "What you changed.", minWords: 6 }],
+      rubricDims: ["Verification", "Clarity", "Evidence"], raisesTo: "advanced",
+    },
+    {
+      id: "WRICAP", pathway: "writing", title: "Capstone — write, edit, and publish a piece",
+      after: ["WRI1", "WRI2"], stage: "Demonstration",
+      brief: "Write a piece, edit it (structure + line + proofread), and publish to a real audience. Log the response.",
+      whatGood: "A real piece published, 3 editing passes documented, response logged.",
+      fields: [{ key: "piece", label: "The piece", hint: "What you published.", minWords: 5 }, { key: "passes", label: "Editing passes", hint: "Structure, line, proofread.", minWords: 8 }, { key: "response", label: "Response", hint: "What you learned.", minWords: 6 }],
       rubricDims: ["Verification", "Clarity", "Evidence"], raisesTo: "advanced",
     },
     {
