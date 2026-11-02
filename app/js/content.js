@@ -2011,6 +2011,7 @@ window.CONTENT = (function () {
     "support",
     "skilled-trades",
     "sustainability",
+    "gaming",
     "writing",
   ];
 
@@ -2109,6 +2110,16 @@ window.CONTENT = (function () {
       status: "available", prereq: "foundation",
       competencies: subjectData["sustainability"].competencies, capstoneId: "SUSCAP",
       rubricEmphasis: ["Verification", "Evidence"],
+    },
+    {
+      id: "gaming", group: "creative",
+      title: "Gaming & Esports",
+      tagline: "Design, play, analyse and prototype small games.",
+      forRoles: "game designers, players, devs, anyone curious about play",
+      recommend: ["gaming", "game design", "esports", "play", "game dev", "gameplay", "esports", "game design"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["gaming"].competencies, capstoneId: "GMCAP",
+      rubricEmphasis: ["Verification", "Reasoning"],
     },
     {
       id: "language-learning", group: "life",
@@ -2786,6 +2797,24 @@ window.CONTENT = (function () {
         { key: "finding", label: "The finding and next question", hint: "The answer plus what you'd check next.", minWords: 8 },
       ],
       rubricDims: ["Verification", "Evidence", "Reasoning"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "GMCAP",
+      pathway: "gaming",
+      title: "Capstone — design, play and prototype one real game",
+      after: ["GM1", "GM2", "GM3"],
+      stage: "Demonstration",
+      brief:
+        "Take one real small game idea and take it through the loop: design the goal and core loop, analyse play, prototype and playtest.",
+      whatGood:
+        "The goal and loop are named; the play analysis identified the design lever; the prototype was scoped, playtested and iterated.",
+      fields: [
+        { key: "goal", label: "The game goal + loop", hint: "What the player does and how it plays.", minWords: 8 },
+        { key: "play", label: "The play analysis", hint: "Signals and balance.", minWords: 8 },
+        { key: "build", label: "The prototype", hint: "Scope, playtest, iterate.", minWords: 8 },
+      ],
+      rubricDims: ["Verification", "Reasoning", "Evidence"],
       raisesTo: "advanced",
     },
     {

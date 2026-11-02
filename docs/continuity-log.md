@@ -2704,6 +2704,20 @@ scenario single ok, every pathway has a checkpoint, no orphan subject files).
 
 Validation: frontend 110/110, API 242/242, signup 7/7, build OK; vm-load sweep clean.
 
+## v0.73 — Gaming & Esports — design, play, build
+
+Added the **Gaming & Esports** subject (`gaming`, group `creative`) per the expansion map Phase B:
+
+- **Gaming & Esports** (`gaming`, group `creative`): GM1 (design the player's goal and core loop) -> GM2
+  (analyse play - feedback, difficulty, balance) -> GM3 (build and playtest a small game), plus the GMCAP
+  capstone (design, play and prototype one real game).
+
+Follows the proven-learning pattern: each competency has `resources`, `selfCheck`, a full lesson and two
+challenges (fields + scenario). Structural sweep clean (lesson steps, guided key match, rubric <= fields,
+scenario single ok, every pathway has a checkpoint, no orphan subject files).
+
+Validation: frontend 110/110, API 242/242, signup 7/7, build OK; vm-load sweep clean.
+
 ## Open threads
 - **Corrected: the pathway subjects were not the problem.** I claimed the 24 pathway subjects
   still needed the foundation's rewrite. Measured instead of assumed: all 25 pathways came back at
