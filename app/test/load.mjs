@@ -18,7 +18,7 @@ const SUBJECT_IDS = [
   "agents", "consulting", "content", "design", "edleadership", "education", "engineering",
   "finance", "foundations", "health", "hr", "journalism", "legal", "ml", "ops", "pm", "public",
   "realestate", "research", "safety", "sales", "salesengineering", "software", "software-engineering", "support",
-  "android-development", "business", "cooking", "data-science", "skilled-trades", "cybersecurity", "fitness", "graphic-design", "language-learning", "music-production", "personal-finance", "photography", "writing",
+  "android-development", "business", "cooking", "data-science", "skilled-trades", "sustainability", "cybersecurity", "fitness", "graphic-design", "language-learning", "music-production", "personal-finance", "photography", "writing",
 ];
 
 export function loadApp(files = [

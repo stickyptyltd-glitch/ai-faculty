@@ -2010,6 +2010,7 @@ window.CONTENT = (function () {
     "software-engineering",
     "support",
     "skilled-trades",
+    "sustainability",
     "writing",
   ];
 
@@ -2098,6 +2099,16 @@ window.CONTENT = (function () {
       status: "available", prereq: "foundation",
       competencies: subjectData["skilled-trades"].competencies, capstoneId: "SKCAP",
       rubricEmphasis: ["Safety", "Verification", "Evidence"],
+    },
+    {
+      id: "sustainability", group: "life",
+      title: "Sustainability & Green Skills",
+      tagline: "Measure impact, make better choices, verify claims and act.",
+      forRoles: "anyone reducing their footprint or working on green choices",
+      recommend: ["sustainability", "green", "climate", "carbon", "environment", "eco", "carbon footprint", "sustainable"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["sustainability"].competencies, capstoneId: "SUSCAP",
+      rubricEmphasis: ["Verification", "Evidence"],
     },
     {
       id: "language-learning", group: "life",
@@ -2775,6 +2786,24 @@ window.CONTENT = (function () {
         { key: "finding", label: "The finding and next question", hint: "The answer plus what you'd check next.", minWords: 8 },
       ],
       rubricDims: ["Verification", "Evidence", "Reasoning"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "SUSCAP",
+      pathway: "sustainability",
+      title: "Capstone — measure, choose, verify one real green decision",
+      after: ["SUS1", "SUS2", "SUS3"],
+      stage: "Demonstration",
+      brief:
+        "Take one real area (home energy, transport, food, consumption, waste) and work it end to end: measure, choose a lower-impact option, verify the claims, and act.",
+      whatGood:
+        "The area is scoped; the footprint or impact was measured; options were researched and compared; claims were verified; a reduction was chosen and acted on.",
+      fields: [
+        { key: "area", label: "The real area", hint: "What you worked on.", minWords: 8 },
+        { key: "measure", label: "The measurement", hint: "What and how.", minWords: 8 },
+        { key: "choose", label: "The choice", hint: "Lower impact, verified.", minWords: 8 },
+      ],
+      rubricDims: ["Verification", "Evidence"],
       raisesTo: "advanced",
     },
     {

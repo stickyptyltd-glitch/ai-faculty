@@ -2689,6 +2689,21 @@ pathway has a checkpoint); no orphan subject files.
 
 Validation: frontend 110/110, API 242/242, signup 7/7, build OK; vm-load sweep clean.
 
+## v0.72 — Sustainability & Green Skills — measure, choose, verify
+
+Added the **Sustainability & Green Skills** subject (`sustainability`, group `life`) per the expansion map
+Phase B:
+
+- **Sustainability & Green Skills** (`sustainability`, group `life`): SUS1 (measure impact) -> SUS2 (make
+  better choices) -> SUS3 (verify claims and act), plus the SUSCAP capstone (measure, choose, verify one
+  real green decision).
+
+Follows the proven-learning pattern: each competency has `resources`, `selfCheck`, a full lesson and two
+challenges (fields + scenario). Structural sweep clean (lesson steps, guided key match, rubric <= fields,
+scenario single ok, every pathway has a checkpoint, no orphan subject files).
+
+Validation: frontend 110/110, API 242/242, signup 7/7, build OK; vm-load sweep clean.
+
 ## Open threads
 - **Corrected: the pathway subjects were not the problem.** I claimed the 24 pathway subjects
   still needed the foundation's rewrite. Measured instead of assumed: all 25 pathways came back at
