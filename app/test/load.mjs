@@ -17,7 +17,8 @@ const SUBJECT_IDS = [
   "foundation-core",
   "agents", "consulting", "content", "design", "edleadership", "education", "engineering",
   "finance", "foundations", "health", "hr", "journalism", "legal", "ml", "ops", "pm", "public",
-  "realestate", "research", "safety", "sales", "salesengineering", "software", "support",
+  "realestate", "research", "safety", "sales", "salesengineering", "software", "software-engineering", "support",
+  "android-development", "business", "cooking", "cybersecurity", "fitness", "graphic-design", "language-learning", "personal-finance",
 ];
 
 export function loadApp(files = [

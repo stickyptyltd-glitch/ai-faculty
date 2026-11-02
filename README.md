@@ -23,6 +23,7 @@ full absorbed architecture, and [app/](app/) for the working prototype.
 | [08-assessment-model.md](docs/08-assessment-model.md) | Practical challenges, checkpoints, Applied Projects |
 | [09-work-pathways.md](docs/09-work-pathways.md) | Profession-specific tracks after the foundation |
 | [roadmap.md](docs/roadmap.md) · [continuity-log.md](docs/continuity-log.md) | Plan + change history |
+| [12-expansion-map.md](docs/12-expansion-map.md) | Expansion into computer engineering + all subjects |
 
 ## Run the app
 

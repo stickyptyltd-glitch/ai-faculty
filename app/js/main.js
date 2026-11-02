@@ -126,6 +126,12 @@
     app.querySelectorAll("[data-action]").forEach(el => el.addEventListener("click", handleAction));
     app.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
     app.querySelectorAll(".qopt").forEach(el => el.addEventListener("click", handleQopt));
+    app.querySelectorAll(".selfcheck input[type=checkbox]").forEach(cb => {
+      cb.addEventListener("change", (e) => {
+        const li = e.currentTarget.closest("li");
+        if (li) li.classList.toggle("done", e.currentTarget.checked);
+      });
+    });
 
     const path = parseHash().path;
     if (path === "/admin") loadAdminOverview();
@@ -1109,6 +1115,7 @@
     const steps = C.lessonSteps(capId);
     const stepIdx = Math.max(0, Math.min(steps.length - 1, parseInt(parts[2] || "0", 10) || 0));
     const L = F.lesson(capId);
+    const comp = C.competency(capId);
     if (!L) return `<div class="notice">Unknown competency.</div>`;
     const stepKey = steps[stepIdx];
     const nextHref = stepIdx < steps.length - 1 ? `#/learn/${capId}/${stepIdx + 1}` : null;
@@ -1191,6 +1198,12 @@
         <p class="lead">What just happened, so you can do it yourself:</p>
         <ul>${L.deconstruct.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
         ${roleLadder}
+        ${comp.selfCheck && comp.selfCheck.length ? `
+        <div class="selfcheck">
+          <div class="card__label">Before you move on — can you…</div>
+          <ul class="selfcheck__list">${comp.selfCheck.map(x => `<li><input type="checkbox"> ${esc(x)}</li>`).join("")}</ul>
+          <p class="hint" style="margin:8px 0 0">Tick each one honestly. If any feel shaky, re-read the worked example and the moves above before the challenges.</p>
+        </div>` : ""}
         ${nav()}`;
     }
 
@@ -1263,6 +1276,18 @@
     if (bar) bar.style.width = Math.round(frac * 100) + "%";
   }
 
+  function resourcesSection(capId) {
+    const c = C.competency(capId);
+    if (!c || !c.resources || !c.resources.length) return "";
+    return `<p class="hint" style="margin-top:-6px">Authoritative tutorials, docs and guides from across the internet — open them alongside the lesson.</p>
+      <div class="resources">${c.resources.map(r => `
+        <div class="resource">
+          <div class="resource__label">${esc(r.type)}</div>
+          <a class="resource__title" href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.title)}</a>
+          <p class="resource__desc">${esc(r.description)}</p>
+        </div>`).join("")}</div>`;
+  }
+
   function viewCompetency(learner, parts) {
     const capId = parts[1];
     const c = C.competency(capId);
@@ -1294,6 +1319,7 @@
       <h3>Practical challenges</h3>
       <p class="hint" style="margin-top:-4px">Do these on your own real task. Each is checked against a rubric and adds to your evidence.</p>
       <div class="caplist">${rows}</div>
+      ${resourcesSection(capId)}
     `;
   }
 

@@ -254,3 +254,20 @@ details.card summary::-webkit-details-marker { display: revert; }
    sets `display` beats it — which silently defeats `el.hidden = true` on anything with a display
    rule of its own (every .btn here). Keep the attribute authoritative. */
 [hidden] { display: none !important; }
+
+/* External learning resources — authoritative docs, tutorials, guides from across the internet */
+.resources { display: grid; gap: 12px; margin-top: 10px; grid-template-columns: 1fr; }
+@media (min-width: 700px) { .resources { grid-template-columns: 1fr 1fr; } }
+.resource { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+.resource__label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
+.resource__title { display: block; color: var(--accent); text-decoration: none; font-weight: 600; font-size: 15px; margin-bottom: 4px; }
+.resource__title:hover { text-decoration: underline; }
+.resource__desc { color: var(--text-dim); font-size: 13px; margin: 0; line-height: 1.45; }
+
+/* Self-check verification — "can you…" questions the learner answers before moving on */
+.selfcheck { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-top: 10px; }
+.selfcheck__list { list-style: none; margin: 8px 0 6px; padding: 0; }
+.selfcheck__list li { margin-bottom: 8px; padding-left: 26px; position: relative; font-size: 14px; color: var(--text-dim); }
+.selfcheck__list li input { position: absolute; left: 0; top: 4px; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+.selfcheck__list li input:checked + /* handled via JS toggling .done */ 
+.selfcheck .done { color: var(--good); }

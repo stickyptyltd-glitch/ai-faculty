@@ -594,7 +594,211 @@ window.CONTENT = (function () {
       ]},
     ],
 
-    // ---- Research & Analysis pathway ----
+    // ---- Computer Engineering — Software pathway ----
+    SWE1: [
+      { q: "Running a function once and getting the right answer means:", options: [
+        { label: "It definitely handles every input correctly", ok: false, why: "One passing case says nothing about edge cases." },
+        { label: "It works for that one input — you still need to read the logic", ok: true, why: "Reading the code is what catches the cases you haven't tried yet." },
+        { label: "It's bug-free", ok: false, why: "One success is not evidence of correctness." },
+      ]},
+      { q: "An empty array is passed to a function that starts with `items[0]`. What happens?", options: [
+        { label: "It returns undefined — safe", ok: false, why: "It throws, because there is no index 0." },
+        { label: "It throws — there is no first item", ok: true, why: "Reading the code predicted this before running it." },
+        { label: "It returns 0", ok: false, why: "That's an assumption, not what the code does." },
+      ]},
+    ],
+    SWE2: [
+      { q: "Why prefer `customerCount` over `n` as a variable name?", options: [
+        { label: "It's shorter to type", ok: false, why: "Shorter isn't better when reading." },
+        { label: "It says what the number means, so the next reader understands", ok: true, why: "Code is read far more than written; names carry the meaning." },
+        { label: "The computer runs it faster", ok: false, why: "The computer doesn't care about names." },
+      ]},
+      { q: "A comment should explain:", options: [
+        { label: "What each line does, so nobody misses it", ok: false, why: "The code should make the what obvious; comments cover the why." },
+        { label: "Why a decision was made — the context the code can't show", ok: true, why: "The reader can see the code; they need the reasoning behind it." },
+        { label: "Nothing — comments are outdated", ok: false, why: "Good comments outlast the memory of why." },
+      ]},
+    ],
+    SWE3: [
+      { q: "You changed three things and the bug disappeared. What's the problem?", options: [
+        { label: "None — it's fixed, ship it", ok: false, why: "You don't know which change mattered." },
+        { label: "You don't know which change fixed it, so you can't reproduce or prevent the next one", ok: true, why: "Fix one thing at a time so the fix is real and durable." },
+        { label: "You should change three more things to be sure", ok: false, why: "More changes, less certainty." },
+      ]},
+      { q: "The best way to isolate a bug is to:", options: [
+        { label: "Rewrite the whole function", ok: false, why: "You'll introduce new bugs and lose the original behaviour." },
+        { label: "Reproduce it reliably, then halve the code until one line remains", ok: true, why: "Bisection narrows to the exact line without guessing." },
+        { label: "Ask someone else to look at it", ok: false, why: "Helpful, but you still need to reproduce it yourself." },
+      ]},
+    ],
+    SWE4: [
+      { q: "Why commit on a branch rather than directly on main?", options: [
+        { label: "Main must stay clean for show", ok: false, why: "Not about cleanliness — about safety." },
+        { label: "So a half-finished change never blocks or breaks the main line", ok: true, why: "Branches isolate work until it's tested and ready." },
+        { label: "Git won't let you commit to main", ok: false, why: "It can — it's just not wise." },
+      ]},
+      { q: "A secret API key was committed. The first thing to do is:", options: [
+        { label: "Delete the file and commit again", ok: false, why: "The key is still in the old commit — treat it as compromised." },
+        { label: "Revoke the key immediately, then remove it from history", ok: true, why: "Revocation is the real protection; history cleanup is secondary." },
+        { label: "Nothing — it's just a key", ok: false, why: "Exposed keys are abused quickly." },
+      ]},
+    ],
+    SWE5: [
+      { q: "A test that passes on both the broken and the fixed code is:", options: [
+        { label: "A good test — it's stable", ok: false, why: "Stability isn't the point; catching the bug is." },
+        { label: "Useless for that bug — it never fails when it should", ok: true, why: "A regression test must fail on the bug and pass after the fix." },
+        { label: "Enough — it runs without errors", ok: false, why: "Running isn't the same as detecting." },
+      ]},
+      { q: "Write the failing case first because:", options: [
+        { label: "It takes longer", ok: false, why: "Speed isn't the reason." },
+        { label: "It proves the test actually bites the bug before you fix it", ok: true, why: "If it doesn't fail pre-fix, it can't catch the bug post-fix." },
+        { label: "The computer requires it", ok: false, why: "It's a discipline, not a compiler rule." },
+      ]},
+    ],
+    AND1: [
+      { q: "An app crashes on launch. First step?", options: [
+        { label: "Rewrite MainActivity from scratch", ok: false, why: "You don't know the cause — rewriting loses what works." },
+        { label: "Open logcat, find the crash stack trace, read the first line in your code", ok: true, why: "The stack trace points at the crashing line." },
+        { label: "Uninstall and reinstall the app", ok: false, why: "That won't fix a code bug." },
+      ]},
+      { q: "State in Compose must be…", options: [
+        { label: "A plain var inside the Composable", ok: false, why: "It resets on every recomposition." },
+        { label: "Wrapped in remember { mutableStateOf(...) }", ok: true, why: "That survives recomposition." },
+        { label: "A global variable", ok: false, why: "Works but breaks encapsulation and leaks state." },
+      ]},
+    ],
+    AND2: [
+      { q: "Typing into a TextField resets every keystroke to empty. Cause?", options: [
+        { label: "The emulator is slow", ok: false, why: "This is a state bug, not speed." },
+        { label: "State redeclared every recomposition — wrap it in remember", ok: true, why: "Without remember, Compose recreates the variable on every redraw." },
+        { label: "The project template is wrong", ok: false, why: "The template isn't the problem; the state declaration is." },
+      ]},
+      { q: "To navigate between Compose screens you need:", options: [
+        { label: "Just a Button that changes the composable", ok: false, why: "Without a NavController nothing changes screens." },
+        { label: "A route per screen, a NavHost, and a navigate() call", ok: true, why: "All three are required." },
+        { label: "A separate Activity per screen", ok: false, why: "Compose navigation handles screens within one Activity." },
+      ]},
+    ],
+    AND3: [
+      { q: "navigate('settings') crashes. Why?", options: [
+        { label: "The route must be added to the NavHost first", ok: true, why: "The route must exist in the navigation graph before navigating to it." },
+        { label: "You need to restart the app", ok: false, why: "Restarting won't register a route." },
+        { label: "Navigation only works on real devices", ok: false, why: "It works on emulators too." },
+      ]},
+      { q: "Play Store requires which build format for release?", options: [
+        { label: "Debug APK", ok: false, why: "Debug builds can't be published." },
+        { label: "Signed Android App Bundle (AAB)", ok: true, why: "AAB is the Play Store publishing format." },
+        { label: "Source code zip", ok: false, why: "Source isn't a published artifact." },
+      ]},
+    ],
+    COOK1: [
+      { q: "When should mise en place happen?", options: [
+        { label: "While the pan is heating", ok: false, why: "You'll scramble and burn things." },
+        { label: "Before any heat goes on — everything chopped, measured, in bowls", ok: true, why: "Cooking is timing; prep first." },
+        { label: "After the first step is done", ok: false, why: "Too late — you're already behind." },
+      ]},
+      { q: "Oil is smoking and you haven't added food. Do:", options: [
+        { label: "Add food anyway — it'll cool the pan", ok: false, why: "Smoking oil is past its smoke point; food tastes burnt." },
+        { label: "Take pan off heat, finish prep, start fresh with new oil at lower temp", ok: true, why: "Smoking oil is degraded — start over." },
+        { label: "Turn heat up to get through it faster", ok: false, why: "More heat worsens the smoke." },
+      ]},
+    ],
+    COOK2: [
+      { q: "A dish tastes flat but not salty. Fix?", options: [
+        { label: "Add more salt until it tastes right", ok: false, why: "More salt won't fix flatness — it'll oversalt." },
+        { label: "Add a splash of acid (lemon or vinegar) and taste again", ok: true, why: "Acid brightens; flatness often means 'needs acid'." },
+        { label: "Add more water to dilute", ok: false, why: "Weakens flavour further." },
+      ]},
+      { q: "Leftovers sat out three hours. Best action?", options: [
+        { label: "Eat them — they look and smell fine", ok: false, why: "Bacteria grow without visible change." },
+        { label: "Discard them — exceeded the two-hour chill rule", ok: true, why: "Three hours exceeds the safe window." },
+        { label: "Reheat thoroughly — kills everything", ok: false, why: "Reheating doesn't destroy all toxins already produced." },
+      ]},
+    ],
+    LAN1: [
+      { q: "Running a function once and getting the right answer means:", options: [
+        { label: "It definitely handles every input correctly", ok: false, why: "One passing case says nothing about edge cases." },
+        { label: "It works for that one input — you still need to read the logic", ok: true, why: "Reading the code catches cases you haven't tried." },
+        { label: "It's bug-free", ok: false, why: "One success is not evidence of correctness." },
+      ]},
+      { q: "Stuck on one unknown word while reading. Do:", options: [
+        { label: "Stop and look it up before reading on", ok: false, why: "Breaks flow; practises translation not comprehension." },
+        { label: "Guess from context, keep reading for the gist, look up only if it blocks meaning", ok: true, why: "Keeps comprehension moving." },
+        { label: "Skip the whole sentence", ok: false, why: "You lose information context could give." },
+      ]},
+    ],
+    LAN2: [
+      { q: "A streak breaks after 40 days. Best response?", options: [
+        { label: "Give up — the streak's gone, so I've failed", ok: false, why: "The streak was never the goal; the language is." },
+        { label: "Restart small — two minutes today, back to the routine tomorrow", ok: true, why: "One small restart beats waiting for a perfect streak." },
+        { label: "Do two hours today to make up for it", ok: false, why: "Binge practice isn't sustainable." },
+      ]},
+      { q: "The other person speaks faster than you can follow. Do:", options: [
+        { label: "Nod and pretend to understand", ok: false, why: "You lose the thread and can't answer." },
+        { label: "Use your repair phrase: 'can you say that again, more slowly?'", ok: true, why: "Keeps the conversation in the target language." },
+        { label: "Switch to your shared language", ok: false, why: "Ends the target-language practice." },
+      ]},
+    ],
+    BIZ1: [
+      { q: "Would you use this? is a useful validation question?", options: [
+        { label: "Yes — it shows intent", ok: false, why: "Future intent is unreliable; past behaviour is the signal." },
+        { label: "No — ask about past behaviour and cost instead", ok: true, why: "Past behaviour predicts; future intent lies." },
+        { label: "Only if asked twice", ok: false, why: "Repetition doesn't fix the question." },
+      ]},
+      { q: "Revenue doubled but bank account is emptier. First check?", options: [
+        { label: "Raise prices immediately", ok: false, why: "Pricing may be the issue, but check the math first." },
+        { label: "Calculate CAC and LTV — growth may be unprofitable per customer", ok: true, why: "Growth that loses money per customer is faster burning." },
+        { label: "Cut all marketing spend", ok: false, why: "That stops growth but doesn't fix economics." },
+      ]},
+    ],
+    PF1: [
+      { q: "You can't account for £200 this month. Best action?", options: [
+        { label: "Ignore it — £200 is small", ok: false, why: "Untracked money is where bad habits hide." },
+        { label: "Log cash withdrawals as a category and review next month", ok: true, why: "Make cash visible so it can be managed." },
+        { label: "Stop using cash entirely", ok: false, why: "That's avoidance, not management." },
+      ]},
+      { q: "You have £2,000 spare but no emergency fund. Invest it all?", options: [
+        { label: "Yes — the market returns more than savings", ok: false, why: "Without a fund, one emergency forces selling or debt." },
+        { label: "Build the emergency fund first, then invest", ok: true, why: "The fund protects against forced selling." },
+        { label: "Split 50/50", ok: false, why: "A partial fund is still inadequate." },
+      ]},
+    ],
+    FIT1: [
+      { q: "You can squat bodyweight but adding 20kg breaks your form. Do:", options: [
+        { label: "Push through — form will improve", ok: false, why: "Loading a broken pattern ingrains the fault." },
+        { label: "Drop weight, fix pattern, then re-add load gradually", ok: true, why: "Pattern must be solid before load increases." },
+        { label: "Switch exercises entirely", ok: false, why: "Avoiding the pattern doesn't fix it." },
+      ]},
+      { q: "You missed two weeks. Last lifted 60kg, programme says 70kg. Do:", options: [
+        { label: "Jump to 70kg — you've done it before", ok: false, why: "Detraining means strength loss; jumping risks injury." },
+        { label: "Restart at 60kg and re-progress over 2–3 weeks", ok: true, why: "Rebuild the base, then progress." },
+        { label: "Skip the lift until ready", ok: false, why: "Light work rebuilds readiness." },
+      ]},
+    ],
+    GD1: [
+      { q: "Client says 'make everything bigger and bolder.' Do:", options: [
+        { label: "Make everything bigger — client is always right", ok: false, why: "If everything stands out, nothing does." },
+        { label: "Explain hierarchy needs contrast; adjust selectively", ok: true, why: "Educate on why hierarchy matters." },
+        { label: "Refuse and ship original", ok: false, why: "Unprofessional — collaborate." },
+      ]},
+      { q: "How many fonts max in a design?", options: [
+        { label: "As many as needed", ok: false, why: "More fonts = more chaos." },
+        { label: "Two — one display, one body", ok: true, why: "Consistency looks professional." },
+        { label: "Five for variety", ok: false, why: "That's decoration, not design." },
+      ]},
+    ],
+    CYB1: [
+      { q: "A feature ships without threat modelling. PM says 'we'll do security review after launch.' Do:", options: [
+        { label: "Ship it — post-launch review is fine", ok: false, why: "Vulnerabilities would be live in production." },
+        { label: "Do a quick 30-minute threat model now", ok: true, why: "A short pre-ship model catches obvious issues cheaply." },
+        { label: "Block release until full audit", ok: false, why: "Disproportionate — quick model suffices." },
+      ]},
+      { q: "Developer says 'our framework handles security.' Is that enough?", options: [
+        { label: "Yes — frameworks handle it", ok: false, why: "Frameworks help but don't cover every case." },
+        { label: "No — still review raw queries and manual output", ok: true, why: "ORMs and auto-escaping are defaults, not guarantees." },
+        { label: "Disable framework security and handle manually", ok: false, why: "Removes the safety net." },
+      ]},
+    ],
     R1: [
       { q: "Which is a researchable question, not just a topic?", options: [
         { label: "\"AI in healthcare.\"", ok: false, why: "A topic — no decision, no scope, no answer shape." },
@@ -1790,8 +1994,17 @@ window.CONTENT = (function () {
     "research",
     "safety",
     "sales",
+    "android-development",
+    "business",
+    "cooking",
+    "cybersecurity",
+    "fitness",
+    "graphic-design",
+    "language-learning",
+    "personal-finance",
     "salesengineering",
     "software",
+    "software-engineering",
     "support",
   ];
 
@@ -1839,6 +2052,96 @@ window.CONTENT = (function () {
       recommend: ["write code", "coding", "software engineer", "developer", "ship features", "debug", "github", "build a product", "technical founder", "programming"],
       status: "available", prereq: "foundation",
       competencies: subjectData["software"].competencies, capstoneId: "SWCAP",
+      rubricEmphasis: ["Verification", "Safety"],
+    },
+    {
+      id: "software-engineering", group: "build",
+      title: "Computer Engineering — Software",
+      tagline: "Read, write, debug, version-control, and test real software — no AI writing it for you.",
+      forRoles: "anyone learning to build software, from scratch",
+      recommend: ["learn to code", "software engineering", "web development", "how to program", "coding basics", "learn programming", "write my first program", "beginner coding", "git", "testing"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["software-engineering"].competencies, capstoneId: "SWECAP",
+      rubricEmphasis: ["Verification", "Structure", "Safety"],
+    },
+    {
+      id: "android-development", group: "build",
+      title: "Android App Development",
+      tagline: "Build real Android apps with Kotlin and Compose — from first screen to Play Store.",
+      forRoles: "anyone learning to build Android apps",
+      recommend: ["android", "android development", "kotlin", "mobile app", "app development", "build an app", "android studio", "jetpack compose"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["android-development"].competencies, capstoneId: "ANDCAP",
+      rubricEmphasis: ["Verification", "Structure", "Safety"],
+    },
+    {
+      id: "cooking", group: "life",
+      title: "Cooking & Food",
+      tagline: "Knife skills, heat control, seasoning, and a real meal for real guests.",
+      forRoles: "anyone learning to cook",
+      recommend: ["cooking", "cook", "knife skills", "learn to cook", "meal planning", "food", "baking", "recipes"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["cooking"].competencies, capstoneId: "COOKCAP",
+      rubricEmphasis: ["Verification", "Safety"],
+    },
+    {
+      id: "language-learning", group: "life",
+      title: "Language Learning",
+      tagline: "Read, speak, and converse in a new language — from first words to real conversations.",
+      forRoles: "anyone learning a new language",
+      recommend: ["language", "spanish", "french", "german", "japanese", "learn a language", "speaking", "conversation", "duolingo"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["language-learning"].competencies, capstoneId: "LANCAP",
+      rubricEmphasis: ["Verification", "Clarity"],
+    },
+    {
+      id: "business", group: "work",
+      title: "Business & Entrepreneurship",
+      tagline: "Validate the problem, check the unit economics, and ship a real micro-business.",
+      forRoles: "founders, operators, anyone starting a business",
+      recommend: ["business", "entrepreneurship", "startup", "start a business", "management", "founder", "value proposition", "unit economics"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["business"].competencies, capstoneId: "BIZCAP",
+      rubricEmphasis: ["Verification", "Reasoning"],
+    },
+    {
+      id: "personal-finance", group: "life",
+      title: "Personal Finance & Investing",
+      tagline: "Track your money, build an emergency fund, and invest for the long term.",
+      forRoles: "anyone managing their own money",
+      recommend: ["personal finance", "budget", "investing", "money", "savings", "emergency fund", "debt", "retirement"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["personal-finance"].competencies, capstoneId: "PFCAP",
+      rubricEmphasis: ["Verification", "Safety"],
+    },
+    {
+      id: "fitness", group: "life",
+      title: "Fitness & Training",
+      tagline: "Move well, programme progressively, fuel the work, and stay consistent.",
+      forRoles: "anyone getting fit or training others",
+      recommend: ["fitness", "training", "workout", "gym", "strength", "exercise", "personal training", "get in shape"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["fitness"].competencies, capstoneId: "FITCAP",
+      rubricEmphasis: ["Verification", "Safety"],
+    },
+    {
+      id: "graphic-design", group: "creative",
+      title: "Graphic Design",
+      tagline: "Layout, typography, colour, and brand — design that communicates.",
+      forRoles: "designers, marketers, anyone making visual content",
+      recommend: ["graphic design", "design", "typography", "layout", "brand", "logo", "poster", "visual"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["graphic-design"].competencies, capstoneId: "GDCAP",
+      rubricEmphasis: ["Verification", "Clarity"],
+    },
+    {
+      id: "cybersecurity", group: "build",
+      title: "Cybersecurity Fundamentals",
+      tagline: "Threat-model, prevent OWASP Top 10, and respond to incidents.",
+      forRoles: "developers, engineers, anyone securing systems",
+      recommend: ["cybersecurity", "security", "owasp", "threat model", "vulnerability", "hacking", "appsec"],
+      status: "available", prereq: "foundation",
+      competencies: subjectData["cybersecurity"].competencies, capstoneId: "CYBCAP",
       rubricEmphasis: ["Verification", "Safety"],
     },
     {
@@ -2679,6 +2982,121 @@ window.CONTENT = (function () {
       ],
       rubricDims: ["Verification", "Reasoning", "Clarity", "Evidence", "Safety"],
       raisesTo: "advanced",
+    },
+    {
+      id: "SWECAP",
+      pathway: "software-engineering",
+      title: "Capstone — build a real program from scratch, with tests",
+      after: ["SWE1", "SWE2", "SWE3", "SWE4", "SWE5"],
+      stage: "Demonstration",
+      brief:
+        "Build one real program (a small CLI tool, a static page, or a local script) end to end: read and plan before writing, write clean code, debug at least one real bug you reproduce first, commit on a branch with real messages, and add regression tests that bite the bug and pass after the fix.",
+      whatGood:
+        "The program does what it set out to do; the code reads well (names, single-purpose functions, flat structure); at least one reproduced bug has a before/after fix; commits are on a named branch with clear messages; and a regression test fails pre-fix and passes post-fix.",
+      fields: [
+        { key: "program", label: "What the program does", hint: "The problem it solves, the input and output.", minWords: 10 },
+        { key: "code", label: "The code quality", hint: "Names, structure, and why a reader could pick it up cold.", minWords: 10 },
+        { key: "bug", label: "One reproduced bug and its fix", hint: "The exact wrong output, the line, the change, the correct result.", minWords: 12 },
+        { key: "git", label: "Branch and commits", hint: "Branch name, commit messages, what each contains.", minWords: 10 },
+        { key: "test", label: "The regression test", hint: "The failing case pre-fix, and that it passes post-fix.", minWords: 10 },
+      ],
+      rubricDims: ["Verification", "Structure", "Evidence", "Safety"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "ANDCAP",
+      pathway: "android-development",
+      title: "Capstone — ship a small Android app to a closed testing track",
+      after: ["AND1", "AND2", "AND3", "AND4"],
+      stage: "Demonstration",
+      brief:
+        "Build a small Android app with at least two screens, text input, and navigation, run it on an emulator, then generate a signed AAB and put it on a closed testing track.",
+      whatGood:
+        "The app runs on an emulator/device without crashing; input and navigation work; a signed AAB exists; it's uploaded to a test track with testers added.",
+      fields: [
+        { key: "app", label: "What the app does", hint: "Screens, inputs, navigation.", minWords: 8 },
+        { key: "run", label: "How you verified it runs", hint: "Emulator/device, what you tested.", minWords: 8 },
+        { key: "release", label: "The release artifact and track", hint: "AAB path, track, testers.", minWords: 8 },
+      ],
+      rubricDims: ["Verification", "Structure", "Evidence", "Safety"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "COOKCAP",
+      pathway: "cooking",
+      title: "Capstone — plan, prep, cook, and serve a real meal",
+      after: ["COOK1", "COOK2", "COOK3", "COOK4", "COOK5"],
+      stage: "Demonstration",
+      brief:
+        "Plan a multi-course meal, prep all ingredients first (mise en place), cook with deliberate heat control, season by tasting, and serve to real guests — with food safety throughout.",
+      whatGood:
+        "The meal is served to real guests; prep happened before cooking; heat and seasoning were deliberate; food safety was followed; the cook can name what they'd change next time.",
+      fields: [
+        { key: "menu", label: "The menu", hint: "Courses and dishes.", minWords: 8 },
+        { key: "prep", label: "How you prepped (mise en place)", hint: "What you prepped and when.", minWords: 8 },
+        { key: "cooking", label: "Heat and seasoning decisions", hint: "Deliberate choices and why.", minWords: 8 },
+        { key: "safety", label: "Food-safety steps followed", hint: "Storage, separation, temp, chill.", minWords: 8 },
+      ],
+      rubricDims: ["Verification", "Safety", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "LANCAP",
+      pathway: "language-learning",
+      title: "Capstone — hold a real 5-minute conversation in the target language",
+      after: ["LAN1", "LAN2", "LAN3", "LAN4"],
+      stage: "Demonstration",
+      brief:
+        "Hold a 5-minute real conversation in the target language with a partner or tutor: greet, ask and answer questions, use a repair phrase, and reflect on what you understood and what to improve.",
+      whatGood:
+        "A real 5-minute conversation happened; stayed in the target language; a repair phrase was used; the learner can name what they understood and one thing to practise next.",
+      fields: [
+        { key: "partner", label: "Who you spoke with", hint: "Tutor, exchange partner, friend.", minWords: 4 },
+        { key: "conversation", label: "What happened", hint: "Topics, turns, repair moments.", minWords: 10 },
+        { key: "reflection", label: "What you'd improve next time", hint: "One concrete thing.", minWords: 6 },
+      ],
+      rubricDims: ["Verification", "Clarity", "Evidence"],
+      raisesTo: "advanced",
+    },
+    {
+      id: "BIZCAP", pathway: "business", title: "Capstone — validate and launch a real micro-business",
+      after: ["BIZ1", "BIZ2"], stage: "Demonstration",
+      brief: "Interview 5 real potential customers, calculate unit economics, and launch a real micro-business or paid pilot.",
+      whatGood: "5 customer interviews logged, unit economics calculated and viable, a real paid pilot or launch completed.",
+      fields: [{ key: "interviews", label: "Customer interviews", hint: "5 real interviews logged.", minWords: 8 }, { key: "economics", label: "Unit economics", hint: "CAC, LTV, margin, ratio.", minWords: 8 }, { key: "launch", label: "The launch or pilot", hint: "What you shipped and to whom.", minWords: 8 }],
+      rubricDims: ["Verification", "Reasoning", "Evidence"], raisesTo: "advanced",
+    },
+    {
+      id: "PFCAP", pathway: "personal-finance", title: "Capstone — build a personal financial plan",
+      after: ["PF1", "PF2"], stage: "Demonstration",
+      brief: "Track one full month of spending, calculate your emergency fund target, open a separate account, and set up a monthly contribution.",
+      whatGood: "Full month tracked and categorised, emergency fund target calculated, account opened, contribution automated.",
+      fields: [{ key: "tracking", label: "One month tracked", hint: "Spend vs income, surprises named.", minWords: 8 }, { key: "fund", label: "Emergency fund", hint: "Target and contribution.", minWords: 8 }],
+      rubricDims: ["Verification", "Safety", "Evidence"], raisesTo: "advanced",
+    },
+    {
+      id: "FITCAP", pathway: "fitness", title: "Capstone — complete a 4-week training block",
+      after: ["FIT1", "FIT2", "FIT3"], stage: "Demonstration",
+      brief: "Complete a 4-week training programme with progressive overload, hitting your protein target, and log every session.",
+      whatGood: "4 weeks completed, every session logged, protein target hit consistently, form maintained throughout.",
+      fields: [{ key: "programme", label: "The programme", hint: "4 weeks, sets, reps, weight.", minWords: 8 }, { key: "log", label: "Session log", hint: "Every session logged.", minWords: 10 }, { key: "nutrition", label: "Nutrition adherence", hint: "Protein target hit.", minWords: 6 }],
+      rubricDims: ["Verification", "Safety", "Evidence"], raisesTo: "advanced",
+    },
+    {
+      id: "GDCAP", pathway: "graphic-design", title: "Capstone — design a real brand identity",
+      after: ["GD1", "GD2"], stage: "Demonstration",
+      brief: "Design a logo, colour palette, and typography system for a real (or plausible) brand, applied to one real deliverable.",
+      whatGood: "Logo, palette, and type system defined; applied to a real deliverable; hierarchy works in greyscale.",
+      fields: [{ key: "brand", label: "The brand", hint: "Name and what it does.", minWords: 5 }, { key: "system", label: "Design system", hint: "Logo, colours, fonts.", minWords: 10 }, { key: "deliverable", label: "Real deliverable", hint: "Where you applied it.", minWords: 6 }],
+      rubricDims: ["Verification", "Clarity", "Evidence"], raisesTo: "advanced",
+    },
+    {
+      id: "CYBCAP", pathway: "cybersecurity", title: "Capstone — threat-model and secure a real app",
+      after: ["CYB1", "CYB2"], stage: "Demonstration",
+      brief: "Threat-model a real app, find and fix at least one OWASP Top 10 vulnerability, and verify the fix.",
+      whatGood: "Threat model documented, vulnerability found and fixed, fix verified with a test payload.",
+      fields: [{ key: "model", label: "Threat model", hint: "Assets, threats, mitigations.", minWords: 10 }, { key: "vuln", label: "Vulnerability found and fixed", hint: "Type, code, fix.", minWords: 10 }, { key: "verify", label: "Verification", hint: "Test payload and result.", minWords: 6 }],
+      rubricDims: ["Verification", "Safety", "Evidence"], raisesTo: "advanced",
     },
   ];
 

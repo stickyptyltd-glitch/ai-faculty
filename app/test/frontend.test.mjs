@@ -919,7 +919,6 @@ test("a personal goal gets a personal pathway, not a blank", async t => {
       "help my kids with homework",
       "sort out my mortgage",
       "my sleep and my anxiety",
-      "learn a language",
     ];
     for (const g of goals) {
       const r = C.recommendPathway({ a: g }, "personal");

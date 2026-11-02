@@ -2597,6 +2597,67 @@ subject files and now fails if `dist/app/index.html` references a script that wa
 Not deployed — no model credentials exist (`npx wrangler secret list` is empty), so live
 assessment still returns `not_configured` in production.
 
+## v0.67 — Computer Engineering — Software pathway (Phase A.1 of docs/12-expansion-map.md)
+
+Added the first non-AI subject domain per the expansion map: **Computer Engineering — Software**
+(new subject id `software-engineering`, pathway id `software-engineering`, group `build`).
+
+- **`app/js/subjects/software-engineering.js`** (new): 5 competencies (SWE1 read & understand
+  code → SWE5 write tests that catch regressions), each a full 6-step lesson + 2 challenges +
+  quick-check MCQs, plus the SWECAP work capstone (build a real program end to end: read/plan,
+  write clean code, reproduce+fix one bug, commit on a branch, regression test). Loaded via
+  `window.AIF_SUBJECTS` like every other subject.
+- Wired into `content.js`: added to `SUBJECT_IDS`, a `PATHWAYS` row (status `available`,
+  prereq `foundation`, `rubricEmphasis: ["Verification","Structure","Safety"]`), `QUICK_CHECKS`
+  for SWE1–SWE5, and the `SWECAP` entry in `PATHWAY_CHECKPOINTS`.
+- `app/index.html` loads `js/subjects/software-engineering.js` before `content.js` (build.sh's
+  missing-script check now covers it).
+- `app/test/load.mjs` loads the new subject file so the frontend suite covers it.
+- Validation: frontend 110/110, API 242/242, signup 7/7; `node --check` clean on all three
+  touched JS files; full structural sweep (6 lesson steps, 2 challenges, guided field/model key
+  match, scenario exactly one `ok:true`, critique ≥3 lowercase+specific signals, fields
+  rubric ≤ fields, checkpoint `after[]` resolves) clean. `./build.sh` assembles cleanly.
+- Pathway count: 25 (was 24). Competency count: 138 total across foundation + pathways.
+- `docs/09-work-pathways.md` catalogue updated with the new row; prototype-status line notes the
+  first computer-engineering track exists under "Building AI / technical".
+
+## v0.68 — Pedagogy proven: external resources + self-verification for the software pathway
+
+Made the Computer Engineering — Software learning actually provable without a model-scored verdict,
+since `FACULTY_MODEL_KEY` is not configured and fields/critique challenges honestly withhold
+verdicts until a model reads them (`faculty.js:164-176`).
+
+- Each competency (SWE1–SWE5) now carries `resources` — 16 total, all live URLs to authoritative
+  external learning materials (MDN Learn web development, MDN JavaScript Guide, freeCodeCamp Clean
+  Code Handbook, Microsoft Learn Debugging for beginners, Stanford CS107 Debugging Guide,
+  Pro Git Book / git-scm.com Learn, env.dev Git visual guide, Jest official docs, freeCodeCamp
+  Unit Testing guide, DEV TDD-with-Jest article). Rendered in `viewCompetency` via a new
+  `resourcesSection(capId)` helper (`app/js/main.js`), opened in a new tab alongside the lesson.
+- Each competency now carries `selfCheck` — 20 total "Before you move on — can you…" verification
+  questions (e.g. "Can I trace one concrete input through every line, writing each variable's value
+  as it changes?"). Rendered in the deconstruct lesson step of `viewLearn` (`app/js/main.js`) with
+  checkboxes that toggle `.done` for honest self-judgement.
+- Deconstruct steps retain visual ASCII how-tos (leap-year before/after, debugging flowchart,
+  Git main/feature/fix branch diagram, test lifecycle) as "graphics" in text form.
+- `app/styles.css`: added `.resources`/`.resource`/`.resource__*` and `.selfcheck`/`.selfcheck__list`
+  styling (two-column grid on wide screens, label/tag styling, checkbox state color).
+- `app/js/main.js`: `wire()` now attaches self-check checkbox change handlers.
+- Validation: frontend 110/110, API 242/242, build OK; `node --check` clean on main.js and
+  software-engineering.js; structural sweep (resources+selfCheck present per competency,
+  guided field/model key match, scenario one ok:true, fields rubric ≤ fields) clean.
+
+## v0.69 — Mainstream subjects: Android, Cooking, Language Learning
+
+Added three mainstream (non-AI) subjects per the expansion map Phase B:
+
+- **Android App Development** (`android-development`, group `build`): AND1–AND4 (build & run first app → state/input → navigation → Play Store publishing) + ANDCAP capstone.
+- **Cooking & Food** (`cooking`, group `life`): COOK1–COOK5 (knife skills & mise en place → heat control → seasoning → meal planning → food safety) + COOKCAP capstone.
+- **Language Learning** (`language-learning`, group `life`): LAN1–LAN4 (decode input → produce output → real conversation → daily habit) + LANCAP capstone.
+
+All follow the proven-learning pattern from v0.68: each competency has `resources` (authoritative external URLs) and `selfCheck` (verification questions). Wired into SUBJECT_IDS, PATHWAYS, QUICK_CHECKS, PATHWAY_CHECKPOINTS, app/index.html, and app/test/load.mjs.
+
+Validation: frontend 110/110, API 242/242, build OK; node --check clean on all new files.
+
 ## Open threads
 - **Corrected: the pathway subjects were not the problem.** I claimed the 24 pathway subjects
   still needed the foundation's rewrite. Measured instead of assumed: all 25 pathways came back at
