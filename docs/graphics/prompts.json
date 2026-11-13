@@ -1,0 +1,18 @@
+{
+  "date": "2026-11-13",
+  "mode": "Built-in image_gen",
+  "assets": [
+    {
+      "name": "pathways-overview",
+      "prompt": "Use case: stylized-concept. Asset type: production website illustration for AI Faculty, an adult practical learning platform. Wide landscape 1536x1024 composition. Premium tactile editorial 3D miniature diorama, matte ceramic and paper materials, precise architectural forms, soft studio shadows, restrained luminous blue #4c8dff accents with small warm ivory details on deep charcoal #0e1116 background. Sophisticated, welcoming, purposeful, no cartoon mascot. Keep all essential objects within central 80 percent, uncluttered silhouette, generous margins. No text, no letters, no logos, no watermark, no UI screenshot. Show learning as a connected landscape: a small open ivory book in the foreground, a clear branching blue pathway joining three elevated platforms that hold a simple work desk, modular computational blocks, and creative tools. A cohesive miniature architectural landscape, clear physical paths, inviting sense of exploration, one harmonious scene."
+    },
+    {
+      "name": "pathways-work",
+      "prompt": "Use case: stylized-concept. Asset type: production website illustration for AI Faculty, an adult practical learning platform. Wide landscape 1536x1024 composition. Premium tactile editorial 3D miniature diorama, matte ceramic and paper materials, precise architectural forms, soft studio shadows, restrained luminous blue #4c8dff accents with small warm ivory details on deep charcoal #0e1116 background. Sophisticated, welcoming, purposeful, no cartoon mascot. Keep all essential objects within central 80 percent, uncluttered silhouette, generous margins. No text, no letters, no logos, no watermark, no UI screenshot. Show practical work enhanced by thoughtful AI use: one sculptural miniature desk with a laptop, orderly paper task cards and three connected blue workflow blocks moving toward one completed ivory card with a simple check mark. A small desk lamp, beautifully arranged physical objects, quiet competent workshop feeling. Abstract screen without text. No people."
+    },
+    {
+      "name": "pathways-build",
+      "prompt": "Use case: stylized-concept. Asset type: production website illustration for AI Faculty, an adult practical learning platform. Wide landscape 1536x1024 composition. Premium tactile editorial 3D miniature diorama, matte ceramic and paper materials, precise architectural forms, soft studio shadows, restrained luminous blue #4c8dff accents with small warm ivory details on deep charcoal #0e1116 background. Sophisticated, welcoming, purposeful, no cartoon mascot. Keep all essential objects within central 80 percent, uncluttered silhouette, generous margins. No text, no letters, no logos, no watermark, no UI screenshot. Show technical learning and building systems: an elegant miniature computational workbench with connected modular blue and ivory cubes, a small open laptop showing only simple node connections, a carefully structured arch of stacked translucent blue blocks and orderly data pathways across the base. Technically inspired tangible objects, restrained detail, no fantastical neon cyberpunk clutter. No people."
+    }
+  ]
+}

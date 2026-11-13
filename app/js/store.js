@@ -20,6 +20,9 @@ window.STORE = (function () {
       module: "foundation",  // "foundation" | <pathwayId> — what the learner is working now
       pathway: null,         // chosen work pathway id (once foundation is done)
       foundationSkipped: false,
+      xp: 0,                 // gamification experience points
+      badges: [],            // earned badge ids
+      lastActive: now,       // ISO timestamp of last platform activity
       capabilities: caps,
       projects: [],          // { id, name, context, goal, createdAt } — Applied Projects
       challenges: {},        // { "C1.1": { completedAt, evidenceId } }
@@ -67,6 +70,9 @@ window.STORE = (function () {
     if (!l.module) l.module = "foundation";
     if (l.pathway === undefined) l.pathway = null;
     if (l.foundationSkipped === undefined) l.foundationSkipped = false;
+    if (l.xp === undefined) l.xp = 0;
+    if (!l.badges) l.badges = [];
+    if (!l.lastActive) l.lastActive = l.createdAt;
     // Records saved before v0.62 stored an assessor line claiming two independent assessors
     // agreed. The second pass was never an independent assessor -- it is the same rubric engine
     // at a higher bar -- so rewrite it rather than letting an upgraded learner keep asserting it.
@@ -94,7 +100,10 @@ window.STORE = (function () {
   }
 
   function log(kind, detail) {
-    update(l => { l.activity.unshift({ ts: new Date().toISOString(), kind, detail }); });
+    update(l => {
+      l.lastActive = new Date().toISOString();
+      l.activity.unshift({ ts: l.lastActive, kind, detail });
+    });
     // Best-effort server mirror for the admin panel — never blocks or affects the local save
     // above, and silently no-ops when signed out (anonymous/local-only use is unaffected).
     if (window.AUTH && window.AUTH.get().user) {

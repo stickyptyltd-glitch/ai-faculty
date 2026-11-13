@@ -25,14 +25,13 @@ window.FACULTY = (function () {
     const l = C.competency(capId).lesson.guided;
     const reports = l.fields.map(f => {
       const val = submission[f.key] || "";
-      const b = fieldBand(f, val, false);
-      let note;
-      if (b === "Not yet") note = "Have a go at this one before you check the model answer.";
-      else if (b === "Developing") note = "Reasonable start — the model answer below is more specific; see what it pins down that yours doesn't.";
-      else note = "Good — compare with the model answer for any details you'd add.";
-      return { key: f.key, label: f.label, band: b, yours: val, model: l.model[f.key], note };
+      const attempted = Boolean(val.trim());
+      const note = attempted
+        ? "Compare your reasoning with the example below. What would you keep or change? Your answer has not been graded."
+        : "Have a go at this one, or use the example to help you start. Your answer has not been graded.";
+      return { key: f.key, label: f.label, band: null, attempted, yours: val, model: l.model[f.key], note };
     });
-    const attempted = reports.filter(r => r.band !== "Not yet").length;
+    const attempted = reports.filter(r => r.attempted).length;
     return {
       reports,
       summary: attempted === reports.length

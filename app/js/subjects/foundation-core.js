@@ -190,7 +190,7 @@
         activate: {
           heading: "When this goes wrong",
           story: "You ask a model a factual question it has no way of checking. It answers — fluently, specifically, with dates and numbers — and you find out ten minutes later that it invented the citation. The model was not being unreliable. It was answering from the only place it has: its training. Nothing in your prompt told it that was not allowed here.",
-          point: "A model has no built-in sense of when it is guessing. You have to supply that boundary, every time.",
+          point: "A confident answer can still be wrong. Supply source boundaries and verify the claims that matter.",
         },
         explain: {
           heading: "Four roles, and the one that matters most",
@@ -270,8 +270,8 @@
         },
         deconstruct: {
           heading: "Independence is the property that matters",
-          story: "A check is worth something when it does not share the failure modes of the thing it checks. A second identical AI pass shares everything — same training, same blind spots, same confident gaps — which is why a second opinion from the same model is a re-run, not a review. An actual test, a real lookup, a person who can tell, or a different kind of check entirely: those are worth something.",
-          point: "Same model, second prompt = the same answer twice. That is repetition, not corroboration.",
+          story: "A check is worth something when it does not share the failure modes of the thing it checks. A second pass with the same model can catch some mistakes but can also repeat them. Agreement alone is not evidence that a claim is true. An actual test, a real lookup, a person who can tell, or a different kind of check entirely: those are worth something.",
+          point: "A second prompt can return a different answer, but agreement alone is not independent verification. Check against evidence outside the generated answer.",
         },
         guided: {
           heading: "Reject conditions in advance",
@@ -506,6 +506,277 @@
       ],
     },
   ];
+
+
+  // Adapt the foundation's narrative sections to the shared interactive lesson contract.
+  // Keep the authored explanation and add concrete practice with a different supplied task.
+  const practice = {
+  "C1": {
+    "task": "You have 20 minutes to prepare for a book-club discussion using your own notes. Write an outcome, a success test, a constraint and a non-goal for AI help.",
+    "fields": [
+      [
+        "brief",
+        "Your four-part brief",
+        "Make each part something you could check."
+      ],
+      [
+        "check",
+        "One failure your test would catch",
+        "Imagine an answer that looks useful but misses your goal."
+      ]
+    ],
+    "model": {
+      "brief": "Outcome: I can discuss three themes using my own notes. Test: each theme has one supporting note and one question I can ask the group. Constraint: preparation takes at most 20 minutes and AI uses only my notes. Non-goal: producing a chapter-by-chapter summary or invented quotations.",
+      "check": "A fluent theme with an invented quotation fails the source check, even if it sounds insightful."
+    },
+    "moves": [
+      [
+        "Name the outcome",
+        "Describe what you can do, not just what AI produces.",
+        "For the AI-learning example: build and explain a small working app."
+      ],
+      [
+        "Make the test observable",
+        "A second person needs something they can try.",
+        "Another person can run the app; you can explain the main choices."
+      ],
+      [
+        "Set limits",
+        "Time and scope constrain what success means.",
+        "A few evenings a week and a set API budget; training a model is outside scope."
+      ]
+    ]
+  },
+  "C2": {
+    "task": "Use AI to turn your own notes into a five-question revision quiz. Sketch the steps, the input and output of each, and where you check the result.",
+    "fields": [
+      [
+        "steps",
+        "Your steps",
+        "Include the source notes, the draft quiz and a check before use."
+      ],
+      [
+        "seam",
+        "The decision AI should not make for you",
+        "Name what must be true before the next step."
+      ]
+    ],
+    "model": {
+      "steps": "Select notes and learning goals → ask AI for five questions with answers linked to those notes → compare every answer to its supporting passage → revise or remove unsupported questions → attempt the quiz with answers hidden.",
+      "seam": "I choose what I need to practise. Before using the quiz I check that each answer is supported and the questions cover my goals; AI cannot decide those goals for me."
+    },
+    "moves": [
+      [
+        "Identify inputs",
+        "A comparison needs your actual requirements.",
+        "Laptop example: budget, minimum battery life, screen and weight limits."
+      ],
+      [
+        "Filter before ranking",
+        "An attractive feature cannot compensate for a non-negotiable requirement.",
+        "Only compare models meeting all requirements, using checked specifications."
+      ],
+      [
+        "Check and decide",
+        "The learner owns the trade-off.",
+        "Check evidence about the main failure risk, then choose or keep researching."
+      ]
+    ]
+  },
+  "C3": {
+    "task": "An AI helps with a community-event invitation. Source notes say: Saturday, 2 pm, library meeting room. No booking link or access details are supplied. Assign roles for drafting, checking details and sending.",
+    "fields": [
+      [
+        "roles",
+        "Who does what",
+        "Assign AI and human roles to the three steps."
+      ],
+      [
+        "unknowns",
+        "Handle missing information",
+        "What should the draft do with a missing booking link or access detail?"
+      ]
+    ],
+    "model": {
+      "roles": "AI assists with a draft using the supplied facts. I check the date, time, location and wording with the organiser. I approve and send it; AI does not commit the organiser or recipients.",
+      "unknowns": "Mark booking and access details as unknown and ask the organiser. Do not invent a link or claim the room is accessible based only on its name."
+    },
+    "moves": [
+      [
+        "Draft from supplied material",
+        "AI can produce a proposed summary.",
+        "Draft a summary anchored to the document; verify it before use."
+      ],
+      [
+        "Reserve the judgement",
+        "Consequences and missing context belong to the person responsible.",
+        "A human decides whether the situation calls for action."
+      ],
+      [
+        "Use AI for wording",
+        "A drafting role is different from permission to send.",
+        "AI suggests a message; the human checks and approves it."
+      ]
+    ]
+  },
+  "C4": {
+    "task": "Source notes: doors open at 6 pm; tickets cost $12; room holds 40 people. An AI draft says: doors open at 7 pm, tickets $12, unlimited places. Design checks and decide whether to use the draft.",
+    "fields": [
+      [
+        "checks",
+        "Your checks and findings",
+        "Compare each factual claim directly with the source."
+      ],
+      [
+        "decision",
+        "Use, revise or reject?",
+        "Set a rule that would fail for a specific mismatch."
+      ]
+    ],
+    "model": {
+      "checks": "Time: draft 7 pm disagrees with source 6 pm. Price: $12 matches. Capacity: unlimited disagrees with 40. Compare to the source, not to the model’s confidence.",
+      "decision": "Do not use it as written. Revise time and capacity, then check all three claims again. Any mismatch or unsupported fact blocks sending."
+    },
+    "moves": [
+      [
+        "Name the failure",
+        "Decide what would make an output unusable.",
+        "A summary misstates a date or invents a citation."
+      ],
+      [
+        "Use evidence outside the answer",
+        "A repeated model assertion is not source verification.",
+        "Compare the date with the source; open and inspect the cited material."
+      ],
+      [
+        "Apply the rejection rule",
+        "A failed check must change what happens next.",
+        "Hold the draft, correct the mismatch, and check it again."
+      ]
+    ]
+  },
+  "C5": {
+    "task": "You are testing an AI that turns notes into a calendar-entry draft. Choose an ordinary case and a difficult case, write expected behaviour, and specify what you will log. Do not claim to have run tests you have only planned.",
+    "fields": [
+      [
+        "cases",
+        "Your two cases and expected results",
+        "Make the difficult case expose a plausible failure."
+      ],
+      [
+        "log",
+        "What you will record",
+        "Keep actual observations separate from expectations."
+      ]
+    ],
+    "model": {
+      "cases": "Ordinary: “Book club, 20 November 2026, 6 pm, library” should preserve those details. Difficult: “Book club next week, time to be confirmed” should flag the missing date and time and ask for clarification, not invent them.",
+      "log": "For each input record the prompt version, expected result, actual draft, source comparison, pass/fail reason and manual corrections. Mark these as planned until the test is actually run."
+    },
+    "moves": [
+      [
+        "Choose an ordinary case",
+        "You need a baseline you can check.",
+        "Use a clear source with an explicit date, time and place."
+      ],
+      [
+        "Choose a difficult case",
+        "Test a situation that could expose a real weakness.",
+        "Use missing or contradictory details and expect a clarification request."
+      ],
+      [
+        "Keep the observation",
+        "A manual repair must not disappear from the record.",
+        "Log the original output, check result and any correction separately."
+      ]
+    ]
+  },
+  "C6": {
+    "task": "Version A makes a short summary but drops “subject to organiser confirmation”. Propose one prompt change and a fair comparison that checks both brevity and the missing caveat.",
+    "fields": [
+      [
+        "change",
+        "Your one change",
+        "Target the observed failure."
+      ],
+      [
+        "test",
+        "Your comparison and rollback rule",
+        "Use the same source and check for regressions."
+      ]
+    ],
+    "model": {
+      "change": "Keep the length target and add: preserve all conditions and uncertainty from the source, including organiser confirmation. Save this as version B.",
+      "test": "Run A and B on the same source more than once. Record length and whether the confirmation caveat is retained accurately; test another source too. Keep B only if it consistently retains the caveat without breaking the length target or inventing details. Otherwise revise or revert."
+    },
+    "moves": [
+      [
+        "State the observed failure",
+        "Shorter does not necessarily mean better.",
+        "The shortened summary loses a needed caveat."
+      ],
+      [
+        "Change one instruction",
+        "Aim the change at the known omission.",
+        "Request six bullets while explicitly preserving caveats."
+      ],
+      [
+        "Compare and save",
+        "A different output alone does not prove improvement.",
+        "Re-run the same case, check caveats and length, and save version plus results."
+      ]
+    ]
+  },
+  "C7": {
+    "task": "You want AI to help write a generic invitation. Your source file also has private attendee contact details. Write a data boundary, a human approval step and a habit you will keep.",
+    "fields": [
+      [
+        "boundary",
+        "What you send and exclude",
+        "The writing task does not need the attendee list."
+      ],
+      [
+        "review",
+        "Who checks what, and when",
+        "Name an action before the invitation is used."
+      ]
+    ],
+    "model": {
+      "boundary": "Use a fictional event brief with only the details needed for wording. Exclude the attendee list and contact information entirely. Do not assume removing names alone makes personal records safe to share.",
+      "review": "I compare the draft with the approved event details before sending it through the usual channel. I keep that check even after several good drafts; AI cannot send on my behalf."
+    },
+    "moves": [
+      [
+        "Ask what is needed",
+        "The task may not need the sensitive source at all.",
+        "For generic wording, provide a fictional brief instead of personal records."
+      ],
+      [
+        "Check sharing boundaries",
+        "Removing a name alone may not remove identifying details.",
+        "Exclude unnecessary personal details and use an authorised process when real records are needed."
+      ],
+      [
+        "Keep a human decision",
+        "A useful draft still needs a check before use.",
+        "The responsible person verifies the facts and decides whether to send."
+      ]
+    ]
+  }
+};
+  COMPETENCIES.forEach(c => {
+    const lesson = c.lesson;
+    const p = practice[c.id];
+    const explanation = lesson.explain, demo = lesson.demonstrate;
+    const moves = lesson.deconstruct, guided = lesson.guided;
+    lesson.explain = { ...explanation, paras: [explanation.story], keyIdea: explanation.point };
+    lesson.demonstrate = { ...demo, task: demo.heading,
+      steps: p.moves.map(([move, think, result]) => ({ move, think, result })),
+      full: p.moves.map(([move, , result]) => move + ': ' + result).join('\n\n') };
+    lesson.deconstruct = [moves.story, moves.point];
+    lesson.guided = { ...guided, intro: guided.story, task: p.task,
+      fields: p.fields.map(([key, label, hint]) => ({ key, label, hint, minWords: 6 })), model: p.model };
+  });
 
   return { competencies: COMPETENCIES, capstoneId: "FNDCP1" };
 };

@@ -71,7 +71,6 @@
       fieldsChallenge("COOK1.1", "Reproduce", "Prep a full recipe's ingredients",
         "Pick a real recipe. Prep every ingredient (chop, measure, portion) before turning on any heat. Time it.",
         "Strong answer: a real recipe, all ingredients prepped and ready, mise en place complete before cooking, time noted.",
-        "What do you do?",
         [
           { key: "recipe", label: "The recipe", hint: "Name and source.", minWords: 4 },
           { key: "prep", label: "What you prepped", hint: "Ingredients and cuts.", minWords: 8 },
@@ -157,7 +156,6 @@
       fieldsChallenge("COOK2.1", "Reproduce", "Cook something with deliberate heat control",
         "Cook one dish (egg, steak, vegetables, sauce) and describe the heat you used at each stage and how you read the pan.",
         "Strong answer: a real dish, heat choices matched to the task, pan-read cues named, result described.",
-        "What do you do?",
         [
           { key: "dish", label: "The dish", hint: "What you cooked.", minWords: 4 },
           { key: "heat", label: "Heat at each stage", hint: "High/medium/low and when you changed it.", minWords: 8 },
@@ -242,7 +240,6 @@
       fieldsChallenge("COOK3.1", "Reproduce", "Season a real dish deliberately",
         "Cook a simple dish and log each seasoning decision: what you added, when, and what you tasted before and after.",
         "Strong answer: a real dish, seasoning logged at multiple stages, tasting documented, final adjustment named.",
-        "What do you do?",
         [
           { key: "dish", label: "The dish", hint: "What you cooked.", minWords: 4 },
           { key: "log", label: "Seasoning log", hint: "What, when, taste before/after.", minWords: 12 },
@@ -327,7 +324,6 @@
       fieldsChallenge("COOK4.1", "Reproduce", "Plan and cook one week",
         "Plan five dinners, shop from a list, and cook at least three of them. Note what you swapped and why.",
         "Strong answer: five dinners planned with balanced plates, shopping list from the plan, at least three cooked, swaps noted.",
-        "What do you do?",
         [
           { key: "plan", label: "The five dinners", hint: "Protein/veg/grain each.", minWords: 10 },
           { key: "cooked", label: "Which you actually cooked", hint: "At least three.", minWords: 6 },
@@ -413,7 +409,6 @@
       fieldsChallenge("COOK5.1", "Reproduce", "Cook one meal with full safety discipline",
         "Cook a meal involving raw meat or poultry. Log the safety steps you followed: storage, separation, temperature, chilling.",
         "Strong answer: a real meal, safety steps logged at each stage, temperature recorded, leftovers chilled in time.",
-        "What do you do?",
         [
           { key: "meal", label: "The meal", hint: "What you cooked.", minWords: 4 },
           { key: "steps", label: "The safety steps you followed", hint: "Storage, separation, temp, chill.", minWords: 12 },

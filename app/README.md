@@ -49,3 +49,27 @@ for `localStorage`.)
 | `js/main.js`    | App shell + hash router + all other views |
 
 See `../docs/` for the institutional design this implements.
+
+
+## Curriculum checks
+
+From the repository root (Node.js and Python 3, no packages required):
+
+```bash
+node app/test/frontend.test.mjs
+node app/test/curriculum.test.mjs
+node app/test/review.test.mjs
+python3 app/test/data_science_test.py
+```
+
+For browser checks, start a separate Chrome using a fresh temporary profile in one terminal:
+
+```bash
+google-chrome --headless=new --no-sandbox --disable-gpu --remote-debugging-port=9337 --user-data-dir=/tmp/aif-curriculum-chrome about:blank
+```
+
+Then run `node app/test/learning-browser.mjs` in another terminal. It serves a temporary local
+copy, blocks HTTPS service requests, and tests practice retries, revisit recording, draft
+restoration, honest feedback, every lesson screen and responsive layout. Stop that Chrome when
+finished. Set `CHROME_DEBUG_URL` to use another port. Set `AIF_SCREENSHOT_DIR` to an existing
+folder to save desktop and mobile screenshots. This uses a separate test learner.

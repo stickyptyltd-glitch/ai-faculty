@@ -76,7 +76,6 @@
       fieldsChallenge("LAN1.1", "Reproduce", "Get the gist of a real text",
         "Take a short text (2–4 sentences) in your target language — news headline, menu, sign, message. Say what it's about and name the clues you used.",
         "Strong answer: states the gist in one sentence, names cognates/context clues, and shows they understood the message rather than translating word-for-word.",
-        "What do you do?",
         [
           { key: "text", label: "The text (quote it)", hint: "The original target-language text.", minWords: 6 },
           { key: "gist", label: "What it's about", hint: "One sentence, the message not a translation.", minWords: 6 },
@@ -162,7 +161,6 @@
       fieldsChallenge("LAN2.1", "Reproduce", "Speak about yourself for 30 seconds",
         "Record yourself (phone voice memo) introducing yourself in the target language — name, where you're from, what you do, one thing you like. Play it back.",
         "Strong answer: the recording exists, the sentences are personal and high-frequency, pronunciation was checked against a model, and the learner played it back to self-check.",
-        "What do you do?",
         [
           { key: "recording", label: "What you said (target language)", hint: "Your introduction, written out.", minWords: 8 },
           { key: "checked", label: "How you checked pronunciation", hint: "Model or reference used.", minWords: 6 },
@@ -248,7 +246,6 @@
       fieldsChallenge("LAN3.1", "Reproduce", "Have a real 2-minute conversation",
         "Speak with another person (tutor, exchange partner, friend) in the target language for at least 2 minutes. Greet, ask one question, answer one, and use your repair phrase at least once.",
         "Strong answer: a real conversation happened, both people stayed in the target language, the repair phrase was used, and the learner notes what worked and what to practise.",
-        "What do you do?",
         [
           { key: "partner", label: "Who you spoke with", hint: "Tutor, exchange partner, friend.", minWords: 4 },
           { key: "whatHappened", label: "What happened (greeting, question, answer)", hint: "Briefly.", minWords: 8 },
@@ -334,7 +331,6 @@
       fieldsChallenge("LAN4.1", "Reproduce", "Track one real week of practice",
         "Log your language practice for one week: when, what (input or output), how many minutes. Note any missed days and what you did after.",
         "Strong answer: a real week logged with times and input/output type; missed days handled with the pre-decided rule; total minutes visible.",
-        "What do you do?",
         [
           { key: "log", label: "Your week's practice log", hint: "Day, activity, minutes.", minWords: 12 },
           { key: "missed", label: "Any missed days and your response", hint: "Or note there were none.", minWords: 6 },

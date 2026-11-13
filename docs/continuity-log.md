@@ -2718,6 +2718,125 @@ scenario single ok, every pathway has a checkpoint, no orphan subject files).
 
 Validation: frontend 110/110, API 242/242, signup 7/7, build OK; vm-load sweep clean.
 
+## v0.74 — 2026-11-13 — Generated pathway catalogue graphics
+
+- Generated three matching charcoal, blue and ivory illustrations using built-in image_gen:
+  a pathway overview landscape, a practical-work desk and a technical systems workbench.
+- Preserved PNG originals and exact prompts under `docs/graphics/`; added 960 × 640 WebP
+  assets under `app/assets/graphics/` (124,782 bytes combined).
+- Integrated the overview and work/build section illustrations into the pathway catalogue.
+  Section images load lazily; real HTML headings carry meaning and decorative images use
+  empty alt text. Responsive sizing retains the complete compositions.
+- Validation: frontend tests 118/118 passing, JavaScript syntax check and build successful,
+  all three deployed-build asset copies byte-identical to source. Local desktop and narrow-window
+  browser screenshots inspected. This pass prepares the local build; no production deployment.
+
+## v0.75 — 2026-11-13 — Graphics for personal, life and creative learning
+
+- Generated three more illustrations using built-in image_gen in the existing blue, ivory and
+  charcoal style: AI outside work, life skills and creative subjects. Saved originals and exact
+  prompts in `docs/graphics/`; web copies total 110,544 bytes.
+- Added the personal illustration and exposed the existing `life` and `creative` pathway groups
+  in the catalogue with their graphics. Updated the introduction and technical-group wording to
+  reflect the full subject range. All five group images use the same responsive, lazy-loaded layout.
+- Validation: frontend tests 118/118, JavaScript syntax and build pass. Rendered the catalogue
+  against real content to verify every pathway has a link, all six image references resolve and
+  build copies match source bytes. Prepared locally; no production deployment.
+
+## v0.76 — 2026-11-13 — Dedicated technical pathway illustrations
+
+- Recovered the software-engineering, Android and data-science images from the interrupted
+  generation. Generated cybersecurity and AI-engineering artwork to complete the five-image set.
+- Preserved PNG originals and exact prompts in `docs/graphics/`; optimized WebP copies total
+  176,186 bytes. All eleven generated assets now have project-local copies.
+- Individual pathway pages now display an illustration: these five use dedicated artwork and
+  the other 36 use the existing category artwork. Reused the responsive overview-image styling,
+  empty decorative alt text and explicit image dimensions.
+- Validation: visually inspected all five optimized images; frontend tests 118/118, syntax check
+  and build pass. Rendered all 41 pathway overview pages and verified one image per page, correct
+  dedicated/category selection, byte-identical build copies and the unknown-pathway response.
+  Local build prepared; no production deployment.
+
+## v0.77 — 2026-11-13 — Technical pathway artwork complete
+
+- Generated and integrated dedicated illustrations for Technical Foundations, Machine Learning,
+  Agentic Systems and AI Safety using built-in image_gen. All nine technical pathways now have
+  individual artwork; 32 other pathways retain category artwork. Total library: 15 images.
+- Saved the exact prompts before generation in `docs/graphics/prompts-batch-4.json`, and copied
+  each output into the project immediately on completion. Preserved PNG originals and produced
+  960 × 640 WebP assets (140,410 bytes combined for this batch).
+- Validation: inspected all four optimized images, frontend tests 118/118, syntax and build pass.
+  Rendered all 41 pathway pages and verified image selection and byte-identical build copies;
+  every pathway in the technical group uses its dedicated image. No production deployment.
+
+## v0.78 — 2026-11-13 — Creative pathway artwork complete
+
+- Generated dedicated Graphic Design, Music Production, Photography, Writing & Publishing and
+  Gaming & Esports illustrations using built-in image_gen. All five creative and nine technical
+  pathways now have individual artwork; 27 other pathways retain category artwork.
+- Saved exact prompts in `docs/graphics/prompts-batch-5.json` before generation, retained PNG
+  originals and optimized 960 × 640 WebP copies (198,432 bytes for this batch). Library total:
+  20 generated images. Integrated the new artwork into the existing pathway overview layout.
+- Validation: visually inspected all five optimized images; frontend tests 118/118, syntax and
+  build pass. Rendered all 41 pathway pages and verified asset selection and matching build copies,
+  including dedicated images for every technical and creative pathway. No production deployment.
+
+## v0.79 — 2026-11-13 — Life-skills pathway artwork complete
+
+- Generated and integrated dedicated illustrations for Cooking & Food, Skilled Trades & DIY,
+  Sustainability, Language Learning, Personal Finance and Fitness using built-in image_gen.
+  All nine technical, five creative and six life-skills pathways now have individual artwork;
+  21 other pathways retain category artwork. Library total: 26 generated images.
+- Saved exact prompts in `docs/graphics/prompts-batch-6.json` before generation and retained
+  project-local PNG originals and 960 × 640 WebP copies (327,768 bytes for this batch).
+- Validation: visually inspected the six optimized images, including the personal-finance image's
+  preserved alpha against the app background. Frontend tests 118/118, syntax and build pass.
+  Rendered all 41 pathway pages and verified image selection and byte-identical build copies;
+  all technical, creative and life-skills pages use dedicated images. No production deployment.
+
+## v0.80 — 2026-11-13 — More enjoyable practice and usable curriculum examples
+
+- Reviewed learner feedback about Duolingo, Babbel, Brilliant and Coursera. Added evidence,
+  limits and an evaluation plan in `docs/13-learner-experience-research.md`; these are design
+  inputs, not measured improvements in AI Faculty learning outcomes.
+- Added 58 explanatory quick checks for 29 previously uncovered competencies. All 172 distinct
+  competencies now have checks (179 catalogue entries include seven reused foundation items).
+- Learners control worked-example reveals, can navigate directly between lesson steps, retry
+  questions without penalties, and retain guided drafts on the current device. Opening a check
+  no longer records a revisit; attempting every question does. Practice does not grant mastery.
+- Guided feedback identifies attempted fields and invites comparison without grading correctness
+  or mistaking answer length for quality.
+- Repaired nine malformed written challenges in Cooking and Language Learning. Browser checks
+  also exposed seven foundation lessons using a narrative schema the shared renderer could not
+  consume. Preserved explanations and added structured worked moves, supplied practice tasks,
+  guided fields and example answers for all seven.
+- Rebuilt Data Science lessons around downloadable fictional data, executable SQL and exact
+  results: bounded November queries, customer identity rather than name alone, justified
+  duplicate removal, unknown values, mean/median and appropriately limited causal claims.
+  Supplied-data challenges no longer require registering a separate real task.
+- Validation: 118 existing frontend tests, 6 curriculum contract tests and 3 executable-data
+  checks passed. Browser checks rendered all 1,032 lesson screens plus the nine repaired
+  challenge forms, exercised retries/drafts/revisits/feedback, and checked 390px and 1280px
+  layouts with no horizontal overflow. Build passed. No production deployment.
+
+## v0.81 — 2026-11-13 — Delayed recall and transfer practice
+
+- Added a separate **Remember & Apply** review space for every completed competency. Reviews
+  become due three days after learning or the previous review, and rotate between authored
+  prompts so the learner practises recall rather than memorising one answer.
+- Each review asks for free recall and a changed application task. The example answer and lesson
+  moves remain hidden until the learner submits or explicitly asks for support. Drafts persist
+  locally; the first submitted attempt is retained for honest comparison.
+- Learners rate recall and application, write one takeaway, and receive a future review date.
+  Reviews are explicitly ungraded: they do not change capability states, evidence, XP, quick-check
+  history or assessment results. Reused foundation competencies are deduplicated in the queue.
+- Added progress discovery, competency-page links, pathway recommendations and a review history
+  view. Bad or incomplete records fail safely, and learner text is escaped before rendering.
+- Validation: 10 review unit tests, 118 existing frontend tests, 6 curriculum tests and 3
+  executable data checks passed. Browser checks rendered all 1,032 lesson screens and exercised
+  review drafts, support reveal, reflection, persistence, scheduling, unchanged mastery/XP and
+  responsive layout. Build passed. No production deployment.
+
 ## Open threads
 - **Corrected: the pathway subjects were not the problem.** I claimed the 24 pathway subjects
   still needed the foundation's rewrite. Measured instead of assumed: all 25 pathways came back at

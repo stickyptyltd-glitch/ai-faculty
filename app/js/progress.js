@@ -70,9 +70,42 @@ window.PROGRESS = (function () {
     const trackLabel = { personal: "Personal", professional: "Professional", mixed: "Mixed" }[learner.track] || "—";
     const chosen = learner.pathway ? C.pathway(learner.pathway) : null;
 
+    const xp = learner.xp || 0;
+    const level = window.GAMIFY.levelForXP(xp);
+    const streak = window.GAMIFY.streakFor(learner);
+    const earnedBadges = (learner.badges || []).map(id => window.GAMIFY.BADGES.find(b => b.id === id)).filter(Boolean);
+    const pct = window.GAMIFY.progressToNext(xp);
+    const toNext = window.GAMIFY.xpForNextLevel(xp);
+
     const goal = diagnosed
       ? `Foundation: ${esc(C.MASTER_CAPABILITY.title)}${chosen ? ` · Pathway: <strong>${esc(chosen.title)}</strong>` : ""} · ${trackLabel}`
       : "Not set — complete the diagnostic";
+
+    const gamifyStrip = `
+      <div class="card gamify-card" style="margin-bottom:14px">
+        <div class="gamify__row">
+          <div class="gamify__level">
+            <div class="gamify__label">Level</div>
+            <div class="gamify__value">${level} · ${esc(window.GAMIFY.levelLabel(xp))}</div>
+          </div>
+          <div class="gamify__xp">
+            <div class="gamify__label">XP</div>
+            <div class="bar" style="margin:6px 0 2px"><span style="width:${pct}%"></span></div>
+            <div class="gamify__value">${xp} XP · ${toNext} to next level</div>
+          </div>
+          <div class="gamify__streak">
+            <div class="gamify__label">Streak</div>
+            <div class="gamify__value">${streak} day${streak === 1 ? "" : "s"}</div>
+          </div>
+        </div>
+        ${earnedBadges.length ? `
+          <div class="gamify__badges">
+            <div class="gamify__label">Badges</div>
+            <div class="badge__shelf">${earnedBadges.map(b => `
+              <span class="badge" title="${esc(b.title)}">${esc(b.icon)} <span class="badge__title">${esc(b.title)}</span></span>
+            `).join("")}</div>
+          </div>` : ""}
+      </div>`;
 
     const nextCard = `
       <div class="card next">
@@ -123,6 +156,7 @@ window.PROGRESS = (function () {
       <h1>Your progress</h1>
       <p class="lead">${goal}</p>
       ${nextCard}
+      ${window.REVIEW.summary(learner)}
       <div class="card card--tight">
         <div class="card__label">What have I proved</div>
         <p style="margin:0"><strong>${split.assessed}</strong> assessed ·

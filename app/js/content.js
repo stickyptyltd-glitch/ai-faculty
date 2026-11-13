@@ -128,8 +128,9 @@ window.CONTENT = (function () {
 
   const DIAGNOSTIC = {
     intro:
-      "This is the diagnostic. Don't try to give the \"right\" answers — it exists to find where you actually are. Nothing here is graded.",
+      "This is the diagnostic. It starts with your dream job — the work you'd most love to be doing — because that's what your pathway is built from. Don't try to give the \"right\" answers; nothing here is graded.",
     questions: [
+      { key: "job", type: "text", label: "Dream job — what work would you most love to be doing?", hint: "Anything at all, real or aspirational. If you're not sure, write what you'd pick if you could start today. \"Not sure yet\" is a real answer." },
       { key: "a", type: "text", label: "A. What would you most like AI to help you in your own life right now?", hint: "Up to 3 things, most important first." },
       { key: "b", type: "text", label: "B. And in work, study, or anything you are responsible for?", hint: "Up to 3. If none of this applies to you, write \u201cnone right now\u201d \u2014 that is a real answer, not a skip." },
       { key: "c", type: "text", label: "C. If this worked extraordinarily well over 12 months, what would you be able to do with AI that you can't reliably do today?", hint: "" },
@@ -2486,8 +2487,9 @@ window.CONTENT = (function () {
   // scoring records which words matched so the recommendation can show its reasoning instead of
   // appearing from nowhere. Still keyword matching — that is what works without a model — but
   // over the whole learner rather than a fragment of them.
-  const INTAKE_WEIGHTS = { a: 3, b: 3, c: 2, d: 1, e: 2 };
+  const INTAKE_WEIGHTS = { job: 5, a: 3, b: 3, c: 2, d: 1, e: 2 };
   const INTAKE_LABELS = {
+    job: "your dream job",
     a: "your real-life goal",
     b: "your professional goal",
     c: "what you want to be able to do in 12 months",
@@ -2521,7 +2523,7 @@ window.CONTENT = (function () {
     const prior = TRACK_GROUP_PRIOR[track] || null;
     const parts = [];
     const weights = [];
-    for (const key of ["a", "b", "c", "d", "e"]) {
+    for (const key of ["job", "a", "b", "c", "d", "e"]) {
       const v = (answers[key] || "").toLowerCase().trim();
       if (!v) continue;
       parts.push(v);
@@ -3297,7 +3299,7 @@ window.CONTENT = (function () {
     if (!moduleId || moduleId === "foundation") return CHECKPOINTS;
     return PATHWAY_CHECKPOINTS.filter(cp => cp.pathway === moduleId);
   }
-  function quickCheck(capId) { return QUICK_CHECKS[capId] || []; }
+  function quickCheck(capId) { return QUICK_CHECKS[capId] || window.AIF_PRACTICE_CHECKS?.[capId] || []; }
   function lessonSteps(capId) {
     return LESSON_STEPS.filter(s => s !== "quickcheck" || quickCheck(capId).length);
   }

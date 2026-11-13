@@ -23,7 +23,7 @@ const SUBJECT_IDS = [
 
 export function loadApp(files = [
   ...SUBJECT_IDS.map(id => `../js/subjects/${id}.js`),
-  "content.js", "model.js", "pathway.js", "export.js", "progress.js", "faculty.js",
+  "practice-checks.js", "content.js", "model.js", "review.js", "pathway.js", "export.js", "gamify.js", "progress.js", "faculty.js",
 ]) {
   const win = {};
   const sandbox = {

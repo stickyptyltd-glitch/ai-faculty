@@ -10,7 +10,6 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadApp } from "./load.mjs";
-
 const win = loadApp();
 const C = win.CONTENT;
 const M = win.MODEL;
@@ -1046,11 +1045,92 @@ test("the foundation teaches AI, not office life", async t => {
           const PUSHES_BACK = /\b(not|no|nothing|never|nobody|does not|doesn\u2019t|is not|was not|too absolute|punts|premium|unlikely|instead|rather|length is|publicly available is)\b/i;
           for (const o of (ch.options || [])) {
             if (o.ok) continue;
-            assert.match(o.why, PUSHES_BACK,
-              `${ch.id}: the wrong option "${o.label.slice(0, 40)}" is not explained — its why just asserts something: ${o.why.slice(0, 80)}`);
+          assert.match(o.why, PUSHES_BACK,
+            `${ch.id}: the wrong option "${o.label.slice(0, 40)}" is not explained — its why just asserts something: ${o.why.slice(0, 80)}`);
           }
         }
       }
     }
+  });
+});
+
+test("gamification: XP, levels, streaks and badges", async t => {
+  const G = win.GAMIFY;
+
+  await t.test("levels rise with XP and label maps correctly", () => {
+    assert.equal(G.levelForXP(0), 1);
+    assert.equal(G.levelForXP(999), 1);
+    assert.equal(G.levelForXP(1000), 2);
+    assert.equal(G.levelForXP(2500), 3);
+    assert.equal(G.levelLabel(0), "Novice");
+    assert.equal(G.levelLabel(1000), "Apprentice");
+    assert.equal(G.levelLabel(9000), "Faculty");
+  });
+
+  await t.test("progress to next level resets each level", () => {
+    assert.equal(G.progressToNext(0), 0);
+    assert.equal(G.progressToNext(500), 50);
+    assert.equal(G.progressToNext(1000), 0);
+    assert.equal(G.xpForNextLevel(1500), 500);
+  });
+
+  await t.test("onEvent awards XP and reports level-up", () => {
+    const r = G.onEvent({ xp: 0 }, "challenge");
+    assert.equal(r.xp, 50);
+    assert.equal(r.gained, 50);
+    assert.equal(r.levelledUp, false);
+    const r2 = G.onEvent({ xp: 990 }, "checkpoint"); // 990 + 200 = 1190 -> level 2
+    assert.equal(r2.levelledUp, true);
+    assert.equal(r2.beforeLevel, 1);
+    assert.equal(r2.afterLevel, 2);
+  });
+
+  await t.test("streak counts consecutive active days ending today", () => {
+    const today = new Date().toISOString();
+    const yesterday = new Date(Date.now() - 86400000).toISOString();
+    const twoDaysAgo = new Date(Date.now() - 172800000).toISOString();
+
+    assert.equal(G.streakFor({ activity: [] }), 0);
+    assert.equal(G.streakFor({ activity: [{ ts: today }] }), 1);
+    assert.equal(G.streakFor({ activity: [{ ts: today }, { ts: yesterday }] }), 2);
+    assert.equal(G.streakFor({ activity: [{ ts: today }, { ts: twoDaysAgo }] }), 1);
+  });
+
+  await t.test("badges are earned on threshold events", () => {
+    const l = { challenges: { "C1.1": {} }, checkpoints: { CP1: {} }, pathway: "software", xp: 0 };
+    assert.ok(G.earned(l, "first-challenge"));
+    assert.ok(G.earned(l, "first-checkpoint"));
+    assert.ok(G.earned(l, "pathway-chosen"));
+    assert.ok(!G.earned(l, "foundation-done"));
+    assert.ok(!G.earned(l, "capstone-builder"));
+    assert.ok(!G.earned(l, "streak-3"));
+    assert.ok(!G.earned(l, "level-5"));
+
+    const l2 = { ...l, checkpoints: { ...l.checkpoints, CP2: {} }, xp: 4000 };
+    assert.ok(G.earned(l2, "capstone-builder"));
+    assert.ok(G.earned(l2, "level-5"));
+  });
+
+  await t.test("newBadges reports only not-yet-earned badges", () => {
+    const l = { challenges: {}, checkpoints: {}, pathway: null, xp: 0, badges: ["first-challenge"] };
+    const fresh = G.newBadges(l, l);
+    assert.equal(fresh.length, 0, "no new badges when snapshot is current");
+
+    const l2 = { challenges: { "C1.1": {} }, checkpoints: {}, pathway: null, xp: 0, badges: [] };
+    const fresh2 = G.newBadges(l2, { badges: [] });
+    assert.ok(fresh2.some(b => b.id === "first-challenge"), "first-challenge surfaced as new");
+  });
+
+  await t.test("polymath needs three transferable-or-advanced competencies", () => {
+    const caps = {
+      C1: { state: "transferable" },
+      C2: { state: "advanced" },
+      C3: { state: "transferable" },
+      C4: { state: "independent" },
+    };
+    assert.ok(G.earned({ capabilities: caps }, "polymath"));
+
+    const caps2 = { C1: { state: "transferable" }, C2: { state: "independent" } };
+    assert.ok(!G.earned({ capabilities: caps2 }, "polymath"));
   });
 });

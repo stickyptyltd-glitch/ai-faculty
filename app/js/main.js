@@ -43,6 +43,7 @@
   const routes = [
     { test: p => p === "/", view: viewProgress },
     { test: p => p === "/diagnostic", view: viewDiagnostic },
+    { test: p => p === "/review" || p.startsWith("/review/"), view: (learner, parts) => window.REVIEW.render(learner, parts) },
     { test: p => p === "/evidence", view: viewEvidence, after: loadMyReviews },
     { test: p => p === "/faculty", view: viewFacultyWorklist, after: loadFacultyWorklist },
     { test: p => p === "/about", view: viewAbout },
@@ -126,6 +127,20 @@
     app.querySelectorAll("[data-action]").forEach(el => el.addEventListener("click", handleAction));
     app.querySelectorAll("form[data-form]").forEach(f => f.addEventListener("submit", handleForm));
     app.querySelectorAll(".qopt").forEach(el => el.addEventListener("click", handleQopt));
+    app.querySelectorAll('form[data-form="guided"]').forEach(form => {
+      form.addEventListener("input", () => {
+        const capId = form.dataset.cap;
+        const fields = C.competency(capId).lesson.guided.fields;
+        window.STORE.update(l => {
+          if (!l.lessonDrafts) l.lessonDrafts = {};
+          l.lessonDrafts[capId] = Object.fromEntries(fields.map(f => [f.key, form.elements.namedItem(f.key).value]));
+        });
+      });
+    });
+    app.querySelectorAll('form[data-form="review-attempt"]').forEach(form => {
+      form.addEventListener("input", () => window.STORE.update(l => window.REVIEW.draft(l, form.dataset.cap,
+        Object.fromEntries(new FormData(form).entries()))));
+    });
     app.querySelectorAll(".selfcheck input[type=checkbox]").forEach(cb => {
       cb.addEventListener("change", (e) => {
         const li = e.currentTarget.closest("li");
@@ -188,31 +203,67 @@
     const fb = block.querySelector(".qcheck__fb");
     fb.textContent = (correct ? "Correct. " : "Not quite. ") + opt.why;
     fb.style.color = correct ? "var(--good)" : "var(--warn)";
+    block.dataset.attempted = "true";
+    block.querySelector(".qcheck__retry").hidden = false;
+    const set = block.closest(".qcheck-set");
+    const attempted = set.querySelectorAll('[data-attempted="true"]').length;
+    const total = +set.dataset.total;
+    const status = document.getElementById("qcheckStatus");
+    status.textContent = attempted === total
+      ? "Practice round complete. Revisit anything that surprised you, or try the guided task."
+      : `${attempted} of ${total} questions explored. Mistakes are useful here — try again whenever you like.`;
+    if (attempted === total && !set.dataset.recorded) {
+      window.STORE.update(l => {
+        if (!l.revisits) l.revisits = {};
+        l.revisits[capId] = new Date().toISOString();
+      });
+      set.dataset.recorded = "true";
+    }
   }
 
   function handleAction(e) {
     const el = e.currentTarget;
 
+    if (el.dataset.action === "review-help") {
+      window.STORE.update(l => window.REVIEW.reveal(l, el.dataset.cap));
+      router();
+      const note = document.querySelector("#app .notice");
+      if (note) { note.tabIndex = -1; note.focus(); }
+      return;
+    }
+
+    if (el.dataset.action === "qcheck-retry") {
+      const block = el.closest(".qcheck");
+      block.classList.remove("answered");
+      block.querySelectorAll(".qopt").forEach(o => {
+        o.disabled = false;
+        o.classList.remove("qopt--right", "qopt--wrong");
+      });
+      block.querySelector(".qcheck__fb").textContent = "Try again. Which reason supports your choice?";
+      el.hidden = true;
+      block.querySelector(".qopt").focus();
+      return;
+    }
+
     if (el.dataset.action === "demo-all") {
       const demo = el.closest(".demo");
-      demo.classList.remove("playing");
-      demo.querySelectorAll(".demo-step").forEach(s => s.classList.add("reveal"));
+      demo.querySelectorAll(".demo-step").forEach(s => { s.hidden = false; });
+      demo.querySelector('[data-action="demo-next"]').disabled = true;
+      demo.querySelector(".demo__status").textContent = "Complete example shown. Take your time with the reasoning.";
       setDemoBar(demo, 1);
       return;
     }
-    if (el.dataset.action === "demo-play") {
+    if (el.dataset.action === "demo-next") {
       const demo = el.closest(".demo");
       const steps = [...demo.querySelectorAll(".demo-step")];
-      el.disabled = true;
-      demo.classList.add("playing");
-      steps.forEach(s => s.classList.remove("reveal"));
-      setDemoBar(demo, 0);
-      steps.forEach((s, i) => setTimeout(() => {
-        s.classList.add("reveal");
-        s.scrollIntoView({ block: "center", behavior: "smooth" });
-        setDemoBar(demo, (i + 1) / steps.length);
-        if (i === steps.length - 1) el.disabled = false;
-      }, i * 2200));
+      const next = steps.find(s => s.hidden);
+      if (next) next.hidden = false;
+      const shown = steps.filter(s => !s.hidden).length;
+      setDemoBar(demo, shown / steps.length);
+      el.disabled = shown === steps.length;
+      demo.querySelector(".demo__status").textContent = shown === steps.length
+        ? "Complete example shown. What would you carry into your own attempt?"
+        : `${shown} of ${steps.length} parts shown. Predict the next move, then reveal it.`;
       return;
     }
 
@@ -293,9 +344,25 @@
     const kind = form.dataset.form;
     const data = Object.fromEntries(new FormData(form).entries());
 
+    if (["review-start", "review-attempt", "review-finish"].includes(kind)) {
+      const method = { "review-start": "begin", "review-attempt": "submit", "review-finish": "finish" }[kind];
+      try {
+        window.STORE.update(l => method === "begin"
+          ? window.REVIEW.begin(l, form.dataset.cap)
+          : window.REVIEW[method](l, form.dataset.cap, data));
+        router();
+        const heading = document.querySelector("#app h1");
+        if (heading) { heading.tabIndex = -1; heading.focus(); }
+      } catch (error) {
+        const box = document.getElementById("reviewError");
+        if (box) box.textContent = error.message;
+      }
+      return;
+    }
+
     if (kind === "diagnostic") {
       window.STORE.update(l => {
-        l.intake = { a: data.a, b: data.b, c: data.c, d: data.d, e: data.e };
+        l.intake = { job: data.job, a: data.a, b: data.b, c: data.c, d: data.d, e: data.e };
         l.track = data.track;
       });
       window.STORE.log("diagnostic", "completed");
@@ -326,7 +393,14 @@
 
     if (kind === "choose-pathway") {
       const pid = form.dataset.pathway;
-      window.STORE.update(l => { l.pathway = pid; l.module = pid; });
+      const before = window.STORE.get();
+      window.STORE.update(l => {
+        l.pathway = pid; l.module = pid;
+        const g = window.GAMIFY.onEvent(l, "pathway");
+        l.xp = g.xp;
+        const fresh = window.GAMIFY.newBadges(l, before);
+        if (fresh.length) l.badges = [...(l.badges || []), ...fresh.map(b => b.id)];
+      });
       window.STORE.log("pathway", pid);
       location.hash = "#/";
       return;
@@ -436,10 +510,10 @@
           ${fb.reports.map(r => `
             <div style="padding:8px 0;border-bottom:1px dashed var(--border)">
               <div class="row"><span>${esc(r.label)}</span>
-                <span>${r.band === "Not yet" ? "" : bandTag(r.band)}</span></div>
+                <span class="hint">${r.attempted ? "Attempted · ungraded" : "Not attempted"}</span></div>
               <p class="hint" style="margin:4px 0">${esc(r.note)}</p>
-              ${r.yours ? `<p style="margin:4px 0;font-size:13px"><strong>You:</strong> ${esc(r.yours)}</p>` : ""}
-              <p style="margin:4px 0;font-size:13px;color:var(--good)"><strong>Model answer:</strong> ${esc(r.model)}</p>
+              ${r.yours ? `<p class="lesson-output" style="margin:4px 0;font-size:13px"><strong>You:</strong> ${esc(r.yours)}</p>` : ""}
+              <p class="lesson-output" style="margin:4px 0;font-size:13px"><strong>Example answer:</strong> ${esc(r.model)}</p>
             </div>`).join("")}
         </div>
         <div class="notice">This is practice. When you're ready, do it on your own task using the button below.</div>`;
@@ -602,6 +676,7 @@
 
       if (payload.scope === "challenge") {
         const chDef = C.challenge(payload.cap, payload.ch);
+        const before = window.STORE.get();
         window.STORE.update(l => {
           const ev = M.addEvidence(l, {
             capId: payload.cap, kind: "challenge", challengeId: payload.ch,
@@ -611,6 +686,10 @@
           });
           M.markChallengeDone(l, payload.ch, ev.id);
           M.raise(l, payload.cap, payload.result.stateTarget, payload.result.confidence);
+          const g = window.GAMIFY.onEvent(l, "challenge");
+          l.xp = g.xp;
+          const fresh = window.GAMIFY.newBadges(l, before);
+          if (fresh.length) l.badges = [...(l.badges || []), ...fresh.map(b => b.id)];
         });
         window.STORE.log("challenge-evidence", payload.ch);
         syncSubmission({
@@ -621,6 +700,7 @@
         });
       } else {
         const cpDef = C.checkpoint(payload.cp);
+        const before = window.STORE.get();
         window.STORE.update(l => {
           const ev = M.addEvidence(l, {
             capId: cpDef.after[0], kind: "checkpoint", checkpointId: payload.cp,
@@ -635,6 +715,16 @@
           });
           M.markCheckpointDone(l, payload.cp, ev.id);
           cpDef.after.forEach(capId => M.raise(l, capId, payload.result.stateTarget, "medium"));
+          const g = window.GAMIFY.onEvent(l, "checkpoint");
+          l.xp = g.xp;
+          const fresh = window.GAMIFY.newBadges(l, before);
+          if (fresh.length) l.badges = [...(l.badges || []), ...fresh.map(b => b.id)];
+          if (payload.cp === "CP2") {
+            const g2 = window.GAMIFY.onEvent(l, "foundation");
+            l.xp = g2.xp;
+            const fresh2 = window.GAMIFY.newBadges(l, before);
+            if (fresh2.length) l.badges = [...(l.badges || []), ...fresh2.map(b => b.id)];
+          }
         });
         window.STORE.log("checkpoint-evidence", payload.cp);
         syncSubmission({
@@ -1048,8 +1138,7 @@
 
   function viewRealTask(learner) {
     const t = learner.realTask || {};
-    const seeded = (learner.intake && (learner.intake.e || learner.intake.a || "").trim())
-      ? ((learner.intake.e || "").trim() || (learner.intake.a || "").trim()) : "";
+    const seeded = learner.intake ? ((learner.intake.job || learner.intake.e || learner.intake.a || "").trim()) : "";
     return `<h1>What are we actually working on?</h1>
       <p class="lead">One real task, yours, carried through everything below. Everything you are asked
         to do afterwards is about this, not about an example.</p>
@@ -1098,16 +1187,16 @@
       }
       return `<div class="field"><label>${esc(item.label)}</label>
         ${item.hint ? `<div class="hint">${esc(item.hint)}</div>` : ""}
-        <textarea name="${item.key}" ${(item.key === "c" || item.key === "e") ? "required" : ""}></textarea></div>`;
+        <textarea name="${item.key}" ${(item.key === "c" || item.key === "e" || item.key === "job") ? "required" : ""}></textarea></div>`;
     }).join("");
     return `<h1>Diagnostic</h1><p class="lead">${esc(C.DIAGNOSTIC.intro)}</p>
       <form data-form="diagnostic">${q}<button class="btn" type="submit">Save &amp; see my pathway</button></form>`;
   }
 
-  function lessonProgress(steps, stepIdx) {
-    return `<div class="stepline">` + steps.map((s, i) =>
-      `<span class="${i < stepIdx ? "done" : i === stepIdx ? "now" : ""}">${C.LESSON_STEP_ICONS[s] || ""} ${esc(C.LESSON_STEP_LABELS[s])}</span>`
-    ).join("") + `</div>`;
+  function lessonProgress(steps, stepIdx, capId) {
+    return `<nav class="stepline" aria-label="Lesson steps">` + steps.map((s, i) =>
+      `<a data-nav href="#/learn/${esc(capId)}/${i}" ${i === stepIdx ? 'aria-current="step" class="now"' : ""}>${C.LESSON_STEP_ICONS[s] || ""} ${esc(C.LESSON_STEP_LABELS[s])}</a>`
+    ).join("") + `</nav>`;
   }
 
   function viewLearn(learner, parts) {
@@ -1120,16 +1209,20 @@
     const stepKey = steps[stepIdx];
     const nextHref = stepIdx < steps.length - 1 ? `#/learn/${capId}/${stepIdx + 1}` : null;
     const prevHref = stepIdx > 0 ? `#/learn/${capId}/${stepIdx - 1}` : null;
+    const materials = L.materials ? `<details class="card lesson-materials" open>
+      <summary>${esc(L.materials.title)}</summary><pre>${esc(L.materials.text)}</pre>
+      ${L.materials.download ? `<a href="${esc(L.materials.download)}" download>Download the practice SQL</a>` : ""}
+      </details>` : "";
 
     const header = `
-      ${lessonProgress(steps, stepIdx)}
-      <p class="hint" style="margin-bottom:2px">${esc(L.id)} — ${esc(L.name)} · lesson ${stepIdx + 1} of ${steps.length}</p>`;
+      ${lessonProgress(steps, stepIdx, capId)}
+      <p class="hint" style="margin-bottom:2px">${esc(L.id)} — ${esc(L.name)} · step ${stepIdx + 1} of ${steps.length}</p>`;
 
     const nav = (extra = "") => `
-      <div style="display:flex;gap:10px;margin-top:18px">
+      <div class="lesson-nav">
         ${prevHref ? `<a class="btn btn--ghost btn--sm" data-nav href="${prevHref}">← Back</a>` : ""}
         ${extra}
-        ${nextHref ? `<a class="btn" data-nav href="${nextHref}">Next →</a>` : ""}
+        ${nextHref ? `<a class="btn" data-nav href="${nextHref}">Next: ${esc(C.LESSON_STEP_LABELS[steps[stepIdx + 1]])} →</a>` : ""}
       </div>`;
 
     if (stepKey === "activate") {
@@ -1139,6 +1232,11 @@
         <p class="lead">This lesson teaches you to: <strong>${esc(L.canDo)}</strong></p>
         <div class="card"><p style="margin:0 0 10px">${esc(a.story)}</p>
           <p style="margin:0;color:var(--accent)"><strong>${esc(a.point)}</strong></p></div>
+        <div class="card lesson-mission"><div class="card__label">Your mission</div>
+          <p>${esc(L.guided.task)}</p>
+          <p class="hint">See an example, explore the idea, then make your own attempt. Practice is ungraded and you can retry.</p>
+          <a data-nav href="#/learn/${capId}/${steps.indexOf("demonstrate")}">Start with the worked example →</a>
+        </div>
         ${nav()}`;
     }
 
@@ -1147,6 +1245,7 @@
       return `${header}
         <h1>The idea</h1>
         ${e.paras.map(p => `<p>${mdBold(esc(p))}</p>`).join("")}
+        ${materials}
         <div class="card next"><div class="card__label">Key idea — remember this one</div>
           <p style="margin:0;font-size:15px">${esc(e.keyIdea)}</p></div>
         ${nav()}`;
@@ -1160,27 +1259,29 @@
       // what turns the stack into a connected flow (a numbered line through every card,
       // ending at the result) — see styles.css.
       const steps = d.steps.map((s, i) => `
-        <div class="card card--tight demo-step" data-i="${i}">
+        <div class="card card--tight demo-step" data-i="${i}" ${i ? "hidden" : ""}>
           <span class="demo-step__dot">${i + 1}</span>
           <div class="card__label">Step ${i + 1} · ${esc(s.move)}</div>
           <p style="margin:6px 0"><em>Thinking:</em> ${esc(s.think)}</p>
-          <p style="margin:0"><strong>→ ${esc(s.result)}</strong></p>
+          <p class="lesson-output" style="margin:0"><strong>→ ${esc(s.result)}</strong></p>
         </div>`).join("");
       return `${header}
         <h1>Watch it done</h1>
         <p class="lead">${esc(d.task)}</p>
+        ${materials}
         <div class="demo" data-count="${d.steps.length}">
-          <div class="demo__bar"><span></span></div>
-          <div style="display:flex;gap:10px;margin-bottom:12px">
-            <button class="btn btn--sm" data-action="demo-play">▶ Play the example</button>
+          <div class="demo__bar" aria-hidden="true"><span style="width:${100 / (d.steps.length + 1)}%"></span></div>
+          <p class="hint demo__status" role="status">1 of ${d.steps.length + 1} parts shown. Predict the next move, then reveal it.</p>
+          <div class="lesson-nav" style="margin:0 0 12px">
+            <button class="btn btn--sm" data-action="demo-next">Reveal next move</button>
             <button class="btn btn--ghost btn--sm" data-action="demo-all">Show all steps</button>
           </div>
           <div class="demo__rail">
             ${steps}
-            <div class="card next demo-step" data-i="${d.steps.length}">
+            <div class="card next demo-step" data-i="${d.steps.length}" hidden>
               <span class="demo-step__dot demo-step__dot--end">🏁</span>
               <div class="card__label">The finished result</div>
-              <p style="margin:0">${esc(d.full)}</p>
+              <p class="lesson-output" style="margin:0">${esc(d.full)}</p>
             </div>
           </div>
         </div>
@@ -1201,16 +1302,15 @@
         ${comp.selfCheck && comp.selfCheck.length ? `
         <div class="selfcheck">
           <div class="card__label">Before you move on — can you…</div>
-          <ul class="selfcheck__list">${comp.selfCheck.map(x => `<li><input type="checkbox"> ${esc(x)}</li>`).join("")}</ul>
+          <ul class="selfcheck__list">${comp.selfCheck.map(x => `<li><label><input type="checkbox"> ${esc(x)}</label></li>`).join("")}</ul>
           <p class="hint" style="margin:8px 0 0">Tick each one honestly. If any feel shaky, re-read the worked example and the moves above before the challenges.</p>
         </div>` : ""}
         ${nav()}`;
     }
 
     if (stepKey === "quickcheck") {
-      // Doing the quick-check IS the spaced-revisit: reset the clock so the Pathway Engine
-      // doesn't keep surfacing this competency (10-pedagogy-review §4.2).
-      window.STORE.update(l => { if (!l.revisits) l.revisits = {}; l.revisits[capId] = new Date().toISOString(); });
+      // Rendering is not practice. The answer handler records the revisit after every
+      // question has been attempted, without awarding capability or requiring perfection.
       const qs = C.quickCheck(capId);
       const blocks = qs.map((qc, qi) => `
         <div class="card qcheck" data-qi="${qi}">
@@ -1222,32 +1322,35 @@
                 ${esc(o.label)}
               </button>`).join("")}
           </div>
-          <p class="qcheck__fb hint" style="margin:10px 0 0"></p>
+          <p class="qcheck__fb hint" role="status" style="margin:10px 0 0"></p>
+          <button class="btn btn--ghost btn--sm qcheck__retry" data-action="qcheck-retry" hidden>Try this question again</button>
         </div>`).join("");
       return `${header}
         <h1>Quick check</h1>
-        <p class="lead">Two questions on the idea. Pick an answer to see why — this isn't graded.</p>
+        <p class="lead">${qs.length} short questions. Choose an answer to explore the reasoning. Unlimited retries; this is practice, not a grade.</p>
         <div class="qcheck-set" data-total="${qs.length}">${blocks}</div>
+        <p id="qcheckStatus" class="notice" role="status">0 of ${qs.length} questions explored. Take your time.</p>
+        <a class="lesson-review" data-nav href="#/learn/${capId}/${steps.indexOf("explain")}">Review the idea</a>
         <div id="qcheckNav">${nav()}</div>`;
     }
 
     // guided
     const g = L.guided;
     const fields = g.fields.map(f => `
-      <div class="field"><label>${esc(f.label)}</label>
-        <div class="hint">${esc(f.hint || "")}</div>
-        <textarea name="${f.key}"></textarea></div>`).join("");
+      <div class="field"><label for="guided-${esc(f.key)}">${esc(f.label)}</label>
+        <div class="hint" id="hint-${esc(f.key)}">${esc(f.hint || "")}</div>
+        <textarea id="guided-${esc(f.key)}" name="${esc(f.key)}" aria-describedby="hint-${esc(f.key)}">${esc(learner.lessonDrafts?.[capId]?.[f.key] || "")}</textarea></div>`).join("");
     // This is deliberately a DIFFERENT scenario from the demonstrate step (near-transfer
     // practice, not a copy exercise) — which is exactly why it needs the worked example
     // visible here, not two screens back in memory. "With support" should mean support.
     const referencePanel = L.demonstrate ? `
-      <div class="card next" style="margin-bottom:14px">
-        <div class="card__label">Reference — how the lesson did it</div>
+      <details class="card next" style="margin-bottom:14px">
+        <summary>Need a starting point? Review the worked example</summary>
         <p class="hint" style="margin:0 0 6px">${esc(L.demonstrate.task)}</p>
-        <p style="margin:0">${esc(L.demonstrate.full)}</p>
-      </div>` : "";
+        <p class="lesson-output" style="margin:0">${esc(L.demonstrate.full)}</p>
+      </details>` : "";
     const movesPanel = (L.deconstruct && L.deconstruct.length) ? `
-      <details class="card card--tight" style="margin-bottom:14px" open>
+      <details class="card card--tight" style="margin-bottom:14px">
         <summary style="cursor:pointer;font-weight:600">The moves, again</summary>
         <ul style="margin:8px 0 0">${L.deconstruct.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
       </details>` : "";
@@ -1256,7 +1359,8 @@
       <p class="lead">${esc(g.intro)}</p>
       <div class="card"><div class="card__label">Practice task (not graded)</div>
         <p style="margin:0">${esc(g.task)}</p></div>
-      ${referencePanel}${movesPanel}
+      ${materials}${referencePanel}${movesPanel}
+      <p class="hint">Drafts stay on this device while you move between lesson steps. Avoid sensitive details.</p>
       <form data-form="guided" data-cap="${capId}">
         ${fields}
         <button class="btn" type="submit">Check against the model answer</button>
@@ -1316,6 +1420,7 @@
       <a class="btn ${taught ? "btn--ghost btn--sm" : ""}" data-nav href="#/learn/${capId}/0" style="margin-bottom:16px">
         ${taught ? "Revisit the lesson" : "Start the lesson"}
       </a>
+      ${window.REVIEW.status(learner, capId) ? `<a class="btn btn--ghost btn--sm" data-nav href="#/review/${esc(capId)}" style="margin-bottom:16px">Remember &amp; apply</a>` : ""}
       <h3>Practical challenges</h3>
       <p class="hint" style="margin-top:-4px">Do these on your own real task. Each is checked against a rubric and adds to your evidence.</p>
       <div class="caplist">${rows}</div>
@@ -1558,15 +1663,22 @@
       </div>`;
     };
     const group = (g, title, blurb) => `
-      <h2>${esc(title)}</h2>
-      <p class="hint" style="margin-top:-4px">${esc(blurb)}</p>
+      <div class="pathway-group-heading">
+        <div><h2>${esc(title)}</h2>
+        <p class="hint">${esc(blurb)}</p></div>
+        <img class="pathway-group-art"
+          src="assets/graphics/pathways-${g}.webp" alt="" width="960" height="640"
+          loading="lazy" decoding="async">
+      </div>
       ${C.PATHWAYS.filter(p => p.group === g).map(card).join("")}`;
 
     return `
       <h1>Pathways</h1>
-      <p class="lead">After the foundation, a pathway goes deep in one direction. Two kinds:
-      using AI well in a specific job, and building AI systems. You can take more than one.
-      (See docs/09-work-pathways.md.)</p>
+      <p class="lead">Go deeper in a subject that matters to you: using AI at home or at work,
+      building technical skills, exploring creative subjects, or learning practical life skills.
+      You can take more than one pathway.</p>
+      <img class="pathway-overview-art" src="assets/graphics/pathways-overview.webp"
+        alt="" width="960" height="640" decoding="async">
       ${!fDone ? `<div class="card next" style="margin-bottom:14px">
         <p style="margin:0 0 10px">You're still in the foundation module. Finish it, or —
         as the founder building this — skip ahead now.</p>
@@ -1601,12 +1713,21 @@
       </div>` : ""}
       ${group("personal", "AI outside work", "For your own life rather than a job — health, money, learning, home. You are the only reviewer, which raises the stakes rather than lowering them.")}
       ${group("work", "Using AI at work", "Take the foundation skills into the real tasks of your role.")}
-      ${group("build", "Building AI", "The technical track — how models work, and how to build systems on them.")}`;
+      ${group("build", "Building AI & technical skills", "Explore AI systems, software development, data science and cybersecurity.")}
+      ${group("life", "Life skills", "Build practical skills for cooking, home projects, sustainability, languages, money and fitness.")}
+      ${group("creative", "Creative subjects", "Develop your craft in design, music, photography, writing and games.")}`;
   }
 
   function viewPathwayOverview(learner, parts) {
     const p = C.pathway(parts[1]);
     if (!p) return `<div class="notice">Unknown pathway.</div>`;
+    const artwork = [
+      "software-engineering", "android-development", "data-science", "cybersecurity", "engineering",
+      "foundations", "ml", "agents", "safety",
+      "graphic-design", "music-production", "photography", "writing", "gaming",
+      "cooking", "skilled-trades", "sustainability", "language-learning", "personal-finance", "fitness",
+    ].includes(p.id)
+      ? `pathway-${p.id}` : `pathways-${p.group}`;
     const fDone = M.foundationDone(learner);
     const chosen = learner.pathway === p.id;
     const comps = p.competencies.map((c, i) => `
@@ -1622,6 +1743,8 @@
       <p class="hint" style="margin-bottom:2px"><a data-nav href="#/pathways">← All pathways</a></p>
       <h1>${esc(p.title)}</h1>
       <p class="lead">${esc(p.tagline)}</p>
+      <img class="pathway-overview-art" src="assets/graphics/${esc(artwork)}.webp"
+        alt="" width="960" height="640" decoding="async">
       <p class="hint">For: ${esc(p.forRoles)} · emphasis: ${p.rubricEmphasis.join(", ")}</p>
       ${["legal","finance","hr","health","public","edleadership","realestate","journalism"].includes(p.id) ? `<div class="notice" style="margin-bottom:14px">
         <strong>Reviewed for unverified specifics, not yet signed off by a licensed professional.</strong>

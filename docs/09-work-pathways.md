@@ -34,8 +34,14 @@ tasks, constraints, risks and examples of their profession — instead of stayin
 
 ## 2. How a learner gets one
 
-- The diagnostic already asks about professional goals (question B). On finishing the foundation,
-  the system **recommends** a pathway from that answer — the learner **chooses**.
+- The diagnostic opens with **your dream job** — the work you'd most love to be doing, real or
+  aspirational ("not sure yet" is a real answer). It then asks about your real-life goals, your
+  work/study context, a 12-month vision, your self-described level and one task you've already used
+  AI for.
+- The dream job is the strongest signal in the pathway recommendation, weighted above every other
+  answer, so the system points you at a real career path (software, healthcare, education, sales,
+  trades, creative, and dozens more) rather than a generic AI exercise. The learner **chooses** the
+  recommended pathway — or browses the full catalogue and picks their own.
 - A learner can take **more than one** pathway. Evidence and Applied Projects carry across.
 - Someone who already works this way can attempt the **pathway capstone directly** to test out of it.
 

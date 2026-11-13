@@ -190,11 +190,18 @@ code { background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-
 .demo__bar { height: 4px; background: var(--surface-2); border-radius: 999px; overflow: hidden; margin-bottom: 12px; }
 .demo__bar > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s ease; }
 .demo-step { position: relative; transition: opacity .45s ease, transform .45s ease; }
-.demo.playing .demo-step { opacity: 0; transform: translateY(10px); }
-.demo.playing .demo-step.reveal { opacity: 1; transform: none; }
+.demo-step[hidden], .qcheck__retry[hidden] { display: none; }
+.stepline a { color: inherit; text-decoration: none; padding: 6px 10px; border-radius: 999px; }
+.stepline a[aria-current="step"] { background: var(--accent); color: var(--bg); }
+.stepline a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.lesson-nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.lesson-mission { margin: 20px 0; }
+.lesson-materials summary { cursor: pointer; font-weight: 600; }
+.lesson-materials pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; line-height: 1.6; }
+.lesson-output { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lesson-materials a, .lesson-mission a, .lesson-review { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   .demo-step { transition: none; }
-  .demo.playing .demo-step { opacity: 1; transform: none; }
 }
 /* the rail turns the step cards into one connected flow instead of a stack — a line
    through every numbered dot, ending at the result. Cards stay untouched (still just
@@ -271,3 +278,46 @@ details.card summary::-webkit-details-marker { display: revert; }
 .selfcheck__list li input { position: absolute; left: 0; top: 4px; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
 .selfcheck__list li input:checked + /* handled via JS toggling .done */ 
 .selfcheck .done { color: var(--good); }
+
+/* ---- Gamification strip (XP, level, streak, badges) ---- */
+.gamify__row { display: flex; gap: 14px; flex-wrap: wrap; }
+.gamify__level, .gamify__xp, .gamify__streak {
+  flex: 1; min-width: 140px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+}
+.gamify__label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-dim); margin-bottom: 4px; }
+.gamify__value { font-size: 15px; font-weight: 700; color: var(--text); }
+.gamify__value .bar { height: 6px; }
+.gamify__badges { margin-top: 10px; }
+.gamify__badges .gamify__label { display: block; margin-bottom: 6px; }
+.badge__shelf { display: flex; gap: 8px; flex-wrap: wrap; }
+.badge {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; color: var(--text);
+}
+.badge__title { margin-left: 2px; }
+
+/* Generated catalogue illustrations; headings carry the meaning for screen readers. */
+.pathway-overview-art {
+  display: block; width: 100%; height: auto; max-height: 280px;
+  object-fit: contain; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  margin-bottom: 18px;
+}
+.pathway-group-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; margin: 22px 0 10px;
+}
+.pathway-group-heading > div { min-width: 0; }
+.pathway-group-heading h2 { margin: 0 0 6px; }
+.pathway-group-heading p { margin: 0; }
+.pathway-group-art {
+  display: block; flex: 0 0 auto; width: 160px; height: auto;
+  border-radius: 10px;
+}
+@media (max-width: 460px) {
+  .pathway-group-heading { gap: 12px; }
+  .pathway-group-art { width: 112px; }
+}
